@@ -15,8 +15,5 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: '22'
-      - run: npm install --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
       - run: npm run build
-      - name: Retrieve generated dependency lock
-        run: |
-          node -e "for (const chunk of Buffer.from(JSON.stringify(require('./package-lock.json'))).toString('base64').match(/.{1,800}/g)) console.log('TANYS_LOCK ' + chunk)"
