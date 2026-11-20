@@ -69,8 +69,10 @@ export async function organizerRoute(req: IncomingMessage, res: ServerResponse, 
     const profilesExist = await hasProfilesTable()
     if (profilesExist) {
       const result = await pool.query(
-        `SELECT m.user_id AS "userId", m.role, p.name, p.role AS "profileRole", p.goal, p.visible
+        `SELECT m.user_id AS "userId", m.role, COALESCE(p.name, u.username) AS name, u.username,
+                p.role AS "profileRole", p.goal, p.visible
          FROM memberships m
+         LEFT JOIN users u ON u.id = m.user_id
          LEFT JOIN event_profiles p ON p.event_id = m.event_id AND p.user_id = m.user_id AND p.visible
          WHERE m.event_id = $1 AND ($2::uuid IS NULL OR m.user_id > $2)
          ORDER BY m.user_id ASC
@@ -84,8 +86,9 @@ export async function organizerRoute(req: IncomingMessage, res: ServerResponse, 
     }
 
     const result = await pool.query(
-      `SELECT m.user_id AS "userId", m.role
+      `SELECT m.user_id AS "userId", m.role, u.username AS name, u.username
        FROM memberships m
+       LEFT JOIN users u ON u.id = m.user_id
        WHERE m.event_id = $1 AND ($2::uuid IS NULL OR m.user_id > $2)
        ORDER BY m.user_id ASC
        LIMIT $3`,

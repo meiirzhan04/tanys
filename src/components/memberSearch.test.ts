@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, test } from 'node:test'
 import { createTanysApiClient } from '../api/client.ts'
 import type { EventMemberItem } from '../api/client'
-import { filterEventMembers } from './memberSearch.ts'
+import { filterEventMembers, getMemberDisplayName } from './memberSearch.ts'
 
 describe('organizer member search (#96)', () => {
   test('matches partial display names case-insensitively with trimmed spaces and Kazakh letters', () => {
@@ -107,6 +107,20 @@ describe('organizer member search (#96)', () => {
     assert.deepEqual(
       filterEventMembers(event2Members, 'жанель').map(item => item.userId),
       ['u-9'],
+    )
+  })
+
+  test('displays and filters by login username when profile name is absent (#119)', () => {
+    const members: EventMemberItem[] = [
+      { userId: '00000000-0000-0000-0000-000000000001', role: 'participant', name: null, username: 'aidos_dev' },
+      { userId: '00000000-0000-0000-0000-000000000002', role: 'participant', name: 'Данияр', username: 'daniyar99' },
+    ]
+
+    assert.equal(getMemberDisplayName(members[0]), 'aidos_dev')
+    assert.equal(getMemberDisplayName(members[1]), 'Данияр')
+    assert.deepEqual(
+      filterEventMembers(members, 'AIDOS').map(item => item.userId),
+      ['00000000-0000-0000-0000-000000000001'],
     )
   })
 })

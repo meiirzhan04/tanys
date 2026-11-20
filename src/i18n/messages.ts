@@ -640,7 +640,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       actionWarn: 'Предупредить',
       actionDismiss: 'Отклонить жалобу',
       resolvedWithAction: action => `Решение: ${action}`,
-      supportNotice: 'Поддержка и обращения по безопасности: напишите организатору события или на support@tanys.kz (ответ до 5 рабочих дней).',
+      supportNotice: 'Поддержка и обращения по безопасности: напишите организатору события или на tanys.hrr@gmail.com (ответ до 5 рабочих дней).',
     },
   },
   kk: {
@@ -961,7 +961,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       actionWarn: 'Ескерту',
       actionDismiss: 'Шағымды қабылдамау',
       resolvedWithAction: action => `Шешім: ${action}`,
-      supportNotice: 'Қолдау және қауіпсіздік бойынша: іс-шара ұйымдастырушысына немесе support@tanys.kz поштасына жазыңыз.',
+      supportNotice: 'Қолдау және қауіпсіздік бойынша: іс-шара ұйымдастырушысына немесе tanys.hrr@gmail.com поштасына жазыңыз.',
     },
   },
   en: {
@@ -1282,7 +1282,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       actionWarn: 'Warn',
       actionDismiss: 'Dismiss',
       resolvedWithAction: action => `Action: ${action}`,
-      supportNotice: 'Safety & support channel: contact the event organizer or email support@tanys.kz (response within 5 business days).',
+      supportNotice: 'Safety & support channel: contact the event organizer or email tanys.hrr@gmail.com (response within 5 business days).',
     },
   },
 }

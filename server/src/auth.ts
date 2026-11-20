@@ -183,7 +183,7 @@ async function authenticatePassword(req: IncomingMessage, res: ServerResponse, r
     userId = user.id
   }
   res.setHeader('Set-Cookie', cookie(session, 7 * 86400))
-  json(res, registration ? 201 : 200, { id: userId })
+  json(res, registration ? 201 : 200, { id: userId, username })
 }
 
 export async function authRoute(req: IncomingMessage, res: ServerResponse, path: string) {
@@ -191,7 +191,12 @@ export async function authRoute(req: IncomingMessage, res: ServerResponse, path:
   else if (req.method === 'POST' && path === '/auth/password') await authenticatePassword(req, res, false)
   else if (req.method === 'POST' && path === '/auth/challenges') await challenge(req,res)
   else if (req.method === 'POST' && path === '/auth/sessions') await signIn(req,res)
-  else if (req.method === 'GET' && path === '/me') json(res, 200, { id: await viewer(req) })
+  else if (req.method === 'GET' && path === '/me') {
+    const id = await viewer(req)
+    const row = await pool.query<{ username: string | null }>('SELECT username FROM users WHERE id=$1', [id])
+    const username = row.rows[0]?.username
+    json(res, 200, username ? { id, username } : { id })
+  }
   else if (req.method === 'DELETE' && path === '/auth/session') {
     await pool.query('DELETE FROM sessions WHERE digest=$1', [sha(token(req) || '')])
     res.setHeader('Set-Cookie', cookie('',0))

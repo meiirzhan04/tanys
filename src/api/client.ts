@@ -64,6 +64,7 @@ export interface EventMemberItem {
   userId: string
   role: EventRole
   name?: string | null
+  username?: string | null
   profileRole?: string | null
   goal?: Goal | null
   visible?: boolean | null
@@ -120,6 +121,7 @@ export interface SubmitReportPayload {
 
 export interface AuthUser {
   id: string
+  username?: string
 }
 
 export interface EventSummary {

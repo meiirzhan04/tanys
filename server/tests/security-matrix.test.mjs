@@ -86,6 +86,10 @@ function createMemoryDatabase() {
       const u = [...users.values()].find((item) => item.username === params[0])
       return u ? { rowCount: 1, rows: [{ id: u.id, password_hash: u.passwordHash }] } : { rowCount: 0, rows: [] }
     }
+    if (sql.startsWith('SELECT username FROM users WHERE id=$1')) {
+      const u = users.get(params[0])
+      return u ? { rowCount: 1, rows: [{ username: u.username ?? null }] } : { rowCount: 0, rows: [] }
+    }
     if (sql.startsWith('INSERT INTO sessions(digest,user_id) SELECT $1,id FROM users')) {
       const [digest, id, hash] = params
       const u = users.get(id)
@@ -208,17 +212,18 @@ function createMemoryDatabase() {
     }
 
     // Organizer members, interests, booths
-    if (sql.startsWith('SELECT m.user_id AS "userId", m.role, p.name')) {
+    if (sql.startsWith('SELECT m.user_id AS "userId", m.role, COALESCE(p.name, u.username)')) {
       const [eventId, cursor, limit] = params
       const rows = [...memberships.values()]
         .filter((m) => m.eventId === eventId && (!cursor || m.userId > cursor))
         .sort((a, b) => a.userId.localeCompare(b.userId))
         .slice(0, limit)
         .map((m) => {
+          const u = users.get(m.userId)
           const p = profiles.get(memberKey(eventId, m.userId))
           return p && p.visible
-            ? { userId: m.userId, role: m.role, name: p.name, profileRole: p.role, goal: p.goal, visible: true }
-            : { userId: m.userId, role: m.role, name: null, profileRole: null, goal: null, visible: null }
+            ? { userId: m.userId, role: m.role, name: p.name, username: u?.username ?? null, profileRole: p.role, goal: p.goal, visible: true }
+            : { userId: m.userId, role: m.role, name: u?.username ?? null, username: u?.username ?? null, profileRole: null, goal: null, visible: null }
         })
       return { rowCount: rows.length, rows }
     }
@@ -380,22 +385,30 @@ function createMemoryDatabase() {
       reports.set(id, row)
       return { rowCount: 1, rows: [{ id, status: row.status }] }
     }
-    if (sql.startsWith('SELECT id, subject_id AS "subjectId", reason, details, status')) {
+    if (sql.startsWith('SELECT r.id, r.subject_id AS "subjectId", COALESCE(p.name, u.username) AS "subjectName"')) {
       const rows = [...reports.values()]
         .filter((r) => r.eventId === params[0])
-        .map((r) => ({ id: r.id, subjectId: r.subjectId, reason: r.reason, details: r.details, status: r.status, action: r.action, resolvedBy: r.resolvedBy, resolvedAt: r.resolvedAt, createdAt: r.createdAt }))
+        .map((r) => {
+          const u = users.get(r.subjectId)
+          const p = profiles.get(memberKey(r.eventId, r.subjectId))
+          const subjectName = p && p.visible ? p.name : (u?.username ?? null)
+          return { id: r.id, subjectId: r.subjectId, subjectName, reason: r.reason, details: r.details, status: r.status, action: r.action, resolvedBy: r.resolvedBy, resolvedAt: r.resolvedAt, createdAt: r.createdAt }
+        })
       return { rowCount: rows.length, rows }
     }
     if (sql.startsWith('SELECT id, subject_id, reason FROM event_reports WHERE id=$1 AND event_id=$2')) {
       const r = reports.get(params[0])
       return r && r.eventId === params[1] ? { rowCount: 1, rows: [{ id: r.id, subject_id: r.subjectId, reason: r.reason }] } : { rowCount: 0, rows: [] }
     }
-    if (sql.startsWith("UPDATE event_reports SET status='resolved'")) {
+    if (sql.startsWith('UPDATE event_reports AS r SET status')) {
       const [action, userId, reportId, eventId] = params
       const r = reports.get(reportId)
       if (!r || r.eventId !== eventId) return { rowCount: 0, rows: [] }
       Object.assign(r, { status: 'resolved', action, resolvedBy: userId, resolvedAt: new Date() })
-      return { rowCount: 1, rows: [{ id: r.id, subjectId: r.subjectId, reason: r.reason, details: r.details, status: r.status, action: r.action, resolvedBy: r.resolvedBy, resolvedAt: r.resolvedAt, createdAt: r.createdAt }] }
+      const u = users.get(r.subjectId)
+      const p = profiles.get(memberKey(r.eventId, r.subjectId))
+      const subjectName = p && p.visible ? p.name : (u?.username ?? null)
+      return { rowCount: 1, rows: [{ id: r.id, subjectId: r.subjectId, subjectName, reason: r.reason, details: r.details, status: r.status, action: r.action, resolvedBy: r.resolvedBy, resolvedAt: r.resolvedAt, createdAt: r.createdAt }] }
     }
     if (sql.startsWith('INSERT INTO moderation_actions(')) {
       moderationActions.push({ eventId: params[0], reportId: params[1], moderatorId: params[2], subjectId: params[3], action: params[4] })
@@ -568,10 +581,13 @@ test('security and event isolation matrix across guest, participants, and cross-
     const partB1 = await registerAccount('pb1')
     const tempUser = await registerAccount('tmp')
 
-    // /me exposes ONLY { id } and never leaks email/username/password_hash
+    // /me exposes ONLY { id, username } and never leaks email/password_hash
     const meA = await api(orgA.cookie, 'GET', '/me')
     assert.equal(meA.status, 200)
-    assert.deepEqual(Object.keys(meA.body), ['id'])
+    assert.deepEqual(Object.keys(meA.body).sort(), ['id', 'username'])
+    assert.equal(meA.body.username, orgA.username)
+    assert.equal('email' in meA.body, false)
+    assert.equal('passwordHash' in meA.body, false)
 
     // Logout & account deletion revoke sessions immediately
     const relogin = await api(null, 'POST', '/auth/password', { username: tempUser.username, password: tempUser.password })
@@ -675,9 +691,12 @@ test('security and event isolation matrix across guest, participants, and cross-
     assert.equal((await api(orgB.cookie, 'GET', `/events/${evA}/interests`)).status, 404)
     const membersRes = await api(orgA.cookie, 'GET', `/events/${evA}/members`)
     assert.equal(membersRes.status, 200)
-    assert.equal(membersRes.raw.includes(partA2.username), false)
+    assert.equal(membersRes.raw.includes('email'), false)
     assert.equal(membersRes.raw.includes('passwordHash'), false)
-    assert.equal(membersRes.raw.includes('Bob A2'), false) // hidden when visible=false
+    assert.equal(membersRes.raw.includes('Bob A2'), false) // hidden profile name stays hidden when visible=false
+    const bobMember = membersRes.body.items.find((m) => m.userId === partA2.id)
+    assert.equal(bobMember?.name, partA2.username)
+    assert.equal(bobMember?.username, partA2.username)
 
     // 4. Recommendations & Mutual-Consent Contact Privacy & Blocks & Moderation
     assert.equal((await api(partB1.cookie, 'GET', `/events/${evA}/recommendations`)).status, 404)
