@@ -54,6 +54,7 @@ import { UnsavedChangesDialog } from './UnsavedChangesDialog'
 
 type ProfileErrorField = 'name' | 'goal' | 'role' | 'experience' | 'skills' | 'interests' | 'about' | 'consent'
 type ProfileErrors = Partial<Record<ProfileErrorField, string>>
+const RECOMMENDATIONS_REFRESH_MS = 15_000
 type EventTab = 'profile' | 'results' | 'introductions' | 'meetings' | 'organizer' | 'me'
 
 function emptyDraft(): EventProfileDraft {
@@ -445,6 +446,19 @@ export function EventAccountFlow({
       window.removeEventListener('focus', handleWindowFocus)
     }
   }, [activeEventId, api, hasSavedProfile, locale, messages.results, phase, refreshSocialState, tab])
+
+  // While the results tab stays open, pick up participants who join or update their profile later.
+  useEffect(() => {
+    if (phase !== 'ready' || !activeEventId || tab !== 'results' || !hasSavedProfile) return
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return
+      void api.getEventRecommendations(activeEventId, locale).then(items => {
+        setRecommendations(items)
+        setRecsMessage(items.length > 0 && items.length < 5 ? messages.results.partialMatches(items.length) : '')
+      }).catch(() => {})
+    }, RECOMMENDATIONS_REFRESH_MS)
+    return () => window.clearInterval(timer)
+  }, [activeEventId, api, hasSavedProfile, locale, messages.results, phase, tab])
 
   // Sync browser URL to /events/{id} when an event is active, and clear stale /events or /invite path when no event is selected.
   useEffect(() => {
