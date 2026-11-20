@@ -1192,15 +1192,13 @@ export function EventAccountFlow({
         <button
           type="button"
           aria-current={tab === 'profile' ? 'page' : undefined}
-          disabled={!activeEventId}
-          onClick={() => setTab('profile')}
+          onClick={event => guardNavigation(() => setTab('profile'), event.currentTarget)}
         >{accountLabels[locale].event}</button>
         <button
           type="button"
           aria-current={tab === 'results' ? 'page' : undefined}
-          disabled={!activeEventId || !hasSavedProfile}
           onClick={event => guardNavigation(() => {
-            if (activeEventId) {
+            if (activeEventId && hasSavedProfile) {
               void loadRecommendations(activeEventId)
             } else {
               setTab('results')
@@ -1212,7 +1210,6 @@ export function EventAccountFlow({
         <button
           type="button"
           aria-current={tab === 'introductions' ? 'page' : undefined}
-          disabled={!activeEventId}
           onClick={event => guardNavigation(() => {
             setTab('introductions')
             if (activeEventId) void refreshSocialState(activeEventId, true)
@@ -1224,7 +1221,6 @@ export function EventAccountFlow({
         <button
           type="button"
           aria-current={tab === 'meetings' ? 'page' : undefined}
-          disabled={!activeEventId}
           onClick={event => guardNavigation(() => {
             setTab('meetings')
             if (activeEventId) void refreshSocialState(activeEventId, true)
@@ -1330,6 +1326,14 @@ export function EventAccountFlow({
             <h1>{t.noEventsTitle}</h1>
             <p>{t.noEventsBody}</p>
             <InviteEntry locale={locale} />
+          </section>
+        ) : tab === 'results' && !hasSavedProfile ? (
+          <section className="surface empty-state">
+            <h1>{accountLabels[locale].needProfileTitle}</h1>
+            <p>{accountLabels[locale].needProfileBody}</p>
+            <button type="button" className="primary-button" onClick={() => setTab('profile')}>
+              {accountLabels[locale].openQuestionnaire}
+            </button>
           </section>
         ) : tab === 'introductions' ? (
           <IntroductionsPanel
