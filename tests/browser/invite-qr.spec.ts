@@ -164,7 +164,7 @@ test('generates invite QR locally without external requests, closes with Escape,
 
     const guestPage = await guestCtx.newPage()
     await guestPage.goto(new URL(inviteUrl).pathname)
-    await expect(guestPage.locator('#expired-invite-title')).toBeVisible()
+    await expect(guestPage.locator('#expired-invite-title')).toHaveText(getMessages('ru').account.inviteRevoked)
   } finally {
     await orgCtx.close()
     await guestCtx.close()

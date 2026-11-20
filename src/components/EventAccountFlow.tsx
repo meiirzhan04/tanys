@@ -181,6 +181,7 @@ export function EventAccountFlow({
   const [activeEventId, setActiveEventId] = useState<string>('')
   const [activeEvent, setActiveEvent] = useState<EventDetails | null>(null)
   const [eventLoading, setEventLoading] = useState(false)
+  const [inviteFailure, setInviteFailure] = useState<'inviteClosed' | 'inviteRevoked' | 'inviteExpired' | 'expiredTitle'>('expiredTitle')
   const [eventError, setEventError] = useState('')
   const [tab, setTab] = useState<EventTab>('profile')
   const [hasSavedProfile, setHasSavedProfile] = useState(false)
@@ -364,8 +365,13 @@ export function EventAccountFlow({
           redirectToLogin()
           return
         }
-        if (isInviteExpiredError(error) || (isApiError(error) && error.code === 'event_closed')) {
-          setEventError(isApiError(error) && error.code === 'event_closed' ? getMessages(locale).account.inviteClosed : '')
+        if (isApiError(error) && (isInviteExpiredError(error) || error.code === 'event_closed')) {
+          switch (error.code) {
+            case 'event_closed': setInviteFailure('inviteClosed'); break
+            case 'invite_revoked': setInviteFailure('inviteRevoked'); break
+            case 'invite_expired': setInviteFailure('inviteExpired'); break
+            default: setInviteFailure('expiredTitle')
+          }
           savePendingInvite(null)
           setPendingInvite(null)
           setPhase('expired')
@@ -1063,7 +1069,7 @@ export function EventAccountFlow({
       <main className="site-width account-main">
         {logoutDialog}
         <section className="surface status-panel" aria-labelledby="expired-invite-title">
-          <h1 id="expired-invite-title">{eventError || t.expiredTitle}</h1>
+          <h1 id="expired-invite-title">{phase === 'expired' ? t[inviteFailure] : eventError}</h1>
           {phase === 'expired' && <p>{t.expiredBody}</p>}
           {phase === 'inviteError' && <button className="primary-button" onClick={() => void enterAuthenticated(pendingInvite)}>{t.inviteRetry}</button>}
           <div className="status-actions">

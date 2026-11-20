@@ -78,8 +78,11 @@ export async function eventRoute(req: IncomingMessage, res: ServerResponse, path
     if (action === 'members/me' && req.method === 'PUT') {
       if (role) return { status:200, data:{ role } }
       if (typeof body.token !== 'string' || body.token.length !== 64) throw missing()
-      const invite = await client.query('SELECT 1 FROM event_invites WHERE event_id=$1 AND digest=$2 AND NOT revoked AND expires_at>now()', [event,digest(body.token)])
-      if (!invite.rowCount) throw missing()
+      const invite = await client.query('SELECT revoked, expires_at <= now() AS expired FROM event_invites WHERE event_id=$1 AND digest=$2', [event,digest(body.token)])
+      const invitation = invite.rows[0]
+      if (!invitation) throw missing()
+      if (invitation.revoked) throw new HttpError(404, 'invite_revoked')
+      if (invitation.expired) throw new HttpError(404, 'invite_expired')
       if (row.status === 'closed') throw new HttpError(409,'event_closed')
       await client.query("INSERT INTO memberships VALUES($1,$2,'participant')", [event,user])
       return { status:200,data:{ role:'participant' } }

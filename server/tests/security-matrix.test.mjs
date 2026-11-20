@@ -227,11 +227,9 @@ function createMemoryDatabase() {
       invites.set(id, { id, eventId: params[0], digest: params[1], expiresAt: params[2], revoked: false })
       return { rowCount: 1, rows: [{ id }] }
     }
-    if (sql.startsWith('SELECT 1 FROM event_invites WHERE event_id=$1 AND digest=$2')) {
-      const found = [...invites.values()].some(
-        (i) => i.eventId === params[0] && i.digest === params[1] && !i.revoked && +i.expiresAt > Date.now(),
-      )
-      return { rowCount: found ? 1 : 0, rows: found ? [{ '?column?': 1 }] : [] }
+    if (sql.startsWith('SELECT revoked, expires_at <= now() AS expired FROM event_invites')) {
+      const invite = [...invites.values()].find(i => i.eventId === params[0] && i.digest === params[1])
+      return { rows: invite ? [{ revoked: invite.revoked, expired: +invite.expiresAt <= Date.now() }] : [] }
     }
     if (sql.startsWith('UPDATE event_invites SET revoked=true WHERE id=$1 AND event_id=$2')) {
       const inv = invites.get(params[0])
