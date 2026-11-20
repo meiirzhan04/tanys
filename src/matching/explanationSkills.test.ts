@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { deduplicateExplanationSkills } from '../../server/src/matching/explanation-skills.ts'
+import { deduplicateExplanationSkills, formatIcebreakerName } from '../../server/src/matching/explanation-skills.ts'
 
 test('requested Go and PostgreSQL appear only once across explanation reasons', () => {
   const requested = [{ key: 'go', label: 'Go' }, { key: 'postgresql', label: 'PostgreSQL' }]
@@ -26,4 +26,12 @@ test('keeps empty reason positions and drops repeated keys within a reason', () 
 
   assert.deepEqual(deduplicateExplanationSkills([[], skills, []]), [[], ['Go'], []])
   assert.deepEqual(deduplicateExplanationSkills([]), [])
+})
+
+test('uses the existing punctuation after initials and adds it to a plain name', () => {
+  assert.equal(formatIcebreakerName('Қанат А.'), 'Қанат А.')
+  assert.equal(formatIcebreakerName('Данияр'), 'Данияр!')
+  for (const punctuated of ['Ada!', 'Ada?', 'Ada…']) {
+    assert.equal(formatIcebreakerName(punctuated), punctuated)
+  }
 })
