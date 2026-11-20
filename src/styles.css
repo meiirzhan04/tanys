@@ -192,4 +192,22 @@ h1, h2, p { margin: 0; }
   .result-details { padding: 0 13px 13px; }
   .interest-table th, .interest-table td { padding-inline: 10px; }
   .interest-topic { grid-template-columns: minmax(0, 1fr); gap: 5px; }
+  .booths-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+.booths-section { margin-top: 26px; }
+.booths-heading { margin-bottom: 14px; }
+.booths-heading h2 { font-size: clamp(19px, 2.2vw, 23px); letter-spacing: -.03em; }
+.booths-heading p { margin-top: 4px; color: var(--muted); font-size: 14px; }
+.booths-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.booth-card { display: flex; flex-direction: column; gap: 8px; padding: 16px; min-width: 0; overflow-wrap: anywhere; }
+.booth-card-top { display: flex; align-items: start; justify-content: space-between; gap: 8px; }
+.booth-card h3 { font-size: 16px; line-height: 1.25; }
+.booth-demo-badge { flex: 0 0 auto; font-size: 11px; font-weight: 700; color: var(--navy); background: #eaf1fb; border: 1px solid #c9dbf5; border-radius: 999px; padding: 2px 8px; }
+.booth-description { font-size: 13.5px; line-height: 1.45; color: var(--muted); }
+.booth-explanation { margin-top: auto; font-size: 13px; line-height: 1.45; font-weight: 600; color: var(--ink); }
+.booths-empty h3 { font-size: 16px; }
+
+@media (max-width: 860px) {
+  .booths-grid { grid-template-columns: minmax(0, 1fr); }
 }

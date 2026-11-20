@@ -3,9 +3,11 @@ import { isAccountRoute, parseInviteLocation, savePendingInvite } from './api/in
 import { EventAccountFlow } from './components/EventAccountFlow'
 import { InterestMap } from './components/InterestMap'
 import { SchedulePanel } from './components/MeetingSlots'
+import { PartnerBooths } from './components/PartnerBooths'
 import { ProfileForm } from './components/ProfileForm'
 import { RecommendationResults } from './components/RecommendationResults'
 import profiles from './data/profiles.json'
+import { DEMO_PARTNER_BOOTHS, recommendBooths } from './data/booths'
 import { summarizeInterests } from './data/interestSummary'
 import { parseCandidates, resolveAppCandidates } from './data/loadCandidates'
 import { previewProfiles, sampleProfile } from './data/previewProfiles'
@@ -157,16 +159,22 @@ export default function App() {
             <div hidden={view !== 'profile'}>
               <ProfileForm onSubmit={submit} example={sampleProfile} locale={locale} />
             </div>
-            {view === 'results' && session && <RecommendationResults
-              recommendations={session.recommendations}
-              onEdit={handleEditProfile}
-              onFeedback={handleFeedback}
-              message={getResultsMessage(session, locale)}
-              bookings={bookings}
-              onBookSlot={handleBookSlot}
-              onCancelSlot={handleCancelSlot}
-              locale={locale}
-            />}
+            {view === 'results' && session && <>
+              <RecommendationResults
+                recommendations={session.recommendations}
+                onEdit={handleEditProfile}
+                onFeedback={handleFeedback}
+                message={getResultsMessage(session, locale)}
+                bookings={bookings}
+                onBookSlot={handleBookSlot}
+                onCancelSlot={handleCancelSlot}
+                locale={locale}
+              />
+              <PartnerBooths
+                recommendations={recommendBooths(session.input, DEMO_PARTNER_BOOTHS, locale)}
+                locale={locale}
+              />
+            </>}
             {view === 'schedule' && <>
               <div className="page-heading"><h1>{messages.meetings.pageTitle}</h1></div>
               <SchedulePanel bookings={bookings} onCancel={handleCancelSlot} locale={locale} />
