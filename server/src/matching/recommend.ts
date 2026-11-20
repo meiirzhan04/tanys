@@ -14,6 +14,8 @@ interface RecommendationTemplates {
   icebreakerQuestions: Record<Goal, string>
   candidateNeeds: (items: string) => string
   participantNeeds: (items: string) => string
+  applicantRole: (role: string) => string
+  requestedRole: (role: string) => string
   sharedSkills: (items: string) => string
   moreExperienced: string
   lessExperienced: string
@@ -42,6 +44,8 @@ const templatesByLocale: Record<Locale, RecommendationTemplates> = {
     },
     candidateNeeds: items => `из ваших навыков участник ищет ${items}`,
     participantNeeds: items => `у участника есть нужные вам навыки: ${items}`,
+    applicantRole: role => `роль соискателя соответствует запросу: ${role}`,
+    requestedRole: role => `работодатель ищет специалиста вашего профиля: ${role}`,
     sharedSkills: items => `общие навыки: ${items}`,
     moreExperienced: 'у ментора больше лет опыта',
     lessExperienced: 'у будущего менти меньше лет опыта',
@@ -68,6 +72,8 @@ const templatesByLocale: Record<Locale, RecommendationTemplates> = {
     },
     candidateNeeds: items => `сіздің дағдыларыңыздан қатысушы ${items} іздейді`,
     participantNeeds: items => `қатысушыда сізге қажет дағдылар бар: ${items}`,
+    applicantRole: role => `үміткердің рөлі сұранысыңызға сай: ${role}`,
+    requestedRole: role => `жұмыс беруші сіздің бейініңізге сай маман іздейді: ${role}`,
     sharedSkills: items => `ортақ дағдылар: ${items}`,
     moreExperienced: 'ментордың тәжірибесі көбірек',
     lessExperienced: 'болашақ ментидің тәжірибесі азырақ',
@@ -94,6 +100,8 @@ const templatesByLocale: Record<Locale, RecommendationTemplates> = {
     },
     candidateNeeds: items => `this participant is looking for your skills: ${items}`,
     participantNeeds: items => `this participant has skills you need: ${items}`,
+    applicantRole: role => `the applicant's role matches your request: ${role}`,
+    requestedRole: role => `the employer is looking for someone in your role: ${role}`,
     sharedSkills: items => `shared skills: ${items}`,
     moreExperienced: 'the mentor has more years of experience',
     lessExperienced: 'the mentee has fewer years of experience',
@@ -202,6 +210,12 @@ function makeIcebreaker(goal: Goal, candidate: Candidate, locale: Locale, topic?
   return templates.formatIcebreaker(candidate.name, profileDetail.trim(), templates.icebreakerQuestions[goal])
 }
 
+function matchingRequestedRole(applicantRole: string, requested: readonly string[]): string | undefined {
+  const role = normalizeSkill(applicantRole)
+  if (!Object.hasOwn(roleGroups, role)) return undefined
+  return requested.find(value => normalizeSkill(value) === role)?.trim()
+}
+
 function matchingTopics(
   values: readonly string[],
   targets: readonly string[],
@@ -233,26 +247,35 @@ function scoreCandidate(
   const participantNeeds = matchingTopics(candidate.skills, input.lookingFor ?? [], skillKey, broaderSkills)
   const sharedSkills = matchingTopics(candidate.skills, input.skills, skillKey)
 
-  // Apply the employer's skill criteria in both directions before ranking job matches.
+  // Apply the employer's criteria in both directions before ranking job matches.
   let hiringMatch: string[] | undefined
+  let roleMatch: string | undefined
   if (input.goal === 'hire') {
     hiringMatch = input.lookingFor?.some(skill => skill.trim()) ? participantNeeds : sharedSkills
+    if (matchingRequestedRole(candidate.role, input.lookingFor ?? [])) roleMatch = candidate.role.trim()
   } else if (input.goal === 'find_job') {
     hiringMatch = candidate.lookingFor?.some(skill => skill.trim()) ? candidateNeeds : sharedSkills
+    roleMatch = matchingRequestedRole(input.role, candidate.lookingFor ?? [])
   }
-  if (hiringMatch?.length === 0) return null
+  if (hiringMatch?.length === 0 && !roleMatch) return null
+
+  if (roleMatch) {
+    const roleKey = normalizeSkill(roleMatch)
+    if (hiringMatch?.some(skill => normalizeSkill(skill) === roleKey)) roleMatch = undefined
+  }
 
   const sharedInterests = matchingTopics(candidate.interests, input.interests, normalizeInterest)
   const isMoreExperienced = input.goal === 'find_mentor' && candidate.experienceYears > input.experienceYears
   const isLessExperienced = input.goal === 'be_mentor' && candidate.experienceYears < input.experienceYears
 
   const score =
-    8 * (candidateNeeds.length + participantNeeds.length) +
+    8 * (candidateNeeds.length + participantNeeds.length + Number(Boolean(roleMatch))) +
     4 * sharedSkills.length +
     2 * sharedInterests.length +
     Number(isMoreExperienced || isLessExperienced)
 
   const reasons: string[] = []
+  if (roleMatch) reasons.push(input.goal === 'hire' ? templates.applicantRole(roleMatch) : templates.requestedRole(roleMatch))
   if (candidateNeeds.length) reasons.push(templates.candidateNeeds(candidateNeeds.slice(0, 2).join(', ')))
   if (participantNeeds.length) reasons.push(templates.participantNeeds(participantNeeds.slice(0, 2).join(', ')))
   if (isCofounder) reasons.reverse()
@@ -262,7 +285,7 @@ function scoreCandidate(
   if (sharedInterests.length) reasons.push(templates.sharedInterests(sharedInterests.slice(0, 2).join(', ')))
 
   const cofounderNeeds = isCofounder ? participantNeeds.length : 0
-  const topic = (isCofounder ? participantNeeds[0] : hiringMatch?.[0]) ??
+  const topic = (isCofounder ? participantNeeds[0] : hiringMatch?.[0] ?? roleMatch) ??
     candidateNeeds[0] ?? participantNeeds[0] ?? sharedSkills[0] ?? sharedInterests[0]
   return { candidate, score, cofounderNeeds, reasons, topic }
 }

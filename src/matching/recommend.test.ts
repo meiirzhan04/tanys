@@ -73,9 +73,9 @@ test('uses shared skills for older hiring profiles without requested skills', ()
 test('recognizes role aliases in both hiring directions without treating related stacks as equivalents', () => {
   const employer = candidate('employer', 'hire', { lookingFor: ['Backend Developer'] })
   const backend = candidate('backend', 'find_job', { skills: ['BackDev'] })
-  const ios = candidate('ios', 'find_job', { skills: ['iOS Developer', 'Swift'] })
-  const frontend = candidate('frontend', 'find_job', { skills: ['FrontDev'] })
-  const other = candidate('generalist', 'find_job', { skills: ['Full Stack Developer', 'Python'] })
+  const ios = candidate('ios', 'find_job', { role: 'iOS Developer', skills: ['iOS Developer', 'Swift'] })
+  const frontend = candidate('frontend', 'find_job', { role: 'Frontend Developer', skills: ['FrontDev'] })
+  const other = candidate('generalist', 'find_job', { role: 'Full Stack Developer', skills: ['Full Stack Developer', 'Python'] })
   const candidates = [ios, frontend, other, backend]
 
   const results = recommend(employer, candidates, 'kk')
@@ -89,10 +89,28 @@ test('recognizes role aliases in both hiring directions without treating related
   }
 })
 
+test('matches the requested hiring role against the applicant role in both directions', () => {
+  const employer = candidate('employer', 'hire', { role: 'Recruiter', lookingFor: ['Backend Developer'], skills: ['Swift'] })
+  const backend = candidate('backend', 'find_job', { role: 'Backend', skills: ['Go', 'PostgreSQL'] })
+  const ios = candidate('ios', 'find_job', { role: 'iOS Developer', skills: ['Swift'], lookingFor: ['Swift'] })
+
+  const hired = recommend(employer, [ios, backend], 'en')
+  assert.deepEqual(hired.map(result => result.candidate.id), ['backend'])
+  assert.match(hired[0].explanation, /applicant's role matches your request: Backend/)
+  assert.match(hired[0].icebreaker ?? '', /"Backend"/)
+  const hiring = recommend(backend, [employer], 'en')
+  assert.deepEqual(hiring.map(result => result.candidate.id), ['employer'])
+  assert.match(hiring[0].explanation, /employer is looking for someone in your role: Backend Developer/)
+  assert.match(hiring[0].icebreaker ?? '', /"Backend Developer"/)
+  assert.deepEqual(recommend(employer, [ios]), [])
+  assert.deepEqual(recommend(ios, [employer]), [])
+  assert.deepEqual(recommend({ ...employer, lookingFor: ['Go'] }, [{ ...ios, role: 'Go' }]), [])
+})
+
 test('corrects a single typo in a known role and preserves distinct technologies', () => {
   const employer = candidate('employer', 'hire', { lookingFor: ['Backend Developer'] })
   const backend = candidate('backend', 'find_job', { skills: ['BacEnd'] })
-  const ios = candidate('ios', 'find_job', { skills: ['Swift'] })
+  const ios = candidate('ios', 'find_job', { role: 'iOS Developer', skills: ['Swift'] })
   assert.deepEqual(recommend(employer, [backend, ios]).map(result => result.candidate.id), ['backend'])
   assert.deepEqual(recommend(backend, [employer]).map(result => result.candidate.id), ['employer'])
   for (const label of ['BacEnd', 'backeend', 'BakCend', 'backand developer']) {
