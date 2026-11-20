@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import type { FormEvent } from 'react'
 import { getMessages } from '../i18n/messages'
 import type { Goal, Locale, ProfileInput } from '../matching/types'
+import { CustomSelect } from './CustomSelect'
 import { getGoalLabels } from './goalLabels'
 import type { ProfileFormProps } from './props'
 
@@ -43,9 +44,8 @@ function validate(fields: Fields, locale: Locale): Errors {
 export function ProfileForm({
   initialProfile,
   onSubmit,
-  example,
   locale = 'ru',
-}: ProfileFormProps & { example: ProfileInput; locale?: Locale }) {
+}: ProfileFormProps & { example?: ProfileInput; locale?: Locale }) {
   const id = useId()
   const [fields, setFields] = useState(() => toFields(initialProfile))
   const [showErrors, setShowErrors] = useState(false)
@@ -94,6 +94,11 @@ export function ProfileForm({
     })
   }
 
+  const goalOptions = Object.entries(goalLabels).map(([goal, label]) => ({
+    value: goal,
+    label,
+  }))
+
   return (
     <form className="profile-form" aria-labelledby="profile-title" noValidate onSubmit={submit}>
       <div className="page-heading">
@@ -101,20 +106,29 @@ export function ProfileForm({
           <h1 id="profile-title" tabIndex={-1}>{messages.title}</h1>
           <p>{messages.subtitle}</p>
         </div>
-        <button className="secondary-button" type="button" onClick={() => {
-          setFields(toFields(example))
-          setShowErrors(false)
-        }}>{messages.fillExample}</button>
       </div>
 
       <div className="form-panel surface">
         <div className="form-fields">
           <div className="field field-full">
             <label htmlFor={`${id}-goal`}>{messages.goalLabel}</label>
-            <select {...control('goal')} onChange={event => change('goal', event.target.value)}>
-              <option disabled value="">{messages.goalPlaceholder}</option>
-              {Object.entries(goalLabels).map(([goal, label]) => <option key={goal} value={goal}>{label}</option>)}
-            </select>
+            <CustomSelect
+              {...control('goal')}
+              options={goalOptions}
+              placeholder={messages.goalPlaceholder}
+              onChange={val => change('goal', val)}
+            />
+            <div className="goal-pills" aria-hidden="true">
+              {goalOptions.map(opt => (
+                <span
+                  key={opt.value}
+                  className={`goal-pill ${fields.goal === opt.value ? 'goal-pill--active' : ''}`}
+                  onClick={() => change('goal', opt.value)}
+                >
+                  {opt.label}
+                </span>
+              ))}
+            </div>
             {fieldError('goal')}
           </div>
 

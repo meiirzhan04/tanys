@@ -444,7 +444,12 @@ test('kk/ru/en switching, empty recommendations, expired invite, and keyboard fo
     // 1. Demo flow: verify kk/ru/en preserve input and candidate IDs, and keyboard slot booking/cancel recovers focus
     await page.goto('/')
     await assertNoHorizontalOverflow(page)
-    await page.locator('.profile-form .secondary-button').click()
+    await page.locator('select[name="goal"]').selectOption('find_job')
+    await page.locator('input[name="role"]').fill('Backend-разработчик')
+    await page.locator('input[name="experience"]').fill('2')
+    await page.locator('input[name="skills"]').fill('Python, FastAPI, PostgreSQL')
+    await page.locator('input[name="interests"]').fill('API, Архитектура')
+    await page.locator('textarea[name="about"]').fill('Разрабатываю сервисы на Python и ищу команду.')
     await page.locator('form button[type="submit"]').click()
     await expect(page.locator('.result-card')).toHaveCount(5)
 

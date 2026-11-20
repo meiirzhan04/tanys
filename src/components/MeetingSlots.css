@@ -1,6 +1,6 @@
 .meeting-picker {
-  padding-top: 10px;
-  border-top: 1px solid var(--line, #d7dfea);
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
 }
 
 .meeting-picker__header,
@@ -9,8 +9,8 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .meeting-picker__title,
@@ -18,7 +18,7 @@
   margin: 0;
   font-size: 13px;
   font-weight: 700;
-  color: var(--ink, #16233a);
+  color: var(--ink);
 }
 
 .schedule-panel__title {
@@ -27,9 +27,9 @@
 }
 
 .schedule-panel__title:focus-visible {
-  outline: 2px solid var(--accent, #2255a0);
+  outline: 2px solid var(--accent);
   outline-offset: 3px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
 .schedule-panel__title:focus:not(:focus-visible) {
@@ -37,18 +37,31 @@
 }
 
 .meeting-picker__tz {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted, #4d5c73);
-  background: #edf3fc;
-  border-radius: 5px;
-  padding: 3px 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid rgba(255, 85, 0, 0.3);
+  border-radius: 7px;
+  padding: 4px 10px;
+}
+.meeting-picker__tz::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
 }
 
 .meeting-picker__slots {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
 }
 
 .meeting-slot-booked {
@@ -62,77 +75,87 @@
 .meeting-slot-btn,
 .meeting-slot-cancel {
   font: inherit;
+  font-family: var(--font-mono, inherit);
   font-size: 12px;
   font-weight: 650;
   line-height: 1.25;
-  min-height: 34px;
+  min-height: 36px;
   max-width: 100%;
   text-align: left;
   overflow-wrap: anywhere;
-  border-radius: 7px;
-  padding: 6px 10px;
-  border: 1px solid #d7dfea;
-  background: var(--paper, #fff);
-  color: #2255a0;
+  border-radius: 8px;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  background: var(--paper-subtle);
+  color: var(--ink);
 }
 
 .meeting-slot-btn:hover:not(:disabled) {
-  background: #edf3fc;
-  border-color: #9eb5d7;
+  background: var(--accent-soft);
+  border-color: rgba(255, 85, 0, 0.45);
+  color: var(--accent);
 }
 
 .meeting-slot-btn:focus-visible,
 .meeting-slot-cancel:focus-visible {
-  outline: 2px solid #2255a0;
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
 .meeting-slot-btn--booked {
-  background: #e0ebfc;
-  border-color: #9bb4d9;
-  color: var(--ink, #16233a);
+  background: var(--accent-soft);
+  border-color: rgba(255, 85, 0, 0.45);
+  color: var(--accent);
   cursor: default;
 }
 
 .meeting-slot-btn--conflict {
-  background: #f4f6fa;
-  border-color: var(--line, #d7dfea);
-  color: #5e6d83;
+  background: transparent;
+  border-color: var(--line);
+  color: var(--muted);
+  opacity: 0.55;
   cursor: not-allowed;
 }
 
 .meeting-slot-cancel {
-  border-color: #e0c8c8;
-  color: #7d3232;
-  background: #fff9f9;
+  border-color: rgba(239, 68, 68, 0.34);
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.12);
+}
+[data-theme='light'] .meeting-slot-cancel {
+  border-color: #fecaca;
+  color: #b91c1c;
+  background: #fef2f2;
 }
 
-.meeting-slot-cancel:hover {
-  background: #fbeeee;
+.meeting-slot-cancel:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.22);
 }
 
 .meeting-picker__empty,
 .schedule-panel__empty {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.45;
-  color: var(--muted, #4d5c73);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--muted);
 }
 
 .schedule-panel {
   margin-top: 0;
-  padding: clamp(16px, 2.4vw, 24px);
-  border: 1px solid var(--line, #d7dfea);
-  border-radius: 9px;
-  background: var(--paper, #fff);
+  padding: clamp(18px, 2.6vw, 26px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background-image: var(--card-glow);
+  background-color: var(--paper);
+  box-shadow: var(--card-shadow);
 }
 
 .schedule-panel__list {
   list-style: none;
-  margin: 10px 0 0;
+  margin: 14px 0 0;
   padding: 0;
   display: grid;
-  gap: 8px;
+  gap: 10px;
 }
 
 .schedule-panel__item {
@@ -140,20 +163,24 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  border: 1px solid #d7dfea;
+  gap: 12px;
+  padding: 12px 15px;
+  border: 1px solid var(--line);
   border-radius: 10px;
-  background: #f8fafd;
+  background: var(--paper-subtle);
 }
 
 .schedule-panel__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   align-items: baseline;
   min-width: 0;
   overflow-wrap: anywhere;
   font-size: 14px;
-  color: #16233a;
+  color: var(--ink);
+}
+.schedule-panel__meta strong {
+  font-family: var(--font-mono, inherit);
+  color: var(--accent);
 }

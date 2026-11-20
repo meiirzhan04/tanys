@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   isAccountRoute,
   isAdminRoute,
@@ -49,16 +49,84 @@ function resolveInitialTheme(): Theme {
 }
 
 const HEADER_EXTRA = {
-  ru: { toDark: 'Тёмная', toLight: 'Светлая' },
-  kk: { toDark: 'Қараңғы', toLight: 'Жарық' },
-  en: { toDark: 'Dark', toLight: 'Light' },
+  ru: { toDark: 'Тёмная тема', toLight: 'Светлая тема' },
+  kk: { toDark: 'Қараңғы тема', toLight: 'Жарық тема' },
+  en: { toDark: 'Dark theme', toLight: 'Light theme' },
 } as const
+
+const LOCALE_META: Record<Locale, { code: string; name: string }> = {
+  kk: { code: 'KZ', name: 'Қазақша' },
+  ru: { code: 'RU', name: 'Русский' },
+  en: { code: 'EN', name: 'English' },
+}
+
+function FlagSvg({ locale }: { locale: Locale }) {
+  if (locale === 'kk') {
+    return (
+      <svg className="flag-svg" width="18" height="13" viewBox="0 0 18 13" aria-hidden="true">
+        <rect width="18" height="13" rx="2.5" fill="#00AFCA" />
+        <circle cx="9.5" cy="6.5" r="2.7" fill="#FEC50C" />
+        <path d="M2.4 2.2v8.6" stroke="#FEC50C" strokeWidth="1.2" strokeLinecap="round" strokeDasharray="1.3 1.3" />
+      </svg>
+    )
+  }
+  if (locale === 'ru') {
+    return (
+      <svg className="flag-svg" width="18" height="13" viewBox="0 0 18 13" aria-hidden="true">
+        <rect width="18" height="4.34" fill="#FFFFFF" />
+        <rect y="4.33" width="18" height="4.34" fill="#0039A6" />
+        <rect y="8.66" width="18" height="4.34" fill="#D52B1E" />
+      </svg>
+    )
+  }
+  return (
+    <svg className="flag-svg" width="18" height="13" viewBox="0 0 18 13" aria-hidden="true">
+      <rect width="18" height="13" rx="2.5" fill="#012169" />
+      <path d="M0 0L18 13M18 0L0 13" stroke="#FFFFFF" strokeWidth="2.2" />
+      <path d="M0 0L18 13M18 0L0 13" stroke="#C8102E" strokeWidth="1.1" />
+      <path d="M9 0V13M0 6.5H18" stroke="#FFFFFF" strokeWidth="3.4" />
+      <path d="M9 0V13M0 6.5H18" stroke="#C8102E" strokeWidth="2" />
+    </svg>
+  )
+}
+
+function TanysLogoMark({ size = 30 }: { size?: number }) {
+  return (
+    <svg
+      className="tanys-logo-svg"
+      width={size}
+      height={size}
+      viewBox="0 0 40 40"
+      fill="none"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="tanysFlame" x1="4" y1="4" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#FF7A2F" />
+          <stop offset="55%" stopColor="#FF5500" />
+          <stop offset="100%" stopColor="#C83800" />
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="36" height="36" rx="10" fill="url(#tanysFlame)" />
+      <path
+        d="M11.5 13.5H28.5M20 13.5V28.5M13.5 23.5L20 18.5L26.5 23.5"
+        stroke="#FFFFFF"
+        strokeWidth="2.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="11.5" cy="13.5" r="2.1" fill="#FFFFFF" />
+      <circle cx="28.5" cy="13.5" r="2.1" fill="#FFFFFF" />
+      <circle cx="20" cy="28.5" r="2.1" fill="#FFFFFF" />
+    </svg>
+  )
+}
 
 const GCORE_HERO_COPY = {
   ru: {
-    pill: '✦ Tanys Networking Engine',
-    headline: 'Exact 1:1 Matches at Live Tech Events',
-    subhead: 'Алгоритмический подбор собеседников по целям, стеку, опыту и свободным 20-минутным слотам.',
+    pill: '✦ Добро пожаловать в Tanys',
+    headline: 'Умный 1:1 нетворкинг для живых IT-митапов',
+    subhead: 'Алгоритм соединяет инженеров, тимлидов, менторов и фаундеров по целям, стеку и свободным 20-минутным слотам.',
     nodes: [
       { code: '1:1', label: 'Слоты 20 мин' },
       { code: 'QR', label: 'Инвайт-пропуск' },
@@ -67,11 +135,16 @@ const GCORE_HERO_COPY = {
       { code: 'TG', label: 'Обмен контактом' },
       { code: 'EXP', label: 'Стенды и темы' },
     ],
+    pillars: [
+      { step: '01', title: 'Точный подбор по целям', desc: 'Поиск работы, найм, менторство, поиск кофаундера или обмен опытом без случайных анкет.' },
+      { step: '02', title: 'Слоты встреч по 20 минут', desc: 'Бронирование общих свободных окон в один клик с защитой от пересечений в расписании.' },
+      { step: '03', title: 'QR-пропуск и приватность', desc: 'Мгновенный вход в событие по QR-коду организатора; личный контакт открывается только взаимно.' },
+    ],
   },
   kk: {
-    pill: '✦ Tanys Networking Engine',
-    headline: 'Exact 1:1 Matches at Live Tech Events',
-    subhead: 'Мақсат, стек, тәжірибе және бос 20 минуттық уақыт слоттары бойынша дәл серіктес таңдау.',
+    pill: '✦ Tanys платформасына қош келдіңіз',
+    headline: 'IT-митаптар мен конференцияларға арналған 1:1 нетворкинг',
+    subhead: 'Алгоритм инженерлерді, тимлидтерді, менторлар мен фаундерлерді мақсат, стек және 20 минуттық слоттар бойынша байланыстырады.',
     nodes: [
       { code: '1:1', label: '20 мин слоттар' },
       { code: 'QR', label: 'Шақыру рұқсаты' },
@@ -80,11 +153,16 @@ const GCORE_HERO_COPY = {
       { code: 'TG', label: 'Контакт алмасу' },
       { code: 'EXP', label: 'Стендтер картасы' },
     ],
+    pillars: [
+      { step: '01', title: 'Мақсат бойынша дәл сәйкестік', desc: 'Жұмыс табу, маман жалдау, менторлық, кофаундер іздеу және тәжірибе алмасу.' },
+      { step: '02', title: '20 минуттық дайын слоттар', desc: 'Ортақ бос уақытты бір батырмамен брондау және кесте қақтығыстарын болдырмау.' },
+      { step: '03', title: 'QR-рұқсат және құпиялылық', desc: 'Ұйымдастырушы QR-кодымен жылдам кіру; жеке контакт тек өзара келісіммен ашылады.' },
+    ],
   },
   en: {
-    pill: '✦ Tanys Networking Engine',
-    headline: 'Exact 1:1 Matches at Live Tech Events',
-    subhead: 'High-precision attendee matching across goals, engineering stack, seniority, and 20-minute slots.',
+    pill: '✦ Welcome to Tanys',
+    headline: 'Precision 1:1 Networking for Live Tech Events',
+    subhead: 'Algorithmic matching connecting engineers, hiring leads, mentors, and founders by goals, stack, and 20-minute slots.',
     nodes: [
       { code: '1:1', label: '20-min slots' },
       { code: 'QR', label: 'Instant pass' },
@@ -92,6 +170,11 @@ const GCORE_HERO_COPY = {
       { code: '6×', label: 'Goal alignment' },
       { code: 'TG', label: 'Contact reveal' },
       { code: 'EXP', label: 'Partner booths' },
+    ],
+    pillars: [
+      { step: '01', title: 'Goal-aligned matching', desc: 'Job search, hiring, mentorship, cofounder discovery, and peer engineering exchange.' },
+      { step: '02', title: '20-minute conflict-free slots', desc: 'One-click booking across shared open time windows with automatic conflict prevention.' },
+      { step: '03', title: 'QR event pass & mutual privacy', desc: 'Scan an organizer QR pass to join; personal contacts unlock only on mutual acceptance.' },
     ],
   },
 } as const
@@ -122,6 +205,8 @@ export default function App() {
     if (typeof document !== 'undefined') document.documentElement.dataset.theme = initial
     return initial
   })
+  const [langOpen, setLangOpen] = useState(false)
+  const langRef = useRef<HTMLDivElement>(null)
   const [exitRequestSeq, setExitRequestSeq] = useState(0)
   const [locale, setLocale] = useState<Locale>(() => {
     const initial = resolveInitialLocale()
@@ -147,6 +232,17 @@ export default function App() {
   }, [theme])
 
   useEffect(() => {
+    if (!langOpen) return
+    function onDocMouseDown(event: MouseEvent) {
+      if (langRef.current && !langRef.current.contains(event.target as Node)) {
+        setLangOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDocMouseDown)
+    return () => document.removeEventListener('mousedown', onDocMouseDown)
+  }, [langOpen])
+
+  useEffect(() => {
     if (mode !== 'account') return
     saveAccountModePreference(true)
     syncAccountLocationUrl(true)
@@ -161,6 +257,7 @@ export default function App() {
     setLocale(nextLocale)
     saveLocalePreference(nextLocale)
     setSession(current => current && localizeRecommendationSession(current, nextLocale))
+    setLangOpen(false)
   }
 
   function handleEditProfile() {
@@ -196,6 +293,7 @@ export default function App() {
 
   const extra = HEADER_EXTRA[locale]
   const hero = GCORE_HERO_COPY[locale]
+  const activeLocaleMeta = LOCALE_META[locale]
 
   function exitAdminToHome() {
     if (typeof window !== 'undefined' && window.history?.replaceState) {
@@ -209,15 +307,83 @@ export default function App() {
       <div className="gcore-flare" aria-hidden="true" />
       <header className="site-header">
         <div className="site-width header-inner">
-          <span className="brand"><span className="brand-mark" aria-hidden="true">T</span>Tanys</span>
-          <span className="header-context">{messages.header.context}</span>
+          <span className="brand">
+            <TanysLogoMark size={30} />
+            <span className="brand-word">Tanys</span>
+            <span className="brand-tag" aria-hidden="true">1:1</span>
+          </span>
+
           <div className="header-actions">
             <button
               type="button"
               className="header-theme-btn"
+              aria-label={theme === 'dark' ? extra.toLight : extra.toDark}
+              title={theme === 'dark' ? extra.toLight : extra.toDark}
               aria-pressed={theme === 'dark'}
               onClick={() => setTheme(current => (current === 'dark' ? 'light' : 'dark'))}
-            >{theme === 'dark' ? extra.toLight : extra.toDark}</button>
+            >
+              {theme === 'dark' ? (
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.9" />
+                  <path
+                    d="M12 2.5V5M12 19V21.5M4.9 4.9L6.7 6.7M17.3 17.3L19.1 19.1M2.5 12H5M19 12H21.5M4.9 19.1L6.7 17.3M17.3 6.7L19.1 4.9"
+                    stroke="currentColor"
+                    strokeWidth="1.9"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              ) : (
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path
+                    d="M20.4 14.8A8.5 8.5 0 0 1 9.2 3.6a8.5 8.5 0 1 0 11.2 11.2Z"
+                    stroke="currentColor"
+                    strokeWidth="1.9"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              )}
+            </button>
+
+            <div
+              ref={langRef}
+              className={`lang-switcher ${langOpen ? 'lang-switcher--open' : ''}`}
+              role="group"
+              aria-label={messages.languageSwitcherLabel}
+            >
+              <span
+                className="lang-switcher__trigger"
+                aria-hidden="true"
+                onClick={() => setLangOpen(current => !current)}
+              >
+                <FlagSvg locale={locale} />
+                <span className="lang-switcher__code">{activeLocaleMeta.code}</span>
+                <svg className="lang-switcher__caret" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+
+              <div className="lang-switcher__menu">
+                {SUPPORTED_LOCALES.map(item => {
+                  const meta = LOCALE_META[item.code]
+                  return (
+                    <button
+                      key={item.code}
+                      type="button"
+                      lang={item.code}
+                      aria-label={item.label}
+                      aria-pressed={locale === item.code}
+                      onClick={() => handleLocaleChange(item.code)}
+                    >
+                      <FlagSvg locale={item.code} />
+                      <span className="lang-option__code">{meta.code}</span>
+                      <span className="lang-option__label">{item.shortLabel}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
             <button
               type="button"
               className="header-link-btn"
@@ -231,18 +397,6 @@ export default function App() {
                 }
               }}
             >{mode === 'account' ? messages.account.backToDemo : messages.account.openAccount}</button>
-            <div className="lang-switcher" role="group" aria-label={messages.languageSwitcherLabel}>
-              {SUPPORTED_LOCALES.map(item => (
-                <button
-                  key={item.code}
-                  type="button"
-                  lang={item.code}
-                  aria-label={item.label}
-                  aria-pressed={locale === item.code}
-                  onClick={() => handleLocaleChange(item.code)}
-                >{item.shortLabel}</button>
-              ))}
-            </div>
           </div>
         </div>
       </header>
@@ -288,10 +442,15 @@ export default function App() {
             <div hidden={view !== 'profile'}>
               <div className="gcore-hero surface" aria-hidden="true">
                 <div className="gcore-hero__top">
+                  <div className="welcome-emblem">
+                    <span className="welcome-emblem__ring" />
+                    <TanysLogoMark size={46} />
+                  </div>
                   <span className="gcore-pill">{hero.pill}</span>
                   <strong className="gcore-hero__title">{hero.headline}</strong>
                   <p className="gcore-hero__sub">{hero.subhead}</p>
                 </div>
+
                 <div className="gcore-circuit">
                   <svg className="gcore-circuit__svg" viewBox="0 0 760 210" fill="none" preserveAspectRatio="none">
                     <path className="trace-base" d="M120 42 H270 L320 92 H380" />
@@ -316,7 +475,7 @@ export default function App() {
                     ))}
                   </div>
                   <div className="gcore-chip">
-                    <span className="gcore-chip__core">AI · 1:1</span>
+                    <TanysLogoMark size={34} />
                     <span className="gcore-chip__sub">TANYS</span>
                   </div>
                   <div className="gcore-nodes-col gcore-nodes-col--right">
@@ -327,6 +486,16 @@ export default function App() {
                       </div>
                     ))}
                   </div>
+                </div>
+
+                <div className="welcome-pillars">
+                  {hero.pillars.map(p => (
+                    <div key={p.step} className="welcome-pillar">
+                      <span className="welcome-pillar__step">{p.step}</span>
+                      <strong>{p.title}</strong>
+                      <p>{p.desc}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
               <ProfileForm onSubmit={submit} example={sampleProfile} locale={locale} />
