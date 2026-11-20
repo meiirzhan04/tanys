@@ -2,3 +2,6 @@ node_modules/
 dist/
 *.local
 test-results/
+deploy/.env.staging
+deploy/.env.production
+deploy/.last_good_release.*
