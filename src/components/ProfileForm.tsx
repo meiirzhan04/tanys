@@ -59,55 +59,60 @@ export function ProfileForm({ initialProfile, onSubmit, example }: ProfileFormPr
   }
 
   return (
-    <form className="profile-form surface" aria-labelledby="profile-title" onSubmit={submit}>
-      <div className="form-heading">
-        <h2 id="profile-title">Ваш профиль</h2>
-        <button className="text-button" type="button" onClick={event => {
+    <form className="profile-form" aria-labelledby="profile-title" onSubmit={submit}>
+      <div className="page-heading">
+        <div>
+          <h1 id="profile-title">Анкета участника</h1>
+          <p>Укажите цель знакомства, навыки и интересы для подбора.</p>
+        </div>
+        <button className="secondary-button" type="button" onClick={event => {
           const controls = event.currentTarget.form?.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('input, textarea')
           controls?.forEach(control => control.setCustomValidity(''))
           setFields(toFields(example))
-        }}>Заполнить пример <span aria-hidden="true">↗</span></button>
+        }}>Заполнить пример</button>
       </div>
 
-      <div className="form-fields">
-        <label className="field field-full">
-          <span>Цель знакомства</span>
-          <select required value={fields.goal} onChange={event => change('goal', event.target.value)}>
-            <option disabled value="">Выберите цель</option>
-            {Object.entries(goalLabels).map(([goal, label]) => <option key={goal} value={goal}>{label}</option>)}
-          </select>
-        </label>
+      <div className="form-panel surface">
+        <div className="form-fields">
+          <label className="field field-full">
+            <span>Цель знакомства</span>
+            <select required value={fields.goal} onChange={event => change('goal', event.target.value)}>
+              <option disabled value="">Выберите цель</option>
+              {Object.entries(goalLabels).map(([goal, label]) => <option key={goal} value={goal}>{label}</option>)}
+            </select>
+          </label>
 
-        <label className="field">
-          <span>Роль</span>
-          <input required maxLength={80} placeholder="Например, Backend-разработчик" value={fields.role} onInput={validateText} onChange={event => change('role', event.target.value)} />
-        </label>
-        <label className="field">
-          <span>Опыт в годах</span>
-          <input required type="number" min={0} max={60} placeholder="0" value={fields.experience} onChange={event => change('experience', event.target.value)} />
-        </label>
-        <label className="field">
-          <span>Стек и навыки</span>
-          <input name="skills" required maxLength={160} placeholder="Python, FastAPI, PostgreSQL" value={fields.skills} onInput={validateText} onChange={event => change('skills', event.target.value)} />
-        </label>
-        <label className="field">
-          <span>Интересы</span>
-          <input name="interests" required maxLength={160} placeholder="Стартапы, API, DevOps" value={fields.interests} onInput={validateText} onChange={event => change('interests', event.target.value)} />
-        </label>
+          <label className="field">
+            <span>Роль</span>
+            <input required maxLength={80} placeholder="Например, Backend-разработчик" value={fields.role} onInput={validateText} onChange={event => change('role', event.target.value)} />
+          </label>
+          <label className="field">
+            <span>Опыт в годах</span>
+            <input required type="number" min={0} max={60} placeholder="0" value={fields.experience} onChange={event => change('experience', event.target.value)} />
+          </label>
+          <label className="field">
+            <span>Стек и навыки</span>
+            <input name="skills" required maxLength={160} placeholder="Python, FastAPI, PostgreSQL" value={fields.skills} onInput={validateText} onChange={event => change('skills', event.target.value)} />
+          </label>
+          <label className="field">
+            <span>Интересы</span>
+            <input name="interests" required maxLength={160} placeholder="Стартапы, API, DevOps" value={fields.interests} onInput={validateText} onChange={event => change('interests', event.target.value)} />
+          </label>
 
-        {showLookingFor && <label className="field field-full">
-          <span>Какие навыки ищете <small>необязательно</small></span>
-          <input maxLength={160} placeholder="Например, React, продажи" value={fields.lookingFor} onChange={event => change('lookingFor', event.target.value)} />
-        </label>}
+          {showLookingFor && <label className="field field-full">
+            <span>Какие навыки ищете <small>необязательно</small></span>
+            <input maxLength={160} placeholder="Например, React, продажи" value={fields.lookingFor} onChange={event => change('lookingFor', event.target.value)} />
+          </label>}
 
-        <label className="field field-full">
-          <span>О себе</span>
-          <textarea required rows={2} maxLength={400} placeholder="Что вы делаете и о чём хотите поговорить?" value={fields.about} onInput={validateText} onChange={event => change('about', event.target.value)} />
-        </label>
-      </div>
-      <div className="form-footer">
-        <button type="submit" className="primary-button">Найти людей <span aria-hidden="true">→</span></button>
-        <span>Анкета остаётся в этой вкладке.</span>
+          <label className="field field-full">
+            <span>О себе</span>
+            <textarea required rows={2} maxLength={400} placeholder="Что вы делаете и о чём хотите поговорить?" value={fields.about} onInput={validateText} onChange={event => change('about', event.target.value)} />
+          </label>
+        </div>
+        <div className="form-footer">
+          <button type="submit" className="primary-button">Найти участников</button>
+          <span>Анкета остаётся в этой вкладке.</span>
+        </div>
       </div>
     </form>
   )
