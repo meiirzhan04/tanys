@@ -23,6 +23,7 @@ SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/.env.$ENV_NAME"
 COMPOSE_FILE="$SCRIPT_DIR/compose.deploy.yaml"
 STATE_FILE="$SCRIPT_DIR/.last_good_release.$ENV_NAME"
+CURRENT_FILE="$SCRIPT_DIR/.current_release.$ENV_NAME"
 
 if [ ! -f "$ENV_FILE" ]; then
   echo "Missing env file: $ENV_FILE (copy from .env.$ENV_NAME.example)" >&2
@@ -54,7 +55,11 @@ if [ -z "$TARGET_TAG" ]; then
   exit 2
 fi
 
-PREVIOUS_TAG="${RELEASE_TAG:-}"
+if [ -f "$CURRENT_FILE" ]; then
+  PREVIOUS_TAG="$(cat "$CURRENT_FILE")"
+else
+  PREVIOUS_TAG="${RELEASE_TAG:-}"
+fi
 
 apply_release() {
   TAG="$1"
@@ -83,13 +88,16 @@ if apply_release "$TARGET_TAG"; then
   if [ "$ACTION" = "deploy" ] && [ -n "$PREVIOUS_TAG" ] && [ "$PREVIOUS_TAG" != "$TARGET_TAG" ]; then
     printf '%s\n' "$PREVIOUS_TAG" > "$STATE_FILE"
   fi
+  printf '%s\n' "$TARGET_TAG" > "$CURRENT_FILE"
   echo "[$ENV_NAME] Release $TARGET_TAG active at https://$APP_DOMAIN"
   exit 0
 fi
 
 if [ "$ACTION" = "deploy" ] && [ -n "$PREVIOUS_TAG" ] && [ "$PREVIOUS_TAG" != "$TARGET_TAG" ]; then
   echo "[$ENV_NAME] Attempting automatic rollback to $PREVIOUS_TAG" >&2
-  apply_release "$PREVIOUS_TAG"
+  if apply_release "$PREVIOUS_TAG"; then
+    printf '%s\n' "$PREVIOUS_TAG" > "$CURRENT_FILE"
+  fi
 fi
 
 exit 1
