@@ -2,8 +2,9 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type { IntroductionStatus, ReportReason } from '../api/client'
 import { getMessages } from '../i18n/messages'
 import type { Feedback } from '../matching/session'
-import type { Goal, Locale, Recommendation } from '../matching/types'
+import type { Locale, Recommendation } from '../matching/types'
 import type { MeetingBooking } from '../scheduling/slots'
+import { getCandidateGoalLabels } from './goalLabels'
 import { CandidateMeetingPicker } from './MeetingSlots'
 import { RecommendationFeedback } from './RecommendationFeedback'
 import type { ResultsProps } from './props'
@@ -12,51 +13,6 @@ type FeedbackHandler = (id: string, response: Feedback) => void
 type BookSlotHandler = (candidate: { id: string; name: string; role?: string }, slotId: string) => void
 type CancelSlotHandler = (slotId: string) => void
 type CopyState = '' | 'copied' | 'fallback'
-
-const CANDIDATE_GOAL_BADGES: Record<Locale, Record<Goal, string>> = {
-  ru: {
-    find_job: 'Ищет работу',
-    hire: 'Нанимает',
-    find_mentor: 'Ищет ментора',
-    be_mentor: 'Готов менторить',
-    find_cofounder: 'Ищет кофаундера',
-    exchange_experience: 'Обменивается опытом',
-  },
-  kk: {
-    find_job: 'Жұмыс іздейді',
-    hire: 'Маман жалдайды',
-    find_mentor: 'Ментор іздейді',
-    be_mentor: 'Ментор болуға дайын',
-    find_cofounder: 'Кофаундер іздейді',
-    exchange_experience: 'Тәжірибе алмасады',
-  },
-  en: {
-    find_job: 'Looking for a role',
-    hire: 'Hiring',
-    find_mentor: 'Looking for a mentor',
-    be_mentor: 'Open to mentoring',
-    find_cofounder: 'Looking for a cofounder',
-    exchange_experience: 'Peer knowledge exchange',
-  },
-}
-
-const EMPTY_RESULTS_ADVICE: Record<Locale, { body: string; refresh: string; refreshing: string }> = {
-  ru: {
-    body: 'Уточните стек и навыки, искомые компетенции или интересы в анкете, чтобы найти больше подходящих собеседников.',
-    refresh: 'Обновить',
-    refreshing: 'Обновляем…',
-  },
-  kk: {
-    body: 'Лайықты қатысушыларды көбірек табу үшін анкетадағы стек пен дағдыларды, іздеген құзыреттерді немесе қызығушылықтарды нақтылаңыз.',
-    refresh: 'Жаңарту',
-    refreshing: 'Жаңартылуда…',
-  },
-  en: {
-    body: 'Refine your skills, target competencies, or interests in your profile to broaden matching.',
-    refresh: 'Refresh',
-    refreshing: 'Refreshing…',
-  },
-}
 
 interface RecommendationCardProps {
   recommendation: Recommendation
@@ -95,7 +51,7 @@ function RecommendationCard({
   const t = getMessages(locale).results
   const social = getMessages(locale).social
   const mod = getMessages(locale).moderation
-  const goalBadges = CANDIDATE_GOAL_BADGES[locale]
+  const goalBadges = getCandidateGoalLabels(locale)
 
   async function copyPhrase() {
     if (!icebreaker) return
@@ -268,7 +224,6 @@ export function RecommendationResults({
   locale?: Locale
 }) {
   const t = getMessages(locale).results
-  const advice = EMPTY_RESULTS_ADVICE[locale]
   const listRef = useRef<HTMLDivElement>(null)
   const pendingFocusIndexRef = useRef<number | null>(null)
 
@@ -304,7 +259,7 @@ export function RecommendationResults({
               className="secondary-button results-refresh-btn"
               disabled={refreshing}
               onClick={onRefresh}
-            >{refreshing ? advice.refreshing : advice.refresh}</button>
+            >{refreshing ? t.refreshing : t.refresh}</button>
           )}
           <button type="button" className="secondary-button" onClick={onEdit}>{t.editProfile}</button>
         </div>
@@ -331,7 +286,7 @@ export function RecommendationResults({
         ))}
       </div> : <div className="surface empty-state">
         <h2>{t.emptyTitle}</h2>
-        <p>{advice.body}</p>
+        <p>{t.emptyBody}</p>
         <div className="empty-state__actions">
           <button type="button" className="primary-button" onClick={onEdit}>{t.editProfile}</button>
           {onRefresh && (
@@ -340,7 +295,7 @@ export function RecommendationResults({
               className="secondary-button results-refresh-btn"
               disabled={refreshing}
               onClick={onRefresh}
-            >{refreshing ? advice.refreshing : advice.refresh}</button>
+            >{refreshing ? t.refreshing : t.refresh}</button>
           )}
         </div>
       </div>}

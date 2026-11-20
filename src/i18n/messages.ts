@@ -35,6 +35,7 @@ export interface Messages {
     emptyBody: string
   }
   goals: Record<Goal, string>
+  candidateGoals: Record<Goal, string>
   form: {
     title: string
     subtitle: string
@@ -49,8 +50,11 @@ export interface Messages {
     interestsLabel: string
     interestsPlaceholder: string
     lookingForLabel: string
+    findJobLookingForLabel: string
     optional: string
     lookingForPlaceholder: string
+    findJobLookingForPlaceholder: string
+    hireLookingForHint: string
     aboutLabel: string
     aboutPlaceholder: string
     submit: string
@@ -67,6 +71,8 @@ export interface Messages {
   results: {
     title: string
     editProfile: string
+    refresh: string
+    refreshing: string
     count: (count: number) => string
     feedbackSaved: (count: number) => string
     partialMatches: (count: number) => string
@@ -139,6 +145,7 @@ export interface Messages {
     visibilityNotice: string
     visibilityStatusVisible: string
     visibilityStatusHidden: string
+    hiddenProfileWarning: string
     consentLabel: string
     saveProfile: string
     savingProfile: string
@@ -359,6 +366,14 @@ export const messagesByLocale: Record<Locale, Messages> = {
       find_cofounder: 'Найти кофаундера',
       exchange_experience: 'Обменяться опытом',
     },
+    candidateGoals: {
+      find_job: 'Ищет работу',
+      hire: 'Нанимает',
+      find_mentor: 'Ищет ментора',
+      be_mentor: 'Готов менторить',
+      find_cofounder: 'Ищет кофаундера',
+      exchange_experience: 'Обменивается опытом',
+    },
     form: {
       title: 'Анкета участника',
       subtitle: 'Укажите цель знакомства, навыки и интересы для подбора.',
@@ -373,8 +388,11 @@ export const messagesByLocale: Record<Locale, Messages> = {
       interestsLabel: 'Интересы',
       interestsPlaceholder: 'Стартапы, API, DevOps',
       lookingForLabel: 'Какие навыки ищете',
+      findJobLookingForLabel: 'Желаемая роль или стек',
       optional: 'необязательно',
       lookingForPlaceholder: 'Например, React, продажи',
+      findJobLookingForPlaceholder: 'Backend, Python, FastAPI, стажировка',
+      hireLookingForHint: 'Укажите роль или стек, который ищете (например: Backend, Go, PostgreSQL), чтобы найти подходящих кандидатов.',
       aboutLabel: 'О себе',
       aboutPlaceholder: 'Что вы делаете и о чём хотите поговорить?',
       submit: 'Найти участников',
@@ -391,6 +409,8 @@ export const messagesByLocale: Record<Locale, Messages> = {
     results: {
       title: 'Рекомендации',
       editProfile: 'Изменить анкету',
+      refresh: 'Обновить',
+      refreshing: 'Обновляем…',
       count: count => `Рекомендаций · ${count}`,
       feedbackSaved: count => `Отметка сохранена. Рекомендаций · ${count}`,
       partialMatches: count => `Показаны все доступные совпадения · ${count} из 5`,
@@ -404,7 +424,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       copied: 'Скопировано',
       copyFallback: 'Выделите и скопируйте текст вручную.',
       emptyTitle: 'Список рекомендаций пуст',
-      emptyBody: 'Измените цель знакомства, чтобы найти других участников.',
+      emptyBody: 'Уточните стек и навыки, искомые компетенции или интересы в анкете, чтобы найти больше подходящих собеседников.',
     },
     feedback: {
       groupLabel: name => `Отзыв о рекомендации — ${name}`,
@@ -463,6 +483,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       visibilityNotice: 'Вашу анкету (имя, роль, навыки, интересы, цель и «О себе») видят только участники этого мероприятия после того, как вы включите показ профиля. Вы можете скрыть анкету или выйти из мероприятия в любой момент.',
       visibilityStatusVisible: 'Видно только участникам этого мероприятия',
       visibilityStatusHidden: 'Скрыто — вы не отображаетесь в выдаче',
+      hiddenProfileWarning: 'Анкета сейчас скрыта: другие участники не увидят вас в рекомендациях, пока вы не включите «Показывать мою анкету участникам этого мероприятия».',
       consentLabel: 'Продолжая, я соглашаюсь на обработку данных моей анкеты для подбора собеседников и встреч 1:1 в рамках этого мероприятия (версия правил v1). Анкета и аккаунт удаляются в настройках профиля или по обращению к оператору; данные закрытого мероприятия очищаются через 30 дней.',
       saveProfile: 'Сохранить и перейти к подбору',
       savingProfile: 'Сохраняем анкету…',
@@ -681,6 +702,14 @@ export const messagesByLocale: Record<Locale, Messages> = {
       find_cofounder: 'Кофаундер табу',
       exchange_experience: 'Тәжірибе алмасу',
     },
+    candidateGoals: {
+      find_job: 'Жұмыс іздейді',
+      hire: 'Маман жалдайды',
+      find_mentor: 'Ментор іздейді',
+      be_mentor: 'Ментор болуға дайын',
+      find_cofounder: 'Кофаундер іздейді',
+      exchange_experience: 'Тәжірибе алмасады',
+    },
     form: {
       title: 'Қатысушы анкетасы',
       subtitle: 'Іріктеу үшін танысу мақсатын, дағдыларыңыз бен қызығушылықтарыңызды көрсетіңіз.',
@@ -688,15 +717,18 @@ export const messagesByLocale: Record<Locale, Messages> = {
       goalLabel: 'Танысу мақсаты',
       goalPlaceholder: 'Мақсатты таңдаңыз',
       roleLabel: 'Рөл',
-      rolePlaceholder: 'Мысалы, Backend-разработчик',
+      rolePlaceholder: 'Мысалы, Backend-әзірлеуші',
       experienceLabel: 'Тәжірибе (жыл)',
       skillsLabel: 'Стек және дағдылар',
       skillsPlaceholder: 'Python, FastAPI, PostgreSQL',
       interestsLabel: 'Қызығушылықтар',
       interestsPlaceholder: 'Стартаптар, API, DevOps',
       lookingForLabel: 'Қандай дағдылар іздейсіз',
+      findJobLookingForLabel: 'Қалаған рөл немесе стек',
       optional: 'міндетті емес',
       lookingForPlaceholder: 'Мысалы, React, сатылым',
+      findJobLookingForPlaceholder: 'Backend, Python, FastAPI, тағылымдама',
+      hireLookingForHint: 'Лайықты кандидаттарды табу үшін іздеген рөлді немесе стекті көрсетіңіз (мысалы: Backend, Go, PostgreSQL).',
       aboutLabel: 'Өзіңіз туралы',
       aboutPlaceholder: 'Не істейсіз және не туралы сөйлескіңіз келеді?',
       submit: 'Қатысушыларды табу',
@@ -713,6 +745,8 @@ export const messagesByLocale: Record<Locale, Messages> = {
     results: {
       title: 'Ұсыныстар',
       editProfile: 'Анкетаны өзгерту',
+      refresh: 'Жаңарту',
+      refreshing: 'Жаңартылуда…',
       count: count => `Ұсыныстар · ${count}`,
       feedbackSaved: count => `Белгі сақталды. Ұсыныстар · ${count}`,
       partialMatches: count => `Барлық қолжетімді сәйкестіктер көрсетілді · 5-тен ${count}`,
@@ -726,7 +760,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       copied: 'Көшірілді',
       copyFallback: 'Мәтінді қолмен белгілеп көшіріңіз.',
       emptyTitle: 'Ұсыныстар тізімі бос',
-      emptyBody: 'Басқа қатысушыларды табу үшін танысу мақсатын өзгертіп көріңіз.',
+      emptyBody: 'Лайықты қатысушыларды көбірек табу үшін анкетадағы стек пен дағдыларды, іздеген құзыреттерді немесе қызығушылықтарды нақтылаңыз.',
     },
     feedback: {
       groupLabel: name => `Ұсыныс бойынша пікір — ${name}`,
@@ -785,6 +819,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       visibilityNotice: 'Сауалнамаңызды (атыңыз, рөліңіз, дағдыларыңыз, қызығушылықтарыңыз, мақсатыңыз және «Өзім туралы») профильді көрсетуді қосқаннан кейін тек осы іс-шараның қатысушылары ғана көреді. Профильді кез келген уақытта жасыруға немесе іс-шарадан шығуға болады.',
       visibilityStatusVisible: 'Тек осы іс-шара қатысушыларына көрінеді',
       visibilityStatusHidden: 'Жасырын — іріктеуде көрсетілмейсіз',
+      hiddenProfileWarning: 'Анкета қазір жасырын: «Менің анкетамды осы іс-шара қатысушыларына көрсету» белгісін қоспайынша, басқа қатысушылар сізді ұсыныстардан көрмейді.',
       consentLabel: 'Жалғастыра отырып, осы іс-шара аясында сұхбаттасушыларды іріктеу және 1:1 кездесулерді жоспарлау үшін сауалнама деректерімді өңдеуге келісемін (ереже нұсқасы v1). Профиль мен аккаунтты баптауларда немесе операторға жүгініп өшіруге болады; аяқталған іс-шара деректері 30 күннен кейін тазаланады.',
       saveProfile: 'Сақтау және ұсыныстарға өту',
       savingProfile: 'Анкета сақталуда…',
@@ -1003,6 +1038,14 @@ export const messagesByLocale: Record<Locale, Messages> = {
       find_cofounder: 'Find a cofounder',
       exchange_experience: 'Exchange experience',
     },
+    candidateGoals: {
+      find_job: 'Looking for a job',
+      hire: 'Hiring',
+      find_mentor: 'Looking for a mentor',
+      be_mentor: 'Open to mentoring',
+      find_cofounder: 'Looking for a cofounder',
+      exchange_experience: 'Exchanging experience',
+    },
     form: {
       title: 'Participant profile',
       subtitle: 'Share your networking goal, skills, and interests to get matched.',
@@ -1017,8 +1060,11 @@ export const messagesByLocale: Record<Locale, Messages> = {
       interestsLabel: 'Interests',
       interestsPlaceholder: 'Startups, API, DevOps',
       lookingForLabel: 'Skills you are looking for',
+      findJobLookingForLabel: 'Target role or stack',
       optional: 'optional',
       lookingForPlaceholder: 'e.g. React, sales',
+      findJobLookingForPlaceholder: 'Backend, Python, FastAPI, internship',
+      hireLookingForHint: 'Specify the role or stack you are hiring for (e.g., Backend, Go, PostgreSQL) to match relevant candidates.',
       aboutLabel: 'About',
       aboutPlaceholder: 'What do you work on and what would you like to discuss?',
       submit: 'Find people',
@@ -1035,6 +1081,8 @@ export const messagesByLocale: Record<Locale, Messages> = {
     results: {
       title: 'Matches',
       editProfile: 'Edit profile',
+      refresh: 'Refresh',
+      refreshing: 'Refreshing…',
       count: count => `Matches · ${count}`,
       feedbackSaved: count => `Feedback saved. Matches · ${count}`,
       partialMatches: count => `Showing all available matches · ${count} of 5`,
@@ -1048,7 +1096,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       copied: 'Copied',
       copyFallback: 'Select and copy the text manually.',
       emptyTitle: 'No matches found',
-      emptyBody: 'Try changing your networking goal to discover other participants.',
+      emptyBody: 'Refine your skills, target competencies, or interests in your profile to broaden matching.',
     },
     feedback: {
       groupLabel: name => `Match feedback — ${name}`,
@@ -1107,6 +1155,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       visibilityNotice: "Your profile (name, role, skills, interests, goal, and 'About') is shown only to participants of this event once you turn profile visibility on. You can hide your profile or leave the event at any time.",
       visibilityStatusVisible: 'Visible only to participants of this event',
       visibilityStatusHidden: 'Hidden — not shown in matches',
+      hiddenProfileWarning: 'Your profile is currently hidden: other participants will not see you in matches until you enable "Show my profile to participants of this event".',
       consentLabel: 'By continuing, I agree to the processing of my profile data for matchmaking and 1:1 meeting scheduling within this event (policy v1). You can delete your profile and account in settings or via the operator contact; closed event data is purged after 30 days.',
       saveProfile: 'Save & view matches',
       savingProfile: 'Saving profile…',

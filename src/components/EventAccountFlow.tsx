@@ -37,35 +37,6 @@ import { PartnerBooths } from './PartnerBooths'
 const OrganizerCabinet = lazy(() =>
   import('./OrganizerCabinet').then(m => ({ default: m.OrganizerCabinet })),
 )
-
-const ACCOUNT_UX_COPY: Record<
-  Locale,
-  {
-    findJobLabel: string
-    findJobPlaceholder: string
-    hrHint: string
-    hiddenWarning: string
-  }
-> = {
-  ru: {
-    findJobLabel: 'Желаемая роль или стек',
-    findJobPlaceholder: 'Backend, Python, FastAPI, стажировка',
-    hrHint: 'Укажите роль или стек, который ищете (например: Backend, Go, PostgreSQL), чтобы найти подходящих кандидатов.',
-    hiddenWarning: 'Анкета сейчас скрыта: другие участники не увидят вас в рекомендациях, пока вы не включите «Показывать мою анкету участникам этого мероприятия».',
-  },
-  kk: {
-    findJobLabel: 'Қалаған рөл немесе стек',
-    findJobPlaceholder: 'Backend, Python, FastAPI, тағылымдама',
-    hrHint: 'Лайықты кандидаттарды табу үшін іздеген рөлді немесе стекті көрсетіңіз (мысалы: Backend, Go, PostgreSQL).',
-    hiddenWarning: 'Анкета қазір жасырын: «Осы іс-шара қатысушыларына анкетамды көрсету» белгісін қоспайынша, басқа қатысушылар сізді ұсыныстардан көрмейді.',
-  },
-  en: {
-    findJobLabel: 'Target role or stack',
-    findJobPlaceholder: 'Backend, Python, FastAPI, internship',
-    hrHint: 'Specify the role or stack you are hiring for (e.g., Backend, Go, PostgreSQL) to match relevant candidates.',
-    hiddenWarning: 'Your profile is currently hidden: other attendees will not see you in matches until you enable "Show my profile to attendees of this event".',
-  },
-}
 import { hasUnsavedProfileChanges, parseProfileTopics } from './profileDirty'
 import type { EventProfileDraft } from './profileDirty'
 import { RecommendationResults } from './RecommendationResults'
@@ -1322,7 +1293,7 @@ export function EventAccountFlow({
               {socialNotice && <div className="info-banner" role="status">{socialNotice}</div>}
               {!draft.visible && (
                 <div className="info-banner visibility-warning-banner" role="status">
-                  {ACCOUNT_UX_COPY[locale].hiddenWarning}
+                  {t.hiddenProfileWarning}
                 </div>
               )}
               <RecommendationResults
@@ -1489,7 +1460,7 @@ export function EventAccountFlow({
                 {showLookingFor && (
                   <label className="field field-full">
                     <span>
-                      {draft.goal === 'find_job' ? ACCOUNT_UX_COPY[locale].findJobLabel : formText.lookingForLabel}{' '}
+                      {draft.goal === 'find_job' ? formText.findJobLookingForLabel : formText.lookingForLabel}{' '}
                       <small>{formText.optional}</small>
                     </span>
                     <input
@@ -1498,14 +1469,14 @@ export function EventAccountFlow({
                       disabled={saving || isClosed}
                       placeholder={
                         draft.goal === 'find_job'
-                          ? ACCOUNT_UX_COPY[locale].findJobPlaceholder
+                          ? formText.findJobLookingForPlaceholder
                           : formText.lookingForPlaceholder
                       }
                       value={draft.lookingFor}
                       onChange={event => updateField('lookingFor', event.target.value)}
                     />
                     {draft.goal === 'hire' && !draft.lookingFor.trim() && (
-                      <span className="field-hint">{ACCOUNT_UX_COPY[locale].hrHint}</span>
+                      <span className="field-hint">{formText.hireLookingForHint}</span>
                     )}
                   </label>
                 )}
@@ -1542,7 +1513,7 @@ export function EventAccountFlow({
                   </label>
                   <p className="privacy-box__note">{t.visibilityNotice}</p>
                   {!draft.visible && (
-                    <p className="field-hint privacy-box__warning">{ACCOUNT_UX_COPY[locale].hiddenWarning}</p>
+                    <p className="field-hint privacy-box__warning">{t.hiddenProfileWarning}</p>
                   )}
                 </div>
 
