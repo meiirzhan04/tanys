@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "test": "node --test tests/observability.test.mjs tests/retention.test.mjs",
+    "test": "node --test tests/observability.test.mjs tests/retention.test.mjs tests/security-matrix.test.mjs",
     "start": "node dist/main.js",
     "migrate": "node dist/migrate.js",
     "retention": "node dist/retention-job.js"
