@@ -84,6 +84,9 @@ button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
+.site-header button:focus-visible {
+  outline-color: #ff8c52;
+}
 input:focus-visible, select:focus-visible, textarea:focus-visible {
   outline: none;
 }
