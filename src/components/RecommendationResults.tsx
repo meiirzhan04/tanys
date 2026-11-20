@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import type { IntroductionStatus } from '../api/client'
 import { getMessages } from '../i18n/messages'
 import type { Feedback } from '../matching/session'
 import type { Locale, Recommendation } from '../matching/types'
@@ -19,6 +20,9 @@ interface RecommendationCardProps {
   bookings?: readonly MeetingBooking[]
   onBookSlot?: BookSlotHandler
   onCancelSlot?: CancelSlotHandler
+  onRequestIntro?: (candidateId: string) => void
+  introStatus?: IntroductionStatus
+  requestingIntro?: boolean
   locale: Locale
 }
 
@@ -28,6 +32,9 @@ function RecommendationCard({
   bookings,
   onBookSlot,
   onCancelSlot,
+  onRequestIntro,
+  introStatus,
+  requestingIntro = false,
   locale,
 }: RecommendationCardProps) {
   const { candidate, icebreaker } = recommendation
@@ -35,6 +42,7 @@ function RecommendationCard({
   const [expanded, setExpanded] = useState(false)
   const detailsId = useId()
   const t = getMessages(locale).results
+  const social = getMessages(locale).social
   const goalLabels = getGoalLabels(locale)
 
   async function copyPhrase() {
@@ -90,6 +98,28 @@ function RecommendationCard({
           onCancel={onCancelSlot}
           locale={locale}
         />}
+        {onRequestIntro && (
+          <div className="intro-action-row">
+            {introStatus ? (
+              <span className={`status-badge status-badge--${introStatus}`}>
+                {introStatus === 'pending'
+                  ? social.alreadyRequested
+                  : introStatus === 'accepted'
+                    ? social.statusAccepted
+                    : introStatus === 'declined'
+                      ? social.statusDeclined
+                      : social.statusWithdrawn}
+              </span>
+            ) : (
+              <button
+                type="button"
+                className="primary-button"
+                disabled={requestingIntro}
+                onClick={() => onRequestIntro(candidate.id)}
+              >{requestingIntro ? social.requestingIntro : social.requestIntro}</button>
+            )}
+          </div>
+        )}
         <RecommendationFeedback candidateId={candidate.id} candidateName={candidate.name} onFeedback={onFeedback} locale={locale} />
       </div>
     </article>
@@ -104,6 +134,9 @@ export function RecommendationResults({
   bookings,
   onBookSlot,
   onCancelSlot,
+  onRequestIntro,
+  introStatusByCandidate,
+  requestingIntroId,
   locale = 'ru',
 }: ResultsProps & {
   onFeedback: FeedbackHandler
@@ -111,6 +144,9 @@ export function RecommendationResults({
   bookings?: readonly MeetingBooking[]
   onBookSlot?: BookSlotHandler
   onCancelSlot?: CancelSlotHandler
+  onRequestIntro?: (candidateId: string) => void
+  introStatusByCandidate?: Readonly<Record<string, IntroductionStatus>>
+  requestingIntroId?: string
   locale?: Locale
 }) {
   const t = getMessages(locale).results
@@ -156,6 +192,9 @@ export function RecommendationResults({
             bookings={bookings}
             onBookSlot={onBookSlot}
             onCancelSlot={onCancelSlot}
+            onRequestIntro={onRequestIntro}
+            introStatus={introStatusByCandidate?.[recommendation.candidate.id]}
+            requestingIntro={requestingIntroId === recommendation.candidate.id}
             locale={locale}
           />
         ))}

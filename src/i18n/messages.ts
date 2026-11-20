@@ -155,6 +155,57 @@ export interface Messages {
       genericRequest: string
     }
   }
+  social: {
+    navIntroductions: string
+    navMeetings: string
+    refresh: string
+    refreshing: string
+    contactLabel: string
+    contactPlaceholder: string
+    contactNotice: string
+    saveContact: string
+    savingContact: string
+    contactSaved: string
+    requestIntro: string
+    requestingIntro: string
+    alreadyRequested: string
+    introTitle: string
+    incomingHeading: string
+    outgoingHeading: string
+    noIncoming: string
+    noOutgoing: string
+    accept: string
+    decline: string
+    withdraw: string
+    sharedContactLabel: string
+    contactNotShared: string
+    proposeMeeting: string
+    hideSlots: string
+    loadingSlots: string
+    noCommonSlots: string
+    slotProposed: string
+    slotConflict: string
+    meetingsTitle: string
+    noMeetings: string
+    confirm: string
+    cancel: string
+    statusPending: string
+    statusAccepted: string
+    statusDeclined: string
+    statusWithdrawn: string
+    meetingPending: string
+    meetingConfirmed: string
+    meetingDeclined: string
+    meetingCancelled: string
+    dismissNotification: string
+    notifications: {
+      newIncomingIntro: (name?: string) => string
+      introAccepted: (name?: string) => string
+      newMeetingInvite: (name?: string) => string
+      meetingConfirmed: (name?: string) => string
+      meetingCancelled: (name?: string) => string
+    }
+  }
 }
 
 export const messagesByLocale: Record<Locale, Messages> = {
@@ -314,6 +365,57 @@ export const messagesByLocale: Record<Locale, Messages> = {
         genericRequest: 'Произошла ошибка. Попробуйте повторить действие.',
       },
     },
+    social: {
+      navIntroductions: 'Знакомства',
+      navMeetings: 'Встречи',
+      refresh: 'Обновить',
+      refreshing: 'Обновляем…',
+      contactLabel: 'Контакт для обмена',
+      contactPlaceholder: '@username, email или телефон',
+      contactNotice: 'Ваш контакт для связи и email для входа скрыты от других участников. Контакт откроется собеседнику только после того, как вы оба подтвердите запрос на знакомство.',
+      saveContact: 'Сохранить контакт',
+      savingContact: 'Сохраняем…',
+      contactSaved: 'Контакт сохранён.',
+      requestIntro: 'Предложить знакомство',
+      requestingIntro: 'Отправляем…',
+      alreadyRequested: 'Запрос уже отправлен',
+      introTitle: 'Знакомства',
+      incomingHeading: 'Входящие запросы',
+      outgoingHeading: 'Исходящие запросы',
+      noIncoming: 'Пока нет входящих запросов на знакомство.',
+      noOutgoing: 'Вы ещё не отправляли запросы на знакомство.',
+      accept: 'Принять',
+      decline: 'Отклонить',
+      withdraw: 'Отозвать',
+      sharedContactLabel: 'Контакт собеседника',
+      contactNotShared: 'Собеседник пока не указал контакт.',
+      proposeMeeting: 'Выбрать время встречи',
+      hideSlots: 'Скрыть слоты',
+      loadingSlots: 'Загружаем общие слоты…',
+      noCommonSlots: 'Нет общих свободных слотов.',
+      slotProposed: 'Приглашение на встречу отправлено.',
+      slotConflict: 'Этот слот уже занят. Список доступных слотов обновлён — выберите другое время.',
+      meetingsTitle: 'Приглашения и встречи 1:1',
+      noMeetings: 'Пока нет приглашений и подтверждённых встреч.',
+      confirm: 'Подтвердить',
+      cancel: 'Отменить',
+      statusPending: 'Ожидает ответа',
+      statusAccepted: 'Знакомство принято',
+      statusDeclined: 'Отклонено',
+      statusWithdrawn: 'Отозвано',
+      meetingPending: 'Ожидает подтверждения',
+      meetingConfirmed: 'Подтверждено',
+      meetingDeclined: 'Отклонено',
+      meetingCancelled: 'Отменено',
+      dismissNotification: 'Скрыть',
+      notifications: {
+        newIncomingIntro: name => name ? `Новый запрос на знакомство от ${name}.` : 'Поступил новый запрос на знакомство.',
+        introAccepted: name => name ? `${name} принял(а) запрос — контакт открыт.` : 'Запрос на знакомство принят — контакт открыт.',
+        newMeetingInvite: name => name ? `Новое приглашение на встречу от ${name}.` : 'Поступило новое приглашение на встречу.',
+        meetingConfirmed: name => name ? `Встреча с ${name} подтверждена.` : 'Встреча подтверждена.',
+        meetingCancelled: name => name ? `Встреча с ${name} отменена.` : 'Встреча отменена.',
+      },
+    },
   },
   kk: {
     languageSwitcherLabel: 'Тілді таңдау',
@@ -471,6 +573,57 @@ export const messagesByLocale: Record<Locale, Messages> = {
         genericRequest: 'Қате орын алды. Әрекетті қайталап көріңіз.',
       },
     },
+    social: {
+      navIntroductions: 'Танысулар',
+      navMeetings: 'Кездесулер',
+      refresh: 'Жаңарту',
+      refreshing: 'Жаңартылуда…',
+      contactLabel: 'Алмасуға арналған байланыс',
+      contactPlaceholder: '@username, email немесе телефон',
+      contactNotice: 'Байланыс дерегіңіз бен кіруге арналған email басқа қатысушылардан жасырылады. Байланыс екі тарап та танысу сұрауын растағаннан кейін ғана ашылады.',
+      saveContact: 'Байланысты сақтау',
+      savingContact: 'Сақталуда…',
+      contactSaved: 'Байланыс сақталды.',
+      requestIntro: 'Танысуды ұсыну',
+      requestingIntro: 'Жіберілуде…',
+      alreadyRequested: 'Сұрау жіберілген',
+      introTitle: 'Танысулар',
+      incomingHeading: 'Кіріс сұраулар',
+      outgoingHeading: 'Шығыс сұраулар',
+      noIncoming: 'Әзірге кіріс танысу сұраулары жоқ.',
+      noOutgoing: 'Сіз әлі танысу сұрауын жіберген жоқсыз.',
+      accept: 'Қабылдау',
+      decline: 'Бас тарту',
+      withdraw: 'Қайтарып алу',
+      sharedContactLabel: 'Қатысушы байланысы',
+      contactNotShared: 'Қатысушы әлі байланыс дерегін көрсетпеген.',
+      proposeMeeting: 'Кездесу уақытын таңдау',
+      hideSlots: 'Слоттарды жасыру',
+      loadingSlots: 'Ортақ слоттар жүктелуде…',
+      noCommonSlots: 'Ортақ бос слоттар жоқ.',
+      slotProposed: 'Кездесуге шақыру жіберілді.',
+      slotConflict: 'Бұл уақыт бос емес. Қолжетімді слоттар жаңартылды — басқа уақытты таңдаңыз.',
+      meetingsTitle: '1:1 шақырулар және кездесулер',
+      noMeetings: 'Әзірге шақырулар мен расталған кездесулер жоқ.',
+      confirm: 'Растау',
+      cancel: 'Болдырмау',
+      statusPending: 'Жауап күтілуде',
+      statusAccepted: 'Танысу қабылданды',
+      statusDeclined: 'Қабылданбады',
+      statusWithdrawn: 'Қайтарып алынды',
+      meetingPending: 'Растауды күтуде',
+      meetingConfirmed: 'Расталды',
+      meetingDeclined: 'Бас тартылды',
+      meetingCancelled: 'Болдырылмады',
+      dismissNotification: 'Жасыру',
+      notifications: {
+        newIncomingIntro: name => name ? `${name} қатысушысынан жаңа танысу сұрауы келді.` : 'Жаңа танысу сұрауы келді.',
+        introAccepted: name => name ? `${name} сұрауды қабылдады — байланыс ашылды.` : 'Танысу сұрауы қабылданды — байланыс ашылды.',
+        newMeetingInvite: name => name ? `${name} кездесуге шақырды.` : 'Жаңа кездесу шақыруы келді.',
+        meetingConfirmed: name => name ? `${name} қатысушысымен кездесу расталды.` : 'Кездесу расталды.',
+        meetingCancelled: name => name ? `${name} қатысушысымен кездесу болдырылмады.` : 'Кездесу болдырылмады.',
+      },
+    },
   },
   en: {
     languageSwitcherLabel: 'Language selector',
@@ -626,6 +779,57 @@ export const messagesByLocale: Record<Locale, Messages> = {
         invalidCode: 'Invalid or expired code. Check the code or request a new one.',
         genericSave: 'Could not save your profile. Your entered fields are preserved on screen.',
         genericRequest: 'Something went wrong. Please try again.',
+      },
+    },
+    social: {
+      navIntroductions: 'Introductions',
+      navMeetings: 'Meetings',
+      refresh: 'Refresh',
+      refreshing: 'Refreshing…',
+      contactLabel: 'Contact to share',
+      contactPlaceholder: '@username, email, or phone',
+      contactNotice: 'Your contact details and sign-in email stay hidden from other participants. Your contact is shared with a match only after both of you accept the introduction request.',
+      saveContact: 'Save contact',
+      savingContact: 'Saving…',
+      contactSaved: 'Contact saved.',
+      requestIntro: 'Request introduction',
+      requestingIntro: 'Sending…',
+      alreadyRequested: 'Request already sent',
+      introTitle: 'Introductions',
+      incomingHeading: 'Incoming requests',
+      outgoingHeading: 'Outgoing requests',
+      noIncoming: 'No incoming introduction requests yet.',
+      noOutgoing: 'You have not sent any introduction requests yet.',
+      accept: 'Accept',
+      decline: 'Decline',
+      withdraw: 'Withdraw',
+      sharedContactLabel: 'Shared contact',
+      contactNotShared: 'Participant has not added a contact yet.',
+      proposeMeeting: 'Choose meeting time',
+      hideSlots: 'Hide slots',
+      loadingSlots: 'Loading common slots…',
+      noCommonSlots: 'No common free slots available.',
+      slotProposed: 'Meeting invite sent.',
+      slotConflict: 'This slot is already taken. Available slots were refreshed — pick another time.',
+      meetingsTitle: '1:1 invites & meetings',
+      noMeetings: 'No meeting invites or confirmed meetings yet.',
+      confirm: 'Confirm',
+      cancel: 'Cancel',
+      statusPending: 'Pending',
+      statusAccepted: 'Accepted',
+      statusDeclined: 'Declined',
+      statusWithdrawn: 'Withdrawn',
+      meetingPending: 'Awaiting confirmation',
+      meetingConfirmed: 'Confirmed',
+      meetingDeclined: 'Declined',
+      meetingCancelled: 'Cancelled',
+      dismissNotification: 'Dismiss',
+      notifications: {
+        newIncomingIntro: name => name ? `New introduction request from ${name}.` : 'You have a new introduction request.',
+        introAccepted: name => name ? `${name} accepted your request — contact is now visible.` : 'Introduction accepted — contact is now visible.',
+        newMeetingInvite: name => name ? `New 1:1 meeting invite from ${name}.` : 'You received a new 1:1 meeting invite.',
+        meetingConfirmed: name => name ? `Meeting with ${name} is confirmed.` : 'Meeting confirmed.',
+        meetingCancelled: name => name ? `Meeting with ${name} was cancelled.` : 'Meeting cancelled.',
       },
     },
   },

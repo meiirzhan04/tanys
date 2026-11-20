@@ -132,6 +132,29 @@ h1, h2, p { margin: 0; }
 .checkbox-row { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; line-height: 1.45; cursor: pointer; }
 .checkbox-row input[type='checkbox'] { width: 18px; height: 18px; min-height: 18px; margin-top: 2px; flex: 0 0 18px; accent-color: var(--accent); }
 .consent-text { font-size: 12px; color: var(--muted); font-weight: 450; }
+.notification-banner { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px; padding: 11px 14px; margin-bottom: 14px; border-radius: 7px; background: #e8f4ec; border: 1px solid #b5ddc5; color: #164b2e; font-size: 13px; }
+.notification-banner ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+.social-section { max-width: 840px; display: grid; gap: 18px; }
+.social-group { display: grid; gap: 10px; }
+.social-group h2 { font-size: 16px; }
+.social-list { display: grid; gap: 10px; }
+.social-card { padding: 14px 16px; display: grid; gap: 10px; }
+.social-card__header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.social-card__header h3 { margin: 0; font-size: 15px; }
+.social-card__role { margin-top: 3px; color: var(--muted); font-size: 12px; }
+.social-card__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.social-card__accepted { display: grid; gap: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
+.social-card__hint { color: var(--muted); font-size: 13px; }
+.social-slots { display: grid; gap: 8px; }
+.contact-panel { padding: 14px 16px; display: grid; gap: 8px; }
+.contact-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.contact-row input { flex: 1 1 200px; }
+.contact-reveal { padding: 8px 10px; border-radius: 6px; background: #f5f8fc; border: 1px solid var(--line); font-size: 13px; overflow-wrap: anywhere; }
+.intro-action-row { margin-top: 10px; }
+.status-badge { display: inline-flex; align-items: center; padding: 4px 8px; border-radius: 5px; font-size: 12px; font-weight: 650; background: #eef1f6; color: var(--muted); border: 1px solid var(--line); }
+.status-badge--accepted, .status-badge--confirmed { background: #e6f4ec; color: #1a5c38; border-color: #b5ddc5; }
+.status-badge--pending { background: var(--accent-soft); color: #183f7f; border-color: #bfd3f1; }
+.status-badge--declined, .status-badge--cancelled, .status-badge--withdrawn { background: #fdf2f2; color: #8b2624; border-color: #e6b9b8; }
 
 .interest-map { max-width: 840px; }
 .interest-table { width: 100%; border-collapse: collapse; font-size: 13px; }
