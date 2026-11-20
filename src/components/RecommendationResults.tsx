@@ -2,9 +2,8 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type { IntroductionStatus, ReportReason } from '../api/client'
 import { getMessages } from '../i18n/messages'
 import type { Feedback } from '../matching/session'
-import type { Locale, Recommendation } from '../matching/types'
+import type { Goal, Locale, Recommendation } from '../matching/types'
 import type { MeetingBooking } from '../scheduling/slots'
-import { getGoalLabels } from './goalLabels'
 import { CandidateMeetingPicker } from './MeetingSlots'
 import { RecommendationFeedback } from './RecommendationFeedback'
 import type { ResultsProps } from './props'
@@ -13,6 +12,51 @@ type FeedbackHandler = (id: string, response: Feedback) => void
 type BookSlotHandler = (candidate: { id: string; name: string; role?: string }, slotId: string) => void
 type CancelSlotHandler = (slotId: string) => void
 type CopyState = '' | 'copied' | 'fallback'
+
+const CANDIDATE_GOAL_BADGES: Record<Locale, Record<Goal, string>> = {
+  ru: {
+    find_job: 'Ищет работу',
+    hire: 'Нанимает',
+    find_mentor: 'Ищет ментора',
+    be_mentor: 'Готов менторить',
+    find_cofounder: 'Ищет кофаундера',
+    exchange_experience: 'Обменивается опытом',
+  },
+  kk: {
+    find_job: 'Жұмыс іздейді',
+    hire: 'Маман жалдайды',
+    find_mentor: 'Ментор іздейді',
+    be_mentor: 'Ментор болуға дайын',
+    find_cofounder: 'Кофаундер іздейді',
+    exchange_experience: 'Тәжірибе алмасады',
+  },
+  en: {
+    find_job: 'Looking for a role',
+    hire: 'Hiring',
+    find_mentor: 'Looking for a mentor',
+    be_mentor: 'Open to mentoring',
+    find_cofounder: 'Looking for a cofounder',
+    exchange_experience: 'Peer knowledge exchange',
+  },
+}
+
+const EMPTY_RESULTS_ADVICE: Record<Locale, { body: string; refresh: string; refreshing: string }> = {
+  ru: {
+    body: 'Уточните стек и навыки, искомые компетенции или интересы в анкете, чтобы найти больше подходящих собеседников.',
+    refresh: 'Обновить',
+    refreshing: 'Обновляем…',
+  },
+  kk: {
+    body: 'Лайықты қатысушыларды көбірек табу үшін анкетадағы стек пен дағдыларды, іздеген құзыреттерді немесе қызығушылықтарды нақтылаңыз.',
+    refresh: 'Жаңарту',
+    refreshing: 'Жаңартылуда…',
+  },
+  en: {
+    body: 'Refine your skills, target competencies, or interests in your profile to broaden matching.',
+    refresh: 'Refresh',
+    refreshing: 'Refreshing…',
+  },
+}
 
 interface RecommendationCardProps {
   recommendation: Recommendation
@@ -51,7 +95,7 @@ function RecommendationCard({
   const t = getMessages(locale).results
   const social = getMessages(locale).social
   const mod = getMessages(locale).moderation
-  const goalLabels = getGoalLabels(locale)
+  const goalBadges = CANDIDATE_GOAL_BADGES[locale]
 
   async function copyPhrase() {
     if (!icebreaker) return
@@ -73,7 +117,7 @@ function RecommendationCard({
           <div className="candidate-name">
             <h2>{candidate.name}</h2>
             <p>{candidate.role}</p>
-            <p className="goal-label">{goalLabels[candidate.goal]}</p>
+            <p className="goal-label">{goalBadges[candidate.goal]}</p>
           </div>
         </div>
         <p className="explanation">{recommendation.explanation}</p>
@@ -205,6 +249,8 @@ export function RecommendationResults({
   requestingIntroId,
   onBlockParticipant,
   onReportParticipant,
+  onRefresh,
+  refreshing = false,
   locale = 'ru',
 }: ResultsProps & {
   onFeedback: FeedbackHandler
@@ -217,9 +263,12 @@ export function RecommendationResults({
   requestingIntroId?: string
   onBlockParticipant?: (candidateId: string) => void
   onReportParticipant?: (candidateId: string, reason: ReportReason, details: string) => void
+  onRefresh?: () => void
+  refreshing?: boolean
   locale?: Locale
 }) {
   const t = getMessages(locale).results
+  const advice = EMPTY_RESULTS_ADVICE[locale]
   const listRef = useRef<HTMLDivElement>(null)
   const pendingFocusIndexRef = useRef<number | null>(null)
 
@@ -248,7 +297,17 @@ export function RecommendationResults({
     <section aria-labelledby="results-title">
       <div className="page-heading">
         <div><h1 id="results-title" tabIndex={-1}>{t.title}</h1><p role="status">{message || t.count(recommendations.length)}</p></div>
-        <button type="button" className="secondary-button" onClick={onEdit}>{t.editProfile}</button>
+        <div className="page-heading__actions">
+          {onRefresh && (
+            <button
+              type="button"
+              className="secondary-button results-refresh-btn"
+              disabled={refreshing}
+              onClick={onRefresh}
+            >{refreshing ? advice.refreshing : advice.refresh}</button>
+          )}
+          <button type="button" className="secondary-button" onClick={onEdit}>{t.editProfile}</button>
+        </div>
       </div>
       {recommendations.length ? <div ref={listRef} className="results-list surface">
         <div className="directory-header" aria-hidden="true">
@@ -272,9 +331,19 @@ export function RecommendationResults({
         ))}
       </div> : <div className="surface empty-state">
         <h2>{t.emptyTitle}</h2>
-        <p>{t.emptyBody}</p>
+        <p>{advice.body}</p>
+        <div className="empty-state__actions">
+          <button type="button" className="primary-button" onClick={onEdit}>{t.editProfile}</button>
+          {onRefresh && (
+            <button
+              type="button"
+              className="secondary-button results-refresh-btn"
+              disabled={refreshing}
+              onClick={onRefresh}
+            >{refreshing ? advice.refreshing : advice.refresh}</button>
+          )}
+        </div>
       </div>}
-
     </section>
   )
 }

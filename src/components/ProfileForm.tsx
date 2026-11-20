@@ -10,6 +10,24 @@ type Fields = { goal: Goal | ''; role: string; experience: string; skills: strin
 type RequiredField = Exclude<keyof Fields, 'lookingFor'>
 type Errors = Partial<Record<RequiredField, string>>
 
+const LOOKING_FOR_EXTRA: Record<Locale, { findJobLabel: string; findJobPlaceholder: string; hrHint: string }> = {
+  ru: {
+    findJobLabel: 'Желаемая роль или стек',
+    findJobPlaceholder: 'Backend, Python, FastAPI, стажировка',
+    hrHint: 'Укажите роль или стек, который ищете (например: Backend, Go, PostgreSQL), чтобы найти подходящих кандидатов.',
+  },
+  kk: {
+    findJobLabel: 'Қалаған рөл немесе стек',
+    findJobPlaceholder: 'Backend, Python, FastAPI, тағылымдама',
+    hrHint: 'Лайықты кандидаттарды табу үшін іздеген рөлді немесе стекті көрсетіңіз (мысалы: Backend, Go, PostgreSQL).',
+  },
+  en: {
+    findJobLabel: 'Target role or stack',
+    findJobPlaceholder: 'Backend, Python, FastAPI, internship',
+    hrHint: 'Specify the role or stack you are hiring for (e.g., Backend, Go, PostgreSQL) to match relevant candidates.',
+  },
+}
+
 function toFields(profile?: ProfileInput): Fields {
   return {
     goal: profile?.goal ?? '',
@@ -50,9 +68,14 @@ export function ProfileForm({
   const [fields, setFields] = useState(() => toFields(initialProfile))
   const [showErrors, setShowErrors] = useState(false)
   const messages = getMessages(locale).form
+  const extra = LOOKING_FOR_EXTRA[locale]
   const goalLabels = getGoalLabels(locale)
   const errors = showErrors ? validate(fields, locale) : {}
-  const showLookingFor = fields.goal === 'hire' || fields.goal === 'find_cofounder' || fields.goal === 'find_mentor'
+  const showLookingFor =
+    fields.goal === 'find_job' ||
+    fields.goal === 'hire' ||
+    fields.goal === 'find_cofounder' ||
+    fields.goal === 'find_mentor'
 
   const change = (field: keyof Fields, value: string) => setFields(current => ({ ...current, [field]: value }))
 
@@ -98,6 +121,9 @@ export function ProfileForm({
     value: goal,
     label,
   }))
+
+  const lookingForLabelText = fields.goal === 'find_job' ? extra.findJobLabel : messages.lookingForLabel
+  const lookingForPlaceholderText = fields.goal === 'find_job' ? extra.findJobPlaceholder : messages.lookingForPlaceholder
 
   return (
     <form className="profile-form" aria-labelledby="profile-title" noValidate onSubmit={submit}>
@@ -154,8 +180,17 @@ export function ProfileForm({
           </div>
 
           {showLookingFor && <label className="field field-full">
-            <span>{messages.lookingForLabel} <small>{messages.optional}</small></span>
-            <input maxLength={160} placeholder={messages.lookingForPlaceholder} value={fields.lookingFor} onChange={event => change('lookingFor', event.target.value)} />
+            <span>{lookingForLabelText} <small>{messages.optional}</small></span>
+            <input
+              name="lookingFor"
+              maxLength={160}
+              placeholder={lookingForPlaceholderText}
+              value={fields.lookingFor}
+              onChange={event => change('lookingFor', event.target.value)}
+            />
+            {fields.goal === 'hire' && !fields.lookingFor.trim() && (
+              <span className="field-hint">{extra.hrHint}</span>
+            )}
           </label>}
 
           <div className="field field-full">
