@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { getMessages } from '../i18n/messages'
 import type { Feedback } from '../matching/session'
 import type { Locale, Recommendation } from '../matching/types'
@@ -114,6 +114,29 @@ export function RecommendationResults({
   locale?: Locale
 }) {
   const t = getMessages(locale).results
+  const listRef = useRef<HTMLDivElement>(null)
+  const pendingFocusIndexRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    const targetIndex = pendingFocusIndexRef.current
+    if (targetIndex === null) return
+    pendingFocusIndexRef.current = null
+
+    if (recommendations.length > 0) {
+      const toggles = listRef.current?.querySelectorAll<HTMLButtonElement>('.row-toggle')
+      const nextToggle = toggles?.[Math.min(targetIndex, toggles.length - 1)]
+      nextToggle?.focus()
+      return
+    }
+
+    document.getElementById('results-title')?.focus()
+  }, [recommendations])
+
+  function handleCardFeedback(id: string, response: Feedback) {
+    const index = recommendations.findIndex(item => item.candidate.id === id)
+    if (index >= 0) pendingFocusIndexRef.current = index
+    onFeedback(id, response)
+  }
 
   return (
     <section aria-labelledby="results-title">
@@ -121,7 +144,7 @@ export function RecommendationResults({
         <div><h1 id="results-title" tabIndex={-1}>{t.title}</h1><p role="status">{message || t.count(recommendations.length)}</p></div>
         <button type="button" className="secondary-button" onClick={onEdit}>{t.editProfile}</button>
       </div>
-      {recommendations.length ? <div className="results-list surface">
+      {recommendations.length ? <div ref={listRef} className="results-list surface">
         <div className="directory-header" aria-hidden="true">
           <span>{t.directoryParticipant}</span><span>{t.directoryWhy}</span><span />
         </div>
@@ -129,7 +152,7 @@ export function RecommendationResults({
           <RecommendationCard
             key={recommendation.candidate.id}
             recommendation={recommendation}
-            onFeedback={onFeedback}
+            onFeedback={handleCardFeedback}
             bookings={bookings}
             onBookSlot={onBookSlot}
             onCancelSlot={onCancelSlot}

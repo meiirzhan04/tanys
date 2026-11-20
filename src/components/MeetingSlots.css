@@ -26,6 +26,16 @@
   letter-spacing: -0.03em;
 }
 
+.schedule-panel__title:focus-visible {
+  outline: 2px solid var(--accent, #2255a0);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.schedule-panel__title:focus:not(:focus-visible) {
+  outline: none;
+}
+
 .meeting-picker__tz {
   font-size: 11px;
   font-weight: 600;
@@ -46,6 +56,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+  max-width: 100%;
 }
 
 .meeting-slot-btn,
@@ -53,8 +64,11 @@
   font: inherit;
   font-size: 12px;
   font-weight: 650;
-  line-height: 1.2;
+  line-height: 1.25;
   min-height: 34px;
+  max-width: 100%;
+  text-align: left;
+  overflow-wrap: anywhere;
   border-radius: 7px;
   padding: 6px 10px;
   border: 1px solid #d7dfea;
@@ -138,6 +152,8 @@
   flex-wrap: wrap;
   gap: 8px;
   align-items: baseline;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 14px;
   color: #16233a;
 }
