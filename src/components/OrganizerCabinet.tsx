@@ -16,7 +16,7 @@ import type { InterestSummary } from '../data/interestSummary'
 import { getMessages } from '../i18n/messages'
 import type { Locale } from '../matching/types'
 import { CustomSelect } from './CustomSelect'
-import { getGoalLabels } from './goalLabels'
+import { getCandidateGoalLabels } from './goalLabels'
 import { InterestMap } from './InterestMap'
 import { buildInviteUrl, getInviteState } from './inviteQr'
 import { InviteQrModal } from './InviteQrModal'
@@ -91,7 +91,7 @@ export function OrganizerCabinet({
 }: OrganizerCabinetProps) {
   const messages = getMessages(locale)
   const o = messages.organizer
-  const goalLabels = getGoalLabels(locale)
+  const goalLabels = getCandidateGoalLabels(locale)
 
   // New event form state
   const [newName, setNewName] = useState('')

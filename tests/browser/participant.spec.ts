@@ -35,3 +35,32 @@ test('участник получает рекомендации, оценива
   await expect(page.getByText(/Пока нет запланированных встреч/)).toBeVisible()
   await expect(page.getByRole('button', { name: /^Встречи\s+0$/ })).toBeVisible()
 })
+
+test('separates form action goal labels from candidate intent labels in ru/kk/en and preserves selected goal (#166)', async ({
+  page,
+}) => {
+  await page.goto('/')
+  const goalSelect = page.locator('select[name="goal"]')
+  await expect(goalSelect.locator('option[value="hire"]')).toHaveText('Нанять')
+
+  await goalSelect.selectOption('find_job')
+  await page.locator('input[name="role"]').fill('Backend-разработчик')
+  await page.locator('input[name="experience"]').fill('1')
+  await page.locator('input[name="skills"]').fill('Python, FastAPI')
+  await page.locator('input[name="interests"]').fill('API')
+  await page.locator('textarea[name="about"]').fill('Ищу работу в backend-команде.')
+  await page.locator('form button[type="submit"]').click()
+
+  const firstGoalBadge = page.locator('section[aria-labelledby="results-title"] .result-card .goal-label').first()
+  await expect(firstGoalBadge).toHaveText('Нанимает')
+
+  await page.locator('.lang-switcher button[lang="kk"]').click()
+  await expect(firstGoalBadge).toHaveText('Маман жалдайды')
+
+  await page.locator('.lang-switcher button[lang="en"]').click()
+  await expect(firstGoalBadge).toHaveText('Hiring')
+
+  await page.getByRole('button', { name: 'Edit profile' }).click()
+  await expect(goalSelect).toHaveValue('find_job')
+  await expect(goalSelect.locator('option[value="hire"]')).toHaveText('Hire')
+})

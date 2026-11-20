@@ -25,7 +25,25 @@ test('provides complete, distinct translations for ru, kk, and en', () => {
 
     for (const goal of ALL_GOALS) {
       assert.ok(messages.goals[goal].trim(), `missing goal label ${goal} for ${code}`)
+      assert.ok(messages.candidateGoals[goal].trim(), `missing candidate goal intent ${goal} for ${code}`)
+      assert.notEqual(
+        messages.goals[goal],
+        messages.candidateGoals[goal],
+        `form action and card intent should differ for ${goal} in ${code}`,
+      )
     }
+
+    assert.ok(messages.form.findJobLookingForLabel.trim())
+    assert.ok(messages.form.findJobLookingForPlaceholder.trim())
+    assert.ok(messages.form.hireLookingForHint.trim())
+    assert.ok(messages.results.refresh.trim())
+    assert.ok(messages.results.refreshing.trim())
+    assert.ok(messages.account.hiddenProfileWarning.trim())
+    assert.equal(
+      /измените цель|мақсатын өзгертіп|changing your networking goal/i.test(messages.results.emptyBody),
+      false,
+      `emptyBody must not advise changing goal in ${code}`,
+    )
 
     for (const [field, errorText] of Object.entries(messages.form.errors)) {
       assert.ok(errorText.trim(), `missing validation error ${field} for ${code}`)
