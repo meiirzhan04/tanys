@@ -2941,5 +2941,586 @@
     ],
     "about": "Хочу поговорить о продуктовых пилотах в разных колледжах и о том, какие наблюдения помогают решить, стоит ли масштабировать эксперимент.",
     "goal": "exchange_experience"
+  },
+  {
+    "id": "demo-151",
+    "name": "Аруна К.",
+    "role": "iOS Developer",
+    "skills": [
+      "Swift",
+      "SwiftUI",
+      "Combine"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "Mobile Accessibility",
+      "Offline First"
+    ],
+    "about": "I built an offline reading app for a student club and am looking for an iOS team that tests with VoiceOver.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-152",
+    "name": "Ернар Т.",
+    "role": "Инженер iOS",
+    "skills": [
+      "Swift",
+      "UIKit",
+      "XCTest"
+    ],
+    "experienceYears": 4,
+    "interests": [
+      "Мобильные платежи",
+      "Доступность приложений"
+    ],
+    "about": "Перенёс экран истории платежей на UIKit и покрыл его тестами. Ищу команду, которая развивает мобильные платежи.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-153",
+    "name": "Мәдина К.",
+    "role": "Android Developer",
+    "skills": [
+      "Kotlin",
+      "Jetpack Compose",
+      "Coroutines"
+    ],
+    "experienceYears": 3,
+    "interests": [
+      "Android Performance",
+      "Offline First"
+    ],
+    "about": "I profiled slow launches on budget Android phones and want to work on apps with large offline catalogs.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-154",
+    "name": "Әсет Н.",
+    "role": "Инженер мобильного тестирования",
+    "skills": [
+      "Appium",
+      "Mobile QA",
+      "Test Automation"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "Тестирование платежей",
+      "Матрица устройств"
+    ],
+    "about": "Настроил проверки восстановления мобильной сессии после потери связи. Ищу задачи по автоматизации тестов на реальных устройствах.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-155",
+    "name": "Лаура Т.",
+    "role": "Gameplay Programmer",
+    "skills": [
+      "Unity",
+      "C#",
+      "Game AI"
+    ],
+    "experienceYears": 3,
+    "interests": [
+      "Game Prototyping",
+      "Level Design"
+    ],
+    "about": "I built enemy behavior for a small puzzle game and want to join a studio that prototypes mechanics in short cycles.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-156",
+    "name": "Данияр Э.",
+    "role": "Разработчик 1С",
+    "skills": [
+      "1С:Предприятие",
+      "СКД",
+      "1С:УТ"
+    ],
+    "experienceYears": 4,
+    "interests": [
+      "Складской учёт",
+      "Розница"
+    ],
+    "about": "Автоматизировал сверку остатков для двух складов. Ищу задачи по обмену данными между торговыми точками.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-157",
+    "name": "Дара С.",
+    "role": "Developer Advocate",
+    "skills": [
+      "Developer Advocacy",
+      "Technical Writing",
+      "API Documentation"
+    ],
+    "experienceYears": 3,
+    "interests": [
+      "Developer Communities",
+      "SDK Onboarding"
+    ],
+    "about": "I turned common SDK setup questions into runnable examples and want to work with a team that teaches developers through workshops.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-158",
+    "name": "Әлішер П.",
+    "role": "Менеджер B2B-продаж",
+    "skills": [
+      "B2B Sales",
+      "CRM",
+      "Product Demos"
+    ],
+    "experienceYears": 4,
+    "interests": [
+      "B2B SaaS",
+      "Пилоты с клиентами"
+    ],
+    "about": "Вёл демонстрации сервиса для малого бизнеса и настраивал этапы сделок в CRM. Ищу продуктовую команду с короткими пилотами.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-159",
+    "name": "Кәмшат Д.",
+    "role": "Разработчик Go",
+    "skills": [
+      "Go",
+      "gRPC",
+      "RabbitMQ"
+    ],
+    "experienceYears": 3,
+    "interests": [
+      "Событийная архитектура",
+      "Асинхронные задачи"
+    ],
+    "about": "Разделила обработку заявок и отправку уведомлений через очередь. Хочу развивать сервисы с чёткими контрактами gRPC.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-160",
+    "name": "Нұрбек Ш.",
+    "role": "Systems Programmer",
+    "skills": [
+      "Rust",
+      "Linux",
+      "OpenTelemetry"
+    ],
+    "experienceYears": 3,
+    "interests": [
+      "Performance Profiling",
+      "Observability"
+    ],
+    "about": "I instrumented a Rust message dispatcher and am looking for a role focused on latency on Linux.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-161",
+    "name": "Айғаным Р.",
+    "role": "iOS Engineering Lead",
+    "skills": [
+      "Swift",
+      "SwiftUI",
+      "VoiceOver"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "Mobile Accessibility",
+      "Offline First"
+    ],
+    "about": "I am hiring an iOS developer to make our offline reading and navigation flows accessible.",
+    "goal": "hire",
+    "lookingFor": [
+      "Swift",
+      "SwiftUI",
+      "Combine"
+    ]
+  },
+  {
+    "id": "demo-162",
+    "name": "Мақсат Л.",
+    "role": "Руководитель iOS-команды",
+    "skills": [
+      "Swift",
+      "UIKit",
+      "XCTest"
+    ],
+    "experienceYears": 9,
+    "interests": [
+      "Мобильные платежи",
+      "Доступность приложений"
+    ],
+    "about": "Набираю инженера для мобильного платёжного приложения. На проекте есть экраны UIKit и нужно расширять покрытие XCTest.",
+    "goal": "hire",
+    "lookingFor": [
+      "Swift",
+      "UIKit",
+      "XCTest"
+    ]
+  },
+  {
+    "id": "demo-163",
+    "name": "Жанель Н.",
+    "role": "Android Tech Lead",
+    "skills": [
+      "Kotlin",
+      "Jetpack Compose",
+      "Coroutines"
+    ],
+    "experienceYears": 7,
+    "interests": [
+      "Android Performance",
+      "Offline First"
+    ],
+    "about": "I am hiring for an Android catalog app that needs predictable background sync and faster cold starts.",
+    "goal": "hire",
+    "lookingFor": [
+      "Kotlin",
+      "Jetpack Compose",
+      "Coroutines"
+    ]
+  },
+  {
+    "id": "demo-164",
+    "name": "Самал Ж.",
+    "role": "Руководитель команды QA",
+    "skills": [
+      "Appium",
+      "Mobile QA",
+      "API Testing"
+    ],
+    "experienceYears": 7,
+    "interests": [
+      "Тестирование платежей",
+      "Матрица устройств"
+    ],
+    "about": "Ищу инженера QA для регрессии мобильных платежей. Важны опыт с Appium и сценарии для разных версий ОС.",
+    "goal": "hire",
+    "lookingFor": [
+      "Appium",
+      "Mobile QA",
+      "Test Automation"
+    ]
+  },
+  {
+    "id": "demo-165",
+    "name": "Мирас Р.",
+    "role": "Game Studio Technical Lead",
+    "skills": [
+      "Unity",
+      "C#",
+      "Game AI"
+    ],
+    "experienceYears": 7,
+    "interests": [
+      "Game Prototyping",
+      "Level Design"
+    ],
+    "about": "I am hiring a gameplay programmer to iterate on enemy navigation with our level designers.",
+    "goal": "hire",
+    "lookingFor": [
+      "Unity",
+      "C#",
+      "Game AI"
+    ]
+  },
+  {
+    "id": "demo-166",
+    "name": "Айнұр П.",
+    "role": "Руководитель внедрения 1С",
+    "skills": [
+      "1С:Предприятие",
+      "1С:УТ",
+      "Интеграция касс"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "Складской учёт",
+      "Розница"
+    ],
+    "about": "Ищу разработчика для обновления обмена между кассами и складами. Отчёты по остаткам собираем на СКД.",
+    "goal": "hire",
+    "lookingFor": [
+      "1С:Предприятие",
+      "СКД",
+      "1С:УТ"
+    ]
+  },
+  {
+    "id": "demo-167",
+    "name": "Дамир Э.",
+    "role": "Developer Relations Lead",
+    "skills": [
+      "Developer Advocacy",
+      "Workshop Design",
+      "SDK Onboarding"
+    ],
+    "experienceYears": 6,
+    "interests": [
+      "Developer Communities",
+      "SDK Onboarding"
+    ],
+    "about": "I am hiring a developer advocate to maintain our onboarding samples and collect feedback from SDK workshops.",
+    "goal": "hire",
+    "lookingFor": [
+      "Developer Advocacy",
+      "Technical Writing",
+      "API Documentation"
+    ]
+  },
+  {
+    "id": "demo-168",
+    "name": "Карина Ш.",
+    "role": "Руководитель B2B-продаж",
+    "skills": [
+      "B2B Sales",
+      "CRM",
+      "Customer Onboarding"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "B2B SaaS",
+      "Пилоты с клиентами"
+    ],
+    "about": "Нанимаю менеджера, который умеет проводить демо и вести пилоты для небольших команд закупок.",
+    "goal": "hire",
+    "lookingFor": [
+      "B2B Sales",
+      "CRM",
+      "Product Demos"
+    ]
+  },
+  {
+    "id": "demo-169",
+    "name": "Ақниет Ф.",
+    "role": "Junior iOS Developer",
+    "skills": [
+      "Swift",
+      "SwiftUI"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Mobile Accessibility",
+      "Offline First"
+    ],
+    "about": "I made my first SwiftUI app and would like feedback on accessibility labels and async data loading.",
+    "goal": "find_mentor",
+    "lookingFor": [
+      "VoiceOver",
+      "Swift Concurrency"
+    ]
+  },
+  {
+    "id": "demo-170",
+    "name": "Бақберген Ц.",
+    "role": "Ведущий iOS-инженер",
+    "skills": [
+      "Swift",
+      "SwiftUI",
+      "Swift Concurrency",
+      "VoiceOver"
+    ],
+    "experienceYears": 9,
+    "interests": [
+      "Mobile Accessibility",
+      "Offline First"
+    ],
+    "about": "Могу разобрать проблемы доступности в списках SwiftUI и показать, как отменять загрузку при уходе с экрана.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-171",
+    "name": "Элина П.",
+    "role": "Младший инженер QA",
+    "skills": [
+      "Appium",
+      "Mobile QA"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Стабильность тестов",
+      "Матрица устройств"
+    ],
+    "about": "Переношу ручную регрессию в Appium и ищу наставника по анализу нестабильных прогонов.",
+    "goal": "find_mentor",
+    "lookingFor": [
+      "Test Automation",
+      "Flaky Test Analysis"
+    ]
+  },
+  {
+    "id": "demo-172",
+    "name": "Ринат Ж.",
+    "role": "Mobile Test Automation Mentor",
+    "skills": [
+      "Appium",
+      "Mobile QA",
+      "Test Automation",
+      "Flaky Test Analysis"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "Стабильность тестов",
+      "Матрица устройств"
+    ],
+    "about": "I mentor QA engineers on clustering flaky failures and designing device coverage for release checks.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-173",
+    "name": "Алтынай Н.",
+    "role": "Младший разработчик 1С",
+    "skills": [
+      "1С:Предприятие",
+      "СКД"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Складской учёт",
+      "Производительность отчётов"
+    ],
+    "about": "Сделала отчёт по остаткам, но он долго открывается при нескольких складах. Хочу научиться разбирать медленные запросы.",
+    "goal": "find_mentor",
+    "lookingFor": [
+      "Оптимизация запросов 1С",
+      "1С:УТ"
+    ]
+  },
+  {
+    "id": "demo-174",
+    "name": "Ерсұлтан П.",
+    "role": "Архитектор 1С",
+    "skills": [
+      "1С:Предприятие",
+      "СКД",
+      "1С:УТ",
+      "Оптимизация запросов 1С"
+    ],
+    "experienceYears": 11,
+    "interests": [
+      "Складской учёт",
+      "Производительность отчётов"
+    ],
+    "about": "Готов помочь с декомпозицией больших отчётов и показать, где искать лишние соединения в запросах.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-175",
+    "name": "Нәзия Ф.",
+    "role": "EdTech Sales Lead",
+    "skills": [
+      "Sales",
+      "B2B Sales",
+      "Customer Pilots"
+    ],
+    "experienceYears": 6,
+    "interests": [
+      "EdTech",
+      "Startups"
+    ],
+    "about": "I can recruit pilot schools and run procurement conversations. I am looking for a technical cofounder to validate a computer vision prototype.",
+    "goal": "find_cofounder",
+    "lookingFor": [
+      "Python",
+      "Computer Vision"
+    ]
+  },
+  {
+    "id": "demo-176",
+    "name": "Асан Ц.",
+    "role": "EdTech Growth Marketer",
+    "skills": [
+      "Marketing",
+      "Market Research",
+      "Customer Discovery"
+    ],
+    "experienceYears": 5,
+    "interests": [
+      "EdTech",
+      "Startups"
+    ],
+    "about": "I can interview training providers and validate landing-page demand for a practical skills product. I need someone to prototype its ML features.",
+    "goal": "find_cofounder",
+    "lookingFor": [
+      "Python",
+      "PyTorch"
+    ]
+  },
+  {
+    "id": "demo-177",
+    "name": "Жәмилә Ф.",
+    "role": "Product Manager for Mobile Learning",
+    "skills": [
+      "Product management",
+      "Customer Discovery",
+      "Product Demos"
+    ],
+    "experienceYears": 6,
+    "interests": [
+      "EdTech",
+      "Startups",
+      "Mobile Learning"
+    ],
+    "about": "I can design the learning pilot and measure retention. I am looking for a partner who can build the first iOS or computer vision prototype.",
+    "goal": "find_cofounder",
+    "lookingFor": [
+      "Swift",
+      "SwiftUI",
+      "Computer Vision"
+    ]
+  },
+  {
+    "id": "demo-178",
+    "name": "Темірлан Ц.",
+    "role": "iOS Prototype Engineer",
+    "skills": [
+      "Swift",
+      "SwiftUI",
+      "Core ML"
+    ],
+    "experienceYears": 4,
+    "interests": [
+      "EdTech",
+      "Startups",
+      "Mobile Learning"
+    ],
+    "about": "I can ship a prototype with on-device feedback for learners. I want a cofounder who can test the value with teachers and learners.",
+    "goal": "find_cofounder",
+    "lookingFor": [
+      "Product management",
+      "Customer Discovery"
+    ]
+  },
+  {
+    "id": "demo-179",
+    "name": "Фарида Ш.",
+    "role": "Android Performance Engineer",
+    "skills": [
+      "Kotlin",
+      "Jetpack Compose",
+      "Baseline Profiles"
+    ],
+    "experienceYears": 6,
+    "interests": [
+      "Android Performance",
+      "Offline First"
+    ],
+    "about": "I can share traces from slow list rendering and want to compare when baseline profiles improve launch measurements.",
+    "goal": "exchange_experience"
+  },
+  {
+    "id": "demo-180",
+    "name": "Арман Ф.",
+    "role": "Инженер производительности Android",
+    "skills": [
+      "Kotlin",
+      "Jetpack Compose",
+      "Macrobenchmark"
+    ],
+    "experienceYears": 5,
+    "interests": [
+      "Android Performance",
+      "Мобильная разработка"
+    ],
+    "about": "Могу показать, как сравниваю холодный старт на устройствах разных поколений. Хочу обсудить измерение задержек в Compose.",
+    "goal": "exchange_experience"
   }
 ]
