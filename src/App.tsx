@@ -52,6 +52,11 @@ export default function App() {
     setSession(current => current && localizeRecommendationSession(current, nextLocale))
   }
 
+  function handleEditProfile() {
+    setView('profile')
+    requestAnimationFrame(() => document.getElementById('profile-title')?.focus())
+  }
+
   function submit(profile: ProfileInput) {
     setSession(startRecommendationSession(profile, candidates, locale))
     setView('results')
@@ -119,7 +124,7 @@ export default function App() {
           </div>
           {view === 'results' && session && <RecommendationResults
             recommendations={session.recommendations}
-            onEdit={() => setView('profile')}
+            onEdit={handleEditProfile}
             onFeedback={handleFeedback}
             message={getResultsMessage(session, locale)}
             bookings={bookings}

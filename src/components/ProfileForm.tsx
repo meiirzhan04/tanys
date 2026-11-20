@@ -98,7 +98,7 @@ export function ProfileForm({
     <form className="profile-form" aria-labelledby="profile-title" noValidate onSubmit={submit}>
       <div className="page-heading">
         <div>
-          <h1 id="profile-title">{messages.title}</h1>
+          <h1 id="profile-title" tabIndex={-1}>{messages.title}</h1>
           <p>{messages.subtitle}</p>
         </div>
         <button className="secondary-button" type="button" onClick={() => {
