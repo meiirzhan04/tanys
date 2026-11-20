@@ -5,3 +5,4 @@ test-results/
 deploy/.env.staging
 deploy/.env.production
 deploy/.last_good_release.*
+deploy/.current_release.*
