@@ -1,7 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { viewer } from './auth.js'
 import { HttpError, json, readBody, transaction, uuid } from './http.js'
-import { recommend } from './matching/recommend.js'
+import { normalizeSkill, recommend } from './matching/recommend.js'
+import { createAiSkillResolver } from './matching/skill-ai.js'
 import type { Candidate } from './matching/types.js'
 
 const fields = 'p.user_id AS id,p.name,p.role,p.skills,p.experience_years AS "experienceYears",p.interests,p.about,p.goal,p.looking_for AS "lookingFor"'
@@ -9,6 +10,12 @@ const eligible = `FROM event_profiles p WHERE p.event_id=$1 AND p.visible AND p.
   AND NOT EXISTS(SELECT 1 FROM event_blocks b WHERE b.event_id=p.event_id AND
     ((b.blocker_id=$2 AND b.blocked_id=p.user_id) OR (b.blocked_id=$2 AND b.blocker_id=p.user_id)))
   AND NOT EXISTS(SELECT 1 FROM event_restrictions r WHERE r.event_id=p.event_id AND r.user_id IN ($2,p.user_id))`
+
+const resolveSkill = createAiSkillResolver({
+  baseUrl: process.env.TANYS_OLLAMA_URL,
+  embeddingModel: process.env.TANYS_EMBEDDING_MODEL || undefined,
+  llmModel: process.env.TANYS_LLM_MODEL || undefined,
+})
 
 export async function recommendationRoute(req: IncomingMessage,res: ServerResponse,path: string) {
   const match = /^\/events\/([^/]+)\/(recommendations|feedback\/([^/]+))$/.exec(path)
@@ -33,8 +40,22 @@ export async function recommendationRoute(req: IncomingMessage,res: ServerRespon
     }
     const candidates = await client.query<Candidate>(`SELECT ${fields} ${eligible} AND NOT EXISTS(
       SELECT 1 FROM event_feedback f WHERE f.event_id=p.event_id AND f.user_id=$2 AND f.candidate_id=p.user_id)`,[event,user])
-    return { items:recommend(self.rows[0],candidates.rows,locale) }
+    return { profile: self.rows[0], candidates: candidates.rows }
   })
-  json(res,feedback ? 204 : 200,result)
+  if (!result) {
+    json(res, 204)
+    return true
+  }
+
+  const { profile, candidates } = result
+  let skillKey = normalizeSkill
+  if (profile.goal === 'hire' || profile.goal === 'find_job') {
+    const reciprocal = profile.goal === 'hire' ? 'find_job' : 'hire'
+    const labels = [profile, ...candidates.filter(item => item.goal === reciprocal)]
+      .flatMap(item => [...item.skills, ...(item.lookingFor ?? [])])
+    skillKey = await resolveSkill(labels, normalizeSkill)
+  }
+  // Release the database transaction before waiting on inference.
+  json(res, 200, { items: recommend(profile, candidates, locale, skillKey) })
   return true
 }
