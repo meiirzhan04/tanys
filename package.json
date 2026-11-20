@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "node --experimental-strip-types --test src/api/client.test.ts src/components/inviteQr.test.ts src/components/memberSearch.test.ts src/components/profileDirty.test.ts src/components/socialHelpers.test.ts src/data/interestCsv.test.ts src/data/loadCandidates.test.ts src/i18n/localeStorage.test.ts src/i18n/messages.test.ts src/matching/recommend.test.ts src/matching/session.test.ts src/scheduling/slots.test.ts src/theme/themeStorage.test.ts tests/verify-matching.test.mjs tests/load/meetup-load-check.test.mjs",
+    "test": "node --experimental-strip-types --test src/api/client.test.ts src/components/inviteQr.test.ts src/components/memberSearch.test.ts src/components/profileDirty.test.ts src/components/socialHelpers.test.ts src/data/interestCsv.test.ts src/data/loadCandidates.test.ts src/i18n/localeStorage.test.ts src/i18n/messages.test.ts src/matching/explanationSkills.test.ts src/matching/recommend.test.ts src/matching/session.test.ts src/scheduling/slots.test.ts src/theme/themeStorage.test.ts tests/verify-matching.test.mjs tests/load/meetup-load-check.test.mjs",
     "test:browser": "playwright install chromium && playwright test --project=desktop-chrome --project=mobile-chrome",
     "test:release": "playwright install chromium webkit && playwright test"
   },
