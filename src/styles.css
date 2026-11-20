@@ -30,8 +30,11 @@ h1, h2, p { margin: 0; }
 .brand { display: inline-flex; align-items: center; gap: 8px; font-size: 21px; font-weight: 740; letter-spacing: -.035em; }
 .brand-mark { width: 27px; height: 27px; display: grid; place-items: center; background: #adc9f9; color: #13243f; border-radius: 5px; font-size: 16px; font-weight: 800; }
 .header-context { padding-left: 18px; border-left: 1px solid #5c6c87; color: #d4dff2; font-size: 13px; }
-.header-actions { margin-left: auto; display: flex; align-items: center; gap: 14px; }
+.header-actions { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 .demo-status { color: #d4dff2; font-size: 12px; }
+.header-link-btn { min-height: 32px; padding: 5px 10px; border: 1px solid #405579; border-radius: 6px; background: #1a3054; color: #f7f9fe; font-size: 12px; font-weight: 650; }
+.header-link-btn:hover { background: #23406f; }
+.header-link-btn:focus-visible { outline-color: #adc9f9; outline-offset: 2px; }
 .lang-switcher { display: inline-flex; padding: 2px; border: 1px solid #405579; border-radius: 6px; background: #0e1c32; gap: 2px; }
 .lang-switcher button { min-height: 28px; padding: 3px 8px; border: 0; border-radius: 4px; background: transparent; color: #d4dff2; font-size: 12px; font-weight: 650; }
 .lang-switcher button:hover:not([aria-pressed='true']) { background: #1d3254; color: #fff; }
@@ -101,6 +104,34 @@ h1, h2, p { margin: 0; }
 .empty-state { padding: 18px; }
 .empty-state h2 { font-size: 17px; }
 .empty-state p { margin-top: 5px; color: var(--muted); }
+
+.account-main { padding-block: clamp(24px, 4vw, 48px); }
+.auth-card, .status-panel { max-width: 520px; margin-inline: auto; padding: clamp(18px, 3vw, 28px); }
+.status-panel h1 { font-size: clamp(20px, 2.6vw, 26px); line-height: 1.2; }
+.status-panel p { margin-top: 8px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+.status-actions, .auth-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.auth-form { display: grid; gap: 14px; }
+.auth-hint { color: var(--muted); font-size: 13px; line-height: 1.45; }
+.purpose-toggle { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.purpose-toggle button { min-height: 34px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--muted); font-size: 13px; font-weight: 650; }
+.purpose-toggle button[aria-pressed='true'] { background: var(--accent-soft); border-color: var(--accent); color: #183f7f; }
+.info-banner, .error-banner { padding: 11px 13px; border-radius: 7px; font-size: 13px; line-height: 1.45; margin-bottom: 14px; }
+.info-banner { background: var(--accent-soft); border: 1px solid #bfd3f1; color: #183f7f; }
+.error-banner { background: #fdf2f2; border: 1px solid #e6b9b8; color: #8b2624; }
+.error-banner--actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.event-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 15px; margin-bottom: 18px; }
+.event-picker { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 650; min-width: 0; }
+.event-picker select { min-height: 36px; padding: 5px 10px; border-radius: 5px; border: 1px solid #cbd6e6; background: var(--paper); color: var(--ink); font-size: 13px; max-width: 100%; }
+.event-picker-empty { font-size: 13px; color: var(--muted); font-weight: 600; }
+.event-toolbar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.visibility-pill { display: inline-flex; align-items: center; padding: 5px 10px; border-radius: 6px; font-size: 12px; font-weight: 650; background: #eef1f6; color: var(--muted); border: 1px solid var(--line); }
+.visibility-pill--on { background: #e6f4ec; color: #1a5c38; border-color: #b5ddc5; }
+.privacy-box { padding: 12px 14px; border-radius: 7px; background: #f8fafd; border: 1px solid var(--line); }
+.privacy-box__heading { font-size: 13px; font-weight: 700; color: var(--ink); }
+.privacy-box__note { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.checkbox-row { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; line-height: 1.45; cursor: pointer; }
+.checkbox-row input[type='checkbox'] { width: 18px; height: 18px; min-height: 18px; margin-top: 2px; flex: 0 0 18px; accent-color: var(--accent); }
+.consent-text { font-size: 12px; color: var(--muted); font-weight: 450; }
 
 .interest-map { max-width: 840px; }
 .interest-table { width: 100%; border-collapse: collapse; font-size: 13px; }

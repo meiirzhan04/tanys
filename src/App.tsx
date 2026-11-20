@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { isAccountRoute, parseInviteLocation, savePendingInvite } from './api/inviteRoute'
+import { EventAccountFlow } from './components/EventAccountFlow'
 import { InterestMap } from './components/InterestMap'
 import { SchedulePanel } from './components/MeetingSlots'
 import { ProfileForm } from './components/ProfileForm'
@@ -36,6 +38,10 @@ function getResultsMessage(session: RecommendationSession, locale: Locale): stri
 }
 
 export default function App() {
+  const [initialInvite] = useState(() => parseInviteLocation(window.location.pathname, window.location.search))
+  const [mode, setMode] = useState<'demo' | 'account'>(() =>
+    isAccountRoute(window.location.pathname, window.location.search) ? 'account' : 'demo',
+  )
   const [locale, setLocale] = useState<Locale>('ru')
   const [view, setView] = useState<View>('profile')
   const [session, setSession] = useState<RecommendationSession>()
@@ -94,7 +100,19 @@ export default function App() {
           <span className="brand"><span className="brand-mark" aria-hidden="true">T</span>Tanys</span>
           <span className="header-context">{messages.header.context}</span>
           <div className="header-actions">
-            <span className="demo-status">{messages.header.demoStatus}</span>
+            {mode === 'demo' && <span className="demo-status">{messages.header.demoStatus}</span>}
+            <button
+              type="button"
+              className="header-link-btn"
+              onClick={() => {
+                if (mode === 'account') {
+                  savePendingInvite(null)
+                  setMode('demo')
+                } else {
+                  setMode('account')
+                }
+              }}
+            >{mode === 'account' ? messages.account.backToDemo : messages.account.openAccount}</button>
             <div className="lang-switcher" role="group" aria-label={messages.languageSwitcherLabel}>
               {SUPPORTED_LOCALES.map(item => (
                 <button
@@ -111,41 +129,52 @@ export default function App() {
         </div>
       </header>
 
-      <div className="site-width workspace">
-        <nav className="workspace-nav" aria-label={messages.nav.label}>
-          <button type="button" aria-current={view === 'profile' ? 'page' : undefined} onClick={() => setView('profile')}>{messages.nav.profile}</button>
-          <button type="button" disabled={!session} aria-current={view === 'results' ? 'page' : undefined} onClick={() => setView('results')}>
-            {messages.nav.results} {session && <span className="nav-count">{session.recommendations.length}</span>}
-          </button>
-          <button type="button" aria-current={view === 'schedule' ? 'page' : undefined} onClick={() => setView('schedule')}>
-            {messages.nav.schedule} <span className="nav-count">{bookings.length}</span>
-          </button>
-          <button type="button" aria-current={view === 'interests' ? 'page' : undefined} onClick={() => setView('interests')}>
-            {messages.nav.interests}
-          </button>
-        </nav>
+      {mode === 'account' ? (
+        <EventAccountFlow
+          locale={locale}
+          initialInvite={initialInvite}
+          onExitToDemo={() => {
+            savePendingInvite(null)
+            setMode('demo')
+          }}
+        />
+      ) : (
+        <div className="site-width workspace">
+          <nav className="workspace-nav" aria-label={messages.nav.label}>
+            <button type="button" aria-current={view === 'profile' ? 'page' : undefined} onClick={() => setView('profile')}>{messages.nav.profile}</button>
+            <button type="button" disabled={!session} aria-current={view === 'results' ? 'page' : undefined} onClick={() => setView('results')}>
+              {messages.nav.results} {session && <span className="nav-count">{session.recommendations.length}</span>}
+            </button>
+            <button type="button" aria-current={view === 'schedule' ? 'page' : undefined} onClick={() => setView('schedule')}>
+              {messages.nav.schedule} <span className="nav-count">{bookings.length}</span>
+            </button>
+            <button type="button" aria-current={view === 'interests' ? 'page' : undefined} onClick={() => setView('interests')}>
+              {messages.nav.interests}
+            </button>
+          </nav>
 
-        <main className="main-content">
-          <div hidden={view !== 'profile'}>
-            <ProfileForm onSubmit={submit} example={sampleProfile} locale={locale} />
-          </div>
-          {view === 'results' && session && <RecommendationResults
-            recommendations={session.recommendations}
-            onEdit={handleEditProfile}
-            onFeedback={handleFeedback}
-            message={getResultsMessage(session, locale)}
-            bookings={bookings}
-            onBookSlot={handleBookSlot}
-            onCancelSlot={handleCancelSlot}
-            locale={locale}
-          />}
-          {view === 'schedule' && <>
-            <div className="page-heading"><h1>{messages.meetings.pageTitle}</h1></div>
-            <SchedulePanel bookings={bookings} onCancel={handleCancelSlot} locale={locale} />
-          </>}
-          {view === 'interests' && <InterestMap summary={interestSummary} locale={locale} />}
-        </main>
-      </div>
+          <main className="main-content">
+            <div hidden={view !== 'profile'}>
+              <ProfileForm onSubmit={submit} example={sampleProfile} locale={locale} />
+            </div>
+            {view === 'results' && session && <RecommendationResults
+              recommendations={session.recommendations}
+              onEdit={handleEditProfile}
+              onFeedback={handleFeedback}
+              message={getResultsMessage(session, locale)}
+              bookings={bookings}
+              onBookSlot={handleBookSlot}
+              onCancelSlot={handleCancelSlot}
+              locale={locale}
+            />}
+            {view === 'schedule' && <>
+              <div className="page-heading"><h1>{messages.meetings.pageTitle}</h1></div>
+              <SchedulePanel bookings={bookings} onCancel={handleCancelSlot} locale={locale} />
+            </>}
+            {view === 'interests' && <InterestMap summary={interestSummary} locale={locale} />}
+          </main>
+        </div>
+      )}
     </>
   )
 }

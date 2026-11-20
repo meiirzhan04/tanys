@@ -92,6 +92,69 @@ export interface Messages {
     scheduleTitle: string
     scheduleEmpty: string
   }
+  account: {
+    openAccount: string
+    backToDemo: string
+    loadingSession: string
+    loadingEvent: string
+    joiningInvite: string
+    signInTitle: string
+    signInSubtitle: string
+    inviteNotice: string
+    purposeLogin: string
+    purposeRecover: string
+    emailLabel: string
+    emailPlaceholder: string
+    sendCode: string
+    sendingCode: string
+    codeSentHint: (email: string) => string
+    codeLabel: string
+    codePlaceholder: string
+    verifyCode: string
+    verifyingCode: string
+    changeEmail: string
+    resendCode: string
+    expiredTitle: string
+    expiredBody: string
+    openMyEvents: string
+    eventSelectorLabel: string
+    noEventsTitle: string
+    noEventsBody: string
+    logout: string
+    loggingOut: string
+    leaveEvent: string
+    leavingEvent: string
+    eventClosedNotice: string
+    profileTitle: string
+    profileEditTitle: string
+    profileSubtitle: string
+    nameLabel: string
+    namePlaceholder: string
+    visibilityHeading: string
+    visibilityToggleLabel: string
+    visibilityNotice: string
+    visibilityStatusVisible: string
+    visibilityStatusHidden: string
+    consentLabel: string
+    saveProfile: string
+    savingProfile: string
+    retrySave: string
+    savedNotice: string
+    loadingRecommendations: string
+    errors: {
+      emailInvalid: string
+      codeInvalid: string
+      nameRequired: string
+      consentRequired: string
+      networkSavePreserved: string
+      networkGeneral: string
+      sessionExpired: string
+      rateLimited: string
+      invalidCode: string
+      genericSave: string
+      genericRequest: string
+    }
+  }
 }
 
 export const messagesByLocale: Record<Locale, Messages> = {
@@ -188,6 +251,69 @@ export const messagesByLocale: Record<Locale, Messages> = {
       scheduleTitle: 'Моё расписание 1:1',
       scheduleEmpty: 'Пока нет запланированных встреч — выберите слот в карточке собеседника.',
     },
+    account: {
+      openAccount: 'Войти',
+      backToDemo: 'К демо',
+      loadingSession: 'Проверяем сессию…',
+      loadingEvent: 'Загружаем данные мероприятия…',
+      joiningInvite: 'Присоединяемся к мероприятию по приглашению…',
+      signInTitle: 'Вход в Tanys',
+      signInSubtitle: 'Введите email, чтобы получить одноразовый код для входа или восстановления доступа.',
+      inviteNotice: 'После входа вы автоматически вернётесь в мероприятие по вашей ссылке-приглашению.',
+      purposeLogin: 'Вход',
+      purposeRecover: 'Восстановить доступ',
+      emailLabel: 'Email',
+      emailPlaceholder: 'name@example.org',
+      sendCode: 'Получить код',
+      sendingCode: 'Отправляем код…',
+      codeSentHint: email => `Код отправлен на ${email}. Введите его ниже.`,
+      codeLabel: 'Одноразовый код',
+      codePlaceholder: '123456',
+      verifyCode: 'Войти',
+      verifyingCode: 'Проверяем код…',
+      changeEmail: 'Изменить email',
+      resendCode: 'Отправить снова',
+      expiredTitle: 'Ссылка-приглашение недействительна или истекла',
+      expiredBody: 'Попросите организатора прислать новое приглашение или откройте одно из ваших мероприятий.',
+      openMyEvents: 'Мои мероприятия',
+      eventSelectorLabel: 'Мероприятие',
+      noEventsTitle: 'Пока нет активных мероприятий',
+      noEventsBody: 'Чтобы присоединиться, откройте ссылку-приглашение от организатора.',
+      logout: 'Выйти',
+      loggingOut: 'Выход…',
+      leaveEvent: 'Выйти из мероприятия',
+      leavingEvent: 'Выходим…',
+      eventClosedNotice: 'Мероприятие завершено. Редактирование анкеты недоступно.',
+      profileTitle: 'Анкета в мероприятии',
+      profileEditTitle: 'Редактировать анкету',
+      profileSubtitle: 'Заполните профиль и выберите, показывать ли его другим участникам этого мероприятия.',
+      nameLabel: 'Имя',
+      namePlaceholder: 'Например, Алия',
+      visibilityHeading: 'Кому доступна анкета',
+      visibilityToggleLabel: 'Показывать мою анкету участникам этого мероприятия',
+      visibilityNotice: 'Вашу анкету (имя, роль, навыки, интересы, цель и «О себе») видят только участники этого мероприятия после того, как вы включите показ профиля. Вы можете скрыть анкету или выйти из мероприятия в любой момент.',
+      visibilityStatusVisible: 'Видно только участникам этого мероприятия',
+      visibilityStatusHidden: 'Скрыто — вы не отображаетесь в выдаче',
+      consentLabel: 'Продолжая, я соглашаюсь на обработку данных моей анкеты для подбора собеседников и встреч 1:1 в рамках этого мероприятия (версия правил v1). Анкета и аккаунт удаляются в настройках профиля или по обращению к оператору; данные закрытого мероприятия очищаются через 30 дней.',
+      saveProfile: 'Сохранить и перейти к подбору',
+      savingProfile: 'Сохраняем анкету…',
+      retrySave: 'Повторить сохранение',
+      savedNotice: 'Анкета сохранена.',
+      loadingRecommendations: 'Загружаем рекомендации…',
+      errors: {
+        emailInvalid: 'Введите корректный email.',
+        codeInvalid: 'Введите код из письма.',
+        nameRequired: 'Укажите ваше имя.',
+        consentRequired: 'Подтвердите согласие на обработку данных анкеты.',
+        networkSavePreserved: 'Не удалось сохранить анкету из-за ошибки сети. Введённые данные сохранены на экране — попробуйте снова.',
+        networkGeneral: 'Ошибка сети. Проверьте подключение и попробуйте ещё раз.',
+        sessionExpired: 'Сессия истекла. Войдите снова — введённые поля сохранены.',
+        rateLimited: 'Слишком много запросов. Подождите немного и повторите попытку.',
+        invalidCode: 'Неверный или истёкший код. Проверьте код или запросите новый.',
+        genericSave: 'Не удалось сохранить анкету. Введённые данные сохранены на экране.',
+        genericRequest: 'Произошла ошибка. Попробуйте повторить действие.',
+      },
+    },
   },
   kk: {
     languageSwitcherLabel: 'Тілді таңдау',
@@ -282,6 +408,69 @@ export const messagesByLocale: Record<Locale, Messages> = {
       scheduleTitle: 'Менің 1:1 кестем',
       scheduleEmpty: 'Әзірге жоспарланған кездесулер жоқ — қатысушы карточкасынан слот таңдаңыз.',
     },
+    account: {
+      openAccount: 'Кіру',
+      backToDemo: 'Демоға оралу',
+      loadingSession: 'Сессия тексерілуде…',
+      loadingEvent: 'Іс-шара деректері жүктелуде…',
+      joiningInvite: 'Шақыру сілтемесі арқылы іс-шараға қосылуда…',
+      signInTitle: 'Tanys жүйесіне кіру',
+      signInSubtitle: 'Кіру немесе қолжетімділікті қалпына келтіру үшін бір реттік код алуға email енгізіңіз.',
+      inviteNotice: 'Кіргеннен кейін сіз шақыру сілтемесіндегі іс-шараға автоматты түрде ораласыз.',
+      purposeLogin: 'Кіру',
+      purposeRecover: 'Қолжетімділікті қалпына келтіру',
+      emailLabel: 'Email',
+      emailPlaceholder: 'name@example.org',
+      sendCode: 'Код алу',
+      sendingCode: 'Код жіберілуде…',
+      codeSentHint: email => `Код ${email} поштасына жіберілді. Төменге енгізіңіз.`,
+      codeLabel: 'Бір реттік код',
+      codePlaceholder: '123456',
+      verifyCode: 'Кіру',
+      verifyingCode: 'Код тексерілуде…',
+      changeEmail: 'Email өзгерту',
+      resendCode: 'Қайта жіберу',
+      expiredTitle: 'Шақыру сілтемесі жарамсыз немесе мерзімі өткен',
+      expiredBody: 'Ұйымдастырушыдан жаңа сілтеме сұраңыз немесе өз іс-шараларыңыздың бірін ашыңыз.',
+      openMyEvents: 'Менің іс-шараларым',
+      eventSelectorLabel: 'Іс-шара',
+      noEventsTitle: 'Белсенді іс-шаралар әлі жоқ',
+      noEventsBody: 'Қосылу үшін ұйымдастырушы жіберген шақыру сілтемесін ашыңыз.',
+      logout: 'Шығу',
+      loggingOut: 'Шығуда…',
+      leaveEvent: 'Іс-шарадан шығу',
+      leavingEvent: 'Шығуда…',
+      eventClosedNotice: 'Іс-шара аяқталды. Сауалнаманы өзгерту қолжетімсіз.',
+      profileTitle: 'Іс-шарадағы анкета',
+      profileEditTitle: 'Анкетаны өңдеу',
+      profileSubtitle: 'Профильді толтырып, оны осы іс-шараның басқа қатысушыларына көрсетуді таңдаңыз.',
+      nameLabel: 'Атыңыз',
+      namePlaceholder: 'Мысалы, Әлия',
+      visibilityHeading: 'Анкета кімге көрінеді',
+      visibilityToggleLabel: 'Менің анкетамды осы іс-шара қатысушыларына көрсету',
+      visibilityNotice: 'Сауалнамаңызды (атыңыз, рөліңіз, дағдыларыңыз, қызығушылықтарыңыз, мақсатыңыз және «Өзім туралы») профильді көрсетуді қосқаннан кейін тек осы іс-шараның қатысушылары ғана көреді. Профильді кез келген уақытта жасыруға немесе іс-шарадан шығуға болады.',
+      visibilityStatusVisible: 'Тек осы іс-шара қатысушыларына көрінеді',
+      visibilityStatusHidden: 'Жасырын — іріктеуде көрсетілмейсіз',
+      consentLabel: 'Жалғастыра отырып, осы іс-шара аясында сұхбаттасушыларды іріктеу және 1:1 кездесулерді жоспарлау үшін сауалнама деректерімді өңдеуге келісемін (ереже нұсқасы v1). Профиль мен аккаунтты баптауларда немесе операторға жүгініп өшіруге болады; аяқталған іс-шара деректері 30 күннен кейін тазаланады.',
+      saveProfile: 'Сақтау және ұсыныстарға өту',
+      savingProfile: 'Анкета сақталуда…',
+      retrySave: 'Сақтауды қайталау',
+      savedNotice: 'Анкета сақталды.',
+      loadingRecommendations: 'Ұсыныстар жүктелуде…',
+      errors: {
+        emailInvalid: 'Дұрыс email енгізіңіз.',
+        codeInvalid: 'Хаттағы кодты енгізіңіз.',
+        nameRequired: 'Атыңызды көрсетіңіз.',
+        consentRequired: 'Сауалнама деректерін өңдеуге келісімді растаңыз.',
+        networkSavePreserved: 'Желі қатесіне байланысты анкетаны сақтау мүмкін болмады. Енгізілген деректер экранда сақталды — қайта көріңіз.',
+        networkGeneral: 'Желі қатесі. Қосылымды тексеріп, қайта көріңіз.',
+        sessionExpired: 'Сессия мерзімі аяқталды. Қайта кіріңіз — енгізілген өрістер сақталды.',
+        rateLimited: 'Сұраулар тым көп. Сәл күтіп, қайта көріңіз.',
+        invalidCode: 'Код қате немесе мерзімі өткен. Кодты тексеріңіз немесе жаңасын сұраңыз.',
+        genericSave: 'Анкетаны сақтау мүмкін болмады. Енгізілген деректер экранда сақталды.',
+        genericRequest: 'Қате орын алды. Әрекетті қайталап көріңіз.',
+      },
+    },
   },
   en: {
     languageSwitcherLabel: 'Language selector',
@@ -375,6 +564,69 @@ export const messagesByLocale: Record<Locale, Messages> = {
       busyInline: name => ` (busy: ${name})`,
       scheduleTitle: 'My 1:1 schedule',
       scheduleEmpty: 'No meetings scheduled yet — choose a slot on a match card.',
+    },
+    account: {
+      openAccount: 'Sign in',
+      backToDemo: 'Demo mode',
+      loadingSession: 'Checking session…',
+      loadingEvent: 'Loading event…',
+      joiningInvite: 'Joining event via invite…',
+      signInTitle: 'Sign in to Tanys',
+      signInSubtitle: 'Enter your email to receive a one-time code to sign in or recover access.',
+      inviteNotice: 'After signing in, you will return directly to the event from your invite link.',
+      purposeLogin: 'Sign in',
+      purposeRecover: 'Recover access',
+      emailLabel: 'Email',
+      emailPlaceholder: 'name@example.org',
+      sendCode: 'Send code',
+      sendingCode: 'Sending code…',
+      codeSentHint: email => `Code sent to ${email}. Enter it below.`,
+      codeLabel: 'One-time code',
+      codePlaceholder: '123456',
+      verifyCode: 'Sign in',
+      verifyingCode: 'Verifying code…',
+      changeEmail: 'Change email',
+      resendCode: 'Resend code',
+      expiredTitle: 'Invite link is invalid or expired',
+      expiredBody: 'Ask the organizer for a fresh invite link or open one of your events.',
+      openMyEvents: 'My events',
+      eventSelectorLabel: 'Event',
+      noEventsTitle: 'No active events yet',
+      noEventsBody: 'Open an invite link from your event organizer to join.',
+      logout: 'Sign out',
+      loggingOut: 'Signing out…',
+      leaveEvent: 'Leave event',
+      leavingEvent: 'Leaving…',
+      eventClosedNotice: 'This event is closed. Profile editing is disabled.',
+      profileTitle: 'Event profile',
+      profileEditTitle: 'Edit profile',
+      profileSubtitle: 'Complete your profile and choose whether other participants of this event can see it.',
+      nameLabel: 'Name',
+      namePlaceholder: 'e.g. Aliya',
+      visibilityHeading: 'Who can see your profile',
+      visibilityToggleLabel: 'Show my profile to participants of this event',
+      visibilityNotice: "Your profile (name, role, skills, interests, goal, and 'About') is shown only to participants of this event once you turn profile visibility on. You can hide your profile or leave the event at any time.",
+      visibilityStatusVisible: 'Visible only to participants of this event',
+      visibilityStatusHidden: 'Hidden — not shown in matches',
+      consentLabel: 'By continuing, I agree to the processing of my profile data for matchmaking and 1:1 meeting scheduling within this event (policy v1). You can delete your profile and account in settings or via the operator contact; closed event data is purged after 30 days.',
+      saveProfile: 'Save & view matches',
+      savingProfile: 'Saving profile…',
+      retrySave: 'Retry save',
+      savedNotice: 'Profile saved.',
+      loadingRecommendations: 'Loading matches…',
+      errors: {
+        emailInvalid: 'Enter a valid email address.',
+        codeInvalid: 'Enter the code from your email.',
+        nameRequired: 'Enter your name.',
+        consentRequired: 'Please accept the profile data processing notice.',
+        networkSavePreserved: 'Could not save your profile due to a network error. Your input is preserved on screen — please retry.',
+        networkGeneral: 'Network error. Check your connection and try again.',
+        sessionExpired: 'Your session expired. Sign in again — your entered fields are preserved.',
+        rateLimited: 'Too many requests. Please wait a moment and try again.',
+        invalidCode: 'Invalid or expired code. Check the code or request a new one.',
+        genericSave: 'Could not save your profile. Your entered fields are preserved on screen.',
+        genericRequest: 'Something went wrong. Please try again.',
+      },
     },
   },
 }
