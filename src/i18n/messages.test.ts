@@ -38,6 +38,9 @@ test('provides complete, distinct translations for ru, kk, and en', () => {
     for (const [field, errorText] of Object.entries(messages.account.errors)) {
       assert.ok(errorText.trim(), `missing account error ${field} for ${code}`)
     }
+    assert.ok(messages.social.contactNotice.trim())
+    assert.ok(messages.social.slotConflict.trim())
+    assert.ok(messages.social.requestIntro.trim())
   }
 
   assert.notEqual(messagesByLocale.ru.form.title, messagesByLocale.kk.form.title)

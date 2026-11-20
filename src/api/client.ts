@@ -4,6 +4,39 @@ import type { Goal, Locale, ProfileInput, Recommendation } from '../matching/typ
 export type AuthPurpose = 'login' | 'recover'
 export type EventRole = 'organizer' | 'participant'
 export type EventStatus = 'active' | 'closed'
+export type IntroductionStatus = 'pending' | 'accepted' | 'declined' | 'withdrawn'
+export type IntroductionDirection = 'incoming' | 'outgoing'
+export type ServerMeetingStatus = 'pending' | 'confirmed' | 'declined' | 'cancelled'
+
+export interface IntroductionItem {
+  id: string
+  status: IntroductionStatus
+  direction: IntroductionDirection
+  participantId?: string
+  participantName?: string
+  participantRole?: string
+  contact?: string | null
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface CommonSlot {
+  id: string
+  start: string
+  end: string
+}
+
+export interface ServerMeeting {
+  id: string
+  introductionId: string
+  slotId?: string
+  start?: string
+  end?: string
+  status: ServerMeetingStatus
+  direction?: IntroductionDirection
+  participantName?: string
+  participantRole?: string
+}
 
 export interface AuthUser {
   id: string
@@ -78,11 +111,16 @@ export function isNetworkError(error: unknown): boolean {
   return isApiError(error) && error.code === 'network_error'
 }
 
+export function isSlotConflictError(error: unknown): boolean {
+  return isApiError(error) && (error.status === 409 || error.code === 'slot_conflict')
+}
+
 export interface TanysApiClient {
   requestAuthChallenge(email: string, purpose: AuthPurpose): Promise<{ challengeId: string }>
   verifyAuthChallenge(challengeId: string, code: string): Promise<AuthUser>
   getMe(): Promise<AuthUser | null>
   logout(): Promise<void>
+  saveContact(value: string): Promise<void>
   listEvents(): Promise<EventSummary[]>
   getEvent(eventId: string): Promise<EventDetails>
   joinEvent(eventId: string, token: string): Promise<{ role: EventRole }>
@@ -91,6 +129,23 @@ export interface TanysApiClient {
   saveEventProfile(eventId: string, profile: ServerProfilePayload): Promise<ServerProfile>
   getEventRecommendations(eventId: string, locale: Locale): Promise<Recommendation[]>
   sendEventFeedback(eventId: string, candidateId: string, response: Feedback): Promise<void>
+  listIntroductions(eventId: string): Promise<IntroductionItem[]>
+  getIntroduction(eventId: string, introductionId: string): Promise<IntroductionItem>
+  createIntroduction(eventId: string, recipientId: string): Promise<IntroductionItem>
+  updateIntroduction(
+    eventId: string,
+    introductionId: string,
+    status: Exclude<IntroductionStatus, 'pending'>,
+  ): Promise<IntroductionItem>
+  saveAvailability(eventId: string, slots: readonly { start: string; end: string }[]): Promise<void>
+  listCommonSlots(eventId: string, introductionId: string): Promise<CommonSlot[]>
+  listMeetings(eventId: string): Promise<ServerMeeting[]>
+  createMeeting(eventId: string, introductionId: string, slotId: string): Promise<ServerMeeting>
+  updateMeeting(
+    eventId: string,
+    meetingId: string,
+    status: Exclude<ServerMeetingStatus, 'pending'>,
+  ): Promise<ServerMeeting>
 }
 
 type FetchLike = typeof fetch
@@ -175,6 +230,13 @@ export function createTanysApiClient(
       await request<null>('/auth/session', { method: 'DELETE' })
     },
 
+    async saveContact(value) {
+      await request<null>('/me/contact', {
+        method: 'PUT',
+        body: JSON.stringify({ value: value.trim() }),
+      })
+    },
+
     async listEvents() {
       const data = await request<{ items?: EventSummary[] }>('/events')
       return Array.isArray(data?.items) ? data.items : []
@@ -227,6 +289,83 @@ export function createTanysApiClient(
         {
           method: 'PUT',
           body: JSON.stringify({ response }),
+        },
+      )
+    },
+
+    async listIntroductions(eventId) {
+      const data = await request<{ items?: IntroductionItem[] }>(
+        `/events/${encodeURIComponent(eventId)}/introductions`,
+      )
+      return Array.isArray(data?.items) ? data.items : []
+    },
+
+    getIntroduction(eventId, introductionId) {
+      return request<IntroductionItem>(
+        `/events/${encodeURIComponent(eventId)}/introductions/${encodeURIComponent(introductionId)}`,
+      )
+    },
+
+    createIntroduction(eventId, recipientId) {
+      return request<IntroductionItem>(
+        `/events/${encodeURIComponent(eventId)}/introductions`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ recipientId }),
+        },
+      )
+    },
+
+    updateIntroduction(eventId, introductionId, status) {
+      return request<IntroductionItem>(
+        `/events/${encodeURIComponent(eventId)}/introductions/${encodeURIComponent(introductionId)}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ status }),
+        },
+      )
+    },
+
+    async saveAvailability(eventId, slots) {
+      await request<null>(
+        `/events/${encodeURIComponent(eventId)}/availability/me`,
+        {
+          method: 'PUT',
+          body: JSON.stringify({ slots }),
+        },
+      )
+    },
+
+    async listCommonSlots(eventId, introductionId) {
+      const data = await request<{ items?: CommonSlot[] }>(
+        `/events/${encodeURIComponent(eventId)}/introductions/${encodeURIComponent(introductionId)}/slots`,
+      )
+      return Array.isArray(data?.items) ? data.items : []
+    },
+
+    async listMeetings(eventId) {
+      const data = await request<{ items?: ServerMeeting[] }>(
+        `/events/${encodeURIComponent(eventId)}/meetings`,
+      )
+      return Array.isArray(data?.items) ? data.items : []
+    },
+
+    createMeeting(eventId, introductionId, slotId) {
+      return request<ServerMeeting>(
+        `/events/${encodeURIComponent(eventId)}/meetings`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ introductionId, slotId }),
+        },
+      )
+    },
+
+    updateMeeting(eventId, meetingId, status) {
+      return request<ServerMeeting>(
+        `/events/${encodeURIComponent(eventId)}/meetings/${encodeURIComponent(meetingId)}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ status }),
         },
       )
     },

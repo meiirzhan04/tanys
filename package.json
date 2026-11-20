@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "node --experimental-strip-types --test src/api/client.test.ts src/data/loadCandidates.test.ts src/i18n/messages.test.ts src/matching/recommend.test.ts src/matching/session.test.ts src/scheduling/slots.test.ts tests/verify-matching.test.mjs",
+    "test": "node --experimental-strip-types --test src/api/client.test.ts src/components/socialHelpers.test.ts src/data/loadCandidates.test.ts src/i18n/messages.test.ts src/matching/recommend.test.ts src/matching/session.test.ts src/scheduling/slots.test.ts tests/verify-matching.test.mjs",
     "test:browser": "playwright install chromium && playwright test"
   },
   "dependencies": {

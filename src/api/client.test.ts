@@ -5,6 +5,7 @@ import {
   createTanysApiClient,
   isInviteExpiredError,
   isNetworkError,
+  isSlotConflictError,
 } from './client.ts'
 import {
   isAccountRoute,
@@ -132,5 +133,59 @@ describe('createTanysApiClient', () => {
       () => apiNet.listEvents(),
       error => error instanceof ApiError && isNetworkError(error),
     )
+
+    const apiConflict = createTanysApiClient('/api/v1', async () =>
+      new Response(JSON.stringify({ error: { code: 'slot_conflict', message: 'Слот занят' } }), { status: 409 }),
+    )
+    await assert.rejects(
+      () => apiConflict.createMeeting('evt-1', 'i-1', 's-1'),
+      error => isSlotConflictError(error),
+    )
+  })
+
+  it('calls introduction, contact, slot, and meeting endpoints per service-v1 contract', async () => {
+    const seen: string[] = []
+    const api = createTanysApiClient('/api/v1', async (input, init) => {
+      const url = String(input)
+      const method = init?.method ?? 'GET'
+      seen.push(`${method} ${url}`)
+      if (url.endsWith('/introductions') && method === 'POST') {
+        return new Response(JSON.stringify({ id: 'i-1', status: 'pending', direction: 'outgoing' }), { status: 201 })
+      }
+      if (url.endsWith('/introductions/i-1') && method === 'PATCH') {
+        return new Response(JSON.stringify({ id: 'i-1', status: 'accepted', direction: 'incoming', contact: '@aliya' }), { status: 200 })
+      }
+      if (url.endsWith('/introductions/i-1/slots')) {
+        return new Response(JSON.stringify({ items: [{ id: 's-1', start: '2027-02-01T09:00:00Z', end: '2027-02-01T09:20:00Z' }] }), { status: 200 })
+      }
+      if (url.endsWith('/meetings') && method === 'POST') {
+        return new Response(JSON.stringify({ id: 'm-1', introductionId: 'i-1', status: 'pending' }), { status: 201 })
+      }
+      if (url.endsWith('/meetings/m-1') && method === 'PATCH') {
+        return new Response(JSON.stringify({ id: 'm-1', introductionId: 'i-1', status: 'confirmed' }), { status: 200 })
+      }
+      return new Response(null, { status: 204 })
+    })
+
+    await api.saveContact('@aliya')
+    const intro = await api.createIntroduction('evt-1', 'u-2')
+    assert.equal(intro.status, 'pending')
+    const accepted = await api.updateIntroduction('evt-1', 'i-1', 'accepted')
+    assert.equal(accepted.contact, '@aliya')
+    const slots = await api.listCommonSlots('evt-1', 'i-1')
+    assert.equal(slots.length, 1)
+    const meeting = await api.createMeeting('evt-1', 'i-1', 's-1')
+    assert.equal(meeting.status, 'pending')
+    const confirmed = await api.updateMeeting('evt-1', 'm-1', 'confirmed')
+    assert.equal(confirmed.status, 'confirmed')
+
+    assert.deepEqual(seen, [
+      'PUT /api/v1/me/contact',
+      'POST /api/v1/events/evt-1/introductions',
+      'PATCH /api/v1/events/evt-1/introductions/i-1',
+      'GET /api/v1/events/evt-1/introductions/i-1/slots',
+      'POST /api/v1/events/evt-1/meetings',
+      'PATCH /api/v1/events/evt-1/meetings/m-1',
+    ])
   })
 })

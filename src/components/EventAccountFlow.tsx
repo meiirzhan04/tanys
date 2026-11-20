@@ -1,16 +1,22 @@
-import { useCallback, useEffect, useId, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   defaultApiClient,
   isApiError,
   isInviteExpiredError,
   isNetworkError,
+  isSlotConflictError,
 } from '../api/client'
 import type {
   AuthPurpose,
   AuthUser,
+  CommonSlot,
   EventDetails,
   EventSummary,
+  IntroductionItem,
+  IntroductionStatus,
+  ServerMeeting,
+  ServerMeetingStatus,
   ServerProfile,
   TanysApiClient,
 } from '../api/client'
@@ -21,6 +27,13 @@ import type { Feedback } from '../matching/session'
 import type { Goal, Locale, Recommendation } from '../matching/types'
 import { getGoalLabels } from './goalLabels'
 import { RecommendationResults } from './RecommendationResults'
+import {
+  countActionableMeetings,
+  countPendingIncomingIntros,
+  diffSocialEvents,
+} from './socialHelpers'
+import type { SocialNotification } from './socialHelpers'
+import { IntroductionsPanel, NotificationBanner, ServerMeetingsPanel } from './SocialPanels'
 
 interface EventProfileDraft {
   name: string
@@ -37,7 +50,7 @@ interface EventProfileDraft {
 
 type ProfileErrorField = 'name' | 'goal' | 'role' | 'experience' | 'skills' | 'interests' | 'about' | 'consent'
 type ProfileErrors = Partial<Record<ProfileErrorField, string>>
-type EventTab = 'profile' | 'results'
+type EventTab = 'profile' | 'results' | 'introductions' | 'meetings'
 
 function emptyDraft(): EventProfileDraft {
   return {
@@ -159,18 +172,95 @@ export function EventAccountFlow({
   const [saveError, setSaveError] = useState('')
   const [saveSuccess, setSaveSuccess] = useState(false)
 
-  // Recommendations state
+  // Recommendations & social state
   const [recommendations, setRecommendations] = useState<Recommendation[] | null>(null)
   const [recsLoading, setRecsLoading] = useState(false)
   const [recsMessage, setRecsMessage] = useState('')
+  const [introductions, setIntroductions] = useState<IntroductionItem[]>([])
+  const [meetings, setMeetings] = useState<ServerMeeting[]>([])
+  const [notifications, setNotifications] = useState<SocialNotification[]>([])
+  const [socialRefreshing, setSocialRefreshing] = useState(false)
+  const [socialError, setSocialError] = useState('')
+  const [socialNotice, setSocialNotice] = useState('')
+  const [requestingIntroId, setRequestingIntroId] = useState('')
+  const [busyIntroId, setBusyIntroId] = useState('')
+  const [busyMeetingId, setBusyMeetingId] = useState('')
+  const [slotsByIntroId, setSlotsByIntroId] = useState<Record<string, readonly CommonSlot[]>>({})
+  const [loadingSlotsIntroId, setLoadingSlotsIntroId] = useState('')
+  const [proposingSlotKey, setProposingSlotKey] = useState('')
+  const [contactValue, setContactValue] = useState('')
+  const [savingContact, setSavingContact] = useState(false)
+  const [contactSaved, setContactSaved] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const [leavingEvent, setLeavingEvent] = useState(false)
+
+  const prevIntrosRef = useRef<readonly IntroductionItem[]>([])
+  const prevMeetingsRef = useRef<readonly ServerMeeting[]>([])
+  const socialInitializedRef = useRef(false)
+
+  const refreshSocialState = useCallback(async (eventId: string, detectDiffs: boolean) => {
+    setSocialRefreshing(true)
+    try {
+      const [rawIntros, nextMeetings] = await Promise.all([
+        api.listIntroductions(eventId),
+        api.listMeetings(eventId),
+      ])
+
+      // Enrich accepted introductions with GET /events/E/introductions/I when contact is omitted from the list.
+      const nextIntros = await Promise.all(
+        rawIntros.map(async item => {
+          if (item.status === 'accepted' && item.contact === undefined) {
+            try {
+              const detailed = await api.getIntroduction(eventId, item.id)
+              return { ...item, ...detailed }
+            } catch {
+              return item
+            }
+          }
+          return item
+        }),
+      )
+
+      if (detectDiffs && socialInitializedRef.current) {
+        const fresh = diffSocialEvents(prevIntrosRef.current, nextIntros, prevMeetingsRef.current, nextMeetings)
+        if (fresh.length) {
+          setNotifications(current => {
+            const seen = new Set(current.map(n => n.id))
+            return [...fresh.filter(n => !seen.has(n.id)), ...current].slice(0, 5)
+          })
+        }
+      }
+
+      prevIntrosRef.current = nextIntros
+      prevMeetingsRef.current = nextMeetings
+      socialInitializedRef.current = true
+      setIntroductions(nextIntros)
+      setMeetings(nextMeetings)
+    } catch (error) {
+      if (isApiError(error) && error.status === 401) {
+        setUser(null)
+        setPhase('auth')
+        setAuthError(formatApiError(error, locale, 'general'))
+        return
+      }
+      // Keep existing state intact if background refresh fails (e.g., backend #52/#53 not yet mounted).
+    } finally {
+      setSocialRefreshing(false)
+    }
+  }, [api, locale])
 
   const loadEventWorkspace = useCallback(async (eventId: string, preserveDraft = false) => {
     setEventLoading(true)
     setEventError('')
     setSaveError('')
     setSaveSuccess(false)
+    setSocialError('')
+    setSocialNotice('')
+    setSlotsByIntroId({})
+    setNotifications([])
+    prevIntrosRef.current = []
+    prevMeetingsRef.current = []
+    socialInitializedRef.current = false
     try {
       const [details, profile] = await Promise.all([
         api.getEvent(eventId),
@@ -186,6 +276,7 @@ export function EventAccountFlow({
       setRecommendations(null)
       setRecsMessage('')
       setTab('profile')
+      await refreshSocialState(eventId, false)
     } catch (error) {
       if (isApiError(error) && error.status === 401) {
         setUser(null)
@@ -197,7 +288,7 @@ export function EventAccountFlow({
     } finally {
       setEventLoading(false)
     }
-  }, [api, locale])
+  }, [api, locale, refreshSocialState])
 
   const enterAuthenticated = useCallback(async (invite: InviteTarget | null, preserveDraft = false) => {
     if (invite?.token) {
@@ -303,6 +394,25 @@ export function EventAccountFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locale])
 
+  // Refresh introductions & meetings when returning to the browser tab.
+  useEffect(() => {
+    if (phase !== 'ready' || !activeEventId) return
+    const handleReturn = () => {
+      if (document.visibilityState === 'visible') {
+        void refreshSocialState(activeEventId, true)
+      }
+    }
+    const handleWindowFocus = () => {
+      void refreshSocialState(activeEventId, true)
+    }
+    document.addEventListener('visibilitychange', handleReturn)
+    window.addEventListener('focus', handleWindowFocus)
+    return () => {
+      document.removeEventListener('visibilitychange', handleReturn)
+      window.removeEventListener('focus', handleWindowFocus)
+    }
+  }, [activeEventId, phase, refreshSocialState])
+
   async function handleRequestCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const trimmed = email.trim()
@@ -358,6 +468,15 @@ export function EventAccountFlow({
       setActiveEventId('')
       setActiveEvent(null)
       setRecommendations(null)
+      setIntroductions([])
+      setMeetings([])
+      setNotifications([])
+      setSlotsByIntroId({})
+      setSocialError('')
+      setSocialNotice('')
+      prevIntrosRef.current = []
+      prevMeetingsRef.current = []
+      socialInitializedRef.current = false
       setDraft(emptyDraft())
       setHasSavedProfile(false)
       setShowErrors(false)
@@ -480,6 +599,153 @@ export function EventAccountFlow({
       setEventError(formatApiError(error, locale, 'general'))
     }
   }
+
+  async function handleRequestIntro(candidateId: string) {
+    if (!activeEventId || requestingIntroId) return
+    const existing = introductions.find(item => item.participantId === candidateId)
+    if (existing && (existing.status === 'pending' || existing.status === 'accepted')) {
+      setSocialNotice(messages.social.alreadyRequested)
+      return
+    }
+    setRequestingIntroId(candidateId)
+    setSocialError('')
+    setSocialNotice('')
+    try {
+      const created = await api.createIntroduction(activeEventId, candidateId)
+      const enriched: IntroductionItem = {
+        ...created,
+        participantId: created.participantId ?? candidateId,
+        direction: created.direction ?? 'outgoing',
+      }
+      setIntroductions(current => {
+        const exists = current.some(item => item.id === enriched.id)
+        const next = exists
+          ? current.map(item => (item.id === enriched.id ? { ...item, ...enriched } : item))
+          : [enriched, ...current]
+        prevIntrosRef.current = next
+        return next
+      })
+      await refreshSocialState(activeEventId, false)
+    } catch (error) {
+      setSocialError(formatApiError(error, locale, 'general'))
+    } finally {
+      setRequestingIntroId('')
+    }
+  }
+
+  async function handleUpdateIntro(introId: string, status: Exclude<IntroductionStatus, 'pending'>) {
+    if (!activeEventId || busyIntroId) return
+    setBusyIntroId(introId)
+    setSocialError('')
+    setSocialNotice('')
+    try {
+      await api.updateIntroduction(activeEventId, introId, status)
+      await refreshSocialState(activeEventId, false)
+    } catch (error) {
+      setSocialError(formatApiError(error, locale, 'general'))
+    } finally {
+      setBusyIntroId('')
+    }
+  }
+
+  async function handleSaveContact(value: string) {
+    setSavingContact(true)
+    setContactSaved(false)
+    setSocialError('')
+    try {
+      await api.saveContact(value)
+      setContactValue(value)
+      setContactSaved(true)
+    } catch (error) {
+      setSocialError(formatApiError(error, locale, 'general'))
+    } finally {
+      setSavingContact(false)
+    }
+  }
+
+  async function handleToggleSlots(introId: string) {
+    if (!activeEventId) return
+    if (slotsByIntroId[introId] !== undefined) {
+      setSlotsByIntroId(current => {
+        const next = { ...current }
+        delete next[introId]
+        return next
+      })
+      return
+    }
+    setLoadingSlotsIntroId(introId)
+    setSocialError('')
+    try {
+      const slots = await api.listCommonSlots(activeEventId, introId)
+      setSlotsByIntroId(current => ({ ...current, [introId]: slots }))
+    } catch (error) {
+      setSocialError(formatApiError(error, locale, 'general'))
+    } finally {
+      setLoadingSlotsIntroId('')
+    }
+  }
+
+  async function handleProposeMeeting(introId: string, slotId: string) {
+    if (!activeEventId || proposingSlotKey) return
+    const key = `${introId}:${slotId}`
+    setProposingSlotKey(key)
+    setSocialError('')
+    setSocialNotice('')
+    try {
+      await api.createMeeting(activeEventId, introId, slotId)
+      setSocialNotice(messages.social.slotProposed)
+      await refreshSocialState(activeEventId, false)
+      const refreshedSlots = await api.listCommonSlots(activeEventId, introId)
+      setSlotsByIntroId(current => ({ ...current, [introId]: refreshedSlots }))
+    } catch (error) {
+      if (isSlotConflictError(error)) {
+        setSocialError(messages.social.slotConflict)
+        try {
+          const refreshedSlots = await api.listCommonSlots(activeEventId, introId)
+          setSlotsByIntroId(current => ({ ...current, [introId]: refreshedSlots }))
+          await refreshSocialState(activeEventId, false)
+        } catch {
+          // Keep slot conflict error visible.
+        }
+      } else {
+        setSocialError(formatApiError(error, locale, 'general'))
+      }
+    } finally {
+      setProposingSlotKey('')
+    }
+  }
+
+  async function handleUpdateMeeting(meetingId: string, status: Exclude<ServerMeetingStatus, 'pending'>) {
+    if (!activeEventId || busyMeetingId) return
+    setBusyMeetingId(meetingId)
+    setSocialError('')
+    setSocialNotice('')
+    try {
+      await api.updateMeeting(activeEventId, meetingId, status)
+      await refreshSocialState(activeEventId, false)
+    } catch (error) {
+      if (isSlotConflictError(error)) {
+        setSocialError(messages.social.slotConflict)
+        await refreshSocialState(activeEventId, false)
+      } else {
+        setSocialError(formatApiError(error, locale, 'general'))
+      }
+    } finally {
+      setBusyMeetingId('')
+    }
+  }
+
+  const introStatusByCandidate = useMemo(() => {
+    const map: Record<string, IntroductionStatus> = {}
+    for (const item of introductions) {
+      if (item.participantId) map[item.participantId] = item.status
+    }
+    return map
+  }, [introductions])
+
+  const pendingIncomingCount = countPendingIncomingIntros(introductions)
+  const activeMeetingsCount = countActionableMeetings(meetings)
+  const eventTimeZone = activeEvent?.timeZone || 'Asia/Almaty'
 
   const errors = showErrors ? validateDraft(draft, locale) : {}
   const showLookingFor = draft.goal === 'hire' || draft.goal === 'find_cofounder' || draft.goal === 'find_mentor'
@@ -659,12 +925,40 @@ export function EventAccountFlow({
         </button>
         <button
           type="button"
+          aria-current={tab === 'introductions' ? 'page' : undefined}
+          disabled={!activeEventId}
+          onClick={() => {
+            setTab('introductions')
+            if (activeEventId) void refreshSocialState(activeEventId, true)
+          }}
+        >
+          {messages.social.navIntroductions}{' '}
+          <span className="nav-count">{pendingIncomingCount || introductions.length}</span>
+        </button>
+        <button
+          type="button"
+          aria-current={tab === 'meetings' ? 'page' : undefined}
+          disabled={!activeEventId}
+          onClick={() => {
+            setTab('meetings')
+            if (activeEventId) void refreshSocialState(activeEventId, true)
+          }}
+        >
+          {messages.social.navMeetings} <span className="nav-count">{activeMeetingsCount}</span>
+        </button>
+        <button
+          type="button"
           disabled={loggingOut}
           onClick={() => void handleLogout()}
         >{loggingOut ? t.loggingOut : t.logout}</button>
       </nav>
 
       <main className="main-content">
+        <NotificationBanner
+          notifications={notifications}
+          locale={locale}
+          onDismiss={() => setNotifications([])}
+        />
         <div className="event-toolbar surface">
           {events.length > 0 ? (
             <label className="event-picker">
@@ -711,22 +1005,62 @@ export function EventAccountFlow({
             <h1>{t.noEventsTitle}</h1>
             <p>{t.noEventsBody}</p>
           </section>
+        ) : tab === 'introductions' ? (
+          <IntroductionsPanel
+            introductions={introductions}
+            locale={locale}
+            timeZone={eventTimeZone}
+            busyIntroId={busyIntroId}
+            slotsByIntroId={slotsByIntroId}
+            loadingSlotsIntroId={loadingSlotsIntroId}
+            proposingSlotKey={proposingSlotKey}
+            contactValue={contactValue}
+            savingContact={savingContact}
+            contactSaved={contactSaved}
+            socialError={socialError}
+            socialNotice={socialNotice}
+            onSaveContact={value => void handleSaveContact(value)}
+            onUpdateIntro={(introId, status) => void handleUpdateIntro(introId, status)}
+            onToggleSlots={introId => void handleToggleSlots(introId)}
+            onProposeMeeting={(introId, slotId) => void handleProposeMeeting(introId, slotId)}
+            onRefresh={() => { if (activeEventId) void refreshSocialState(activeEventId, true) }}
+            refreshing={socialRefreshing}
+          />
+        ) : tab === 'meetings' ? (
+          <ServerMeetingsPanel
+            meetings={meetings}
+            locale={locale}
+            timeZone={eventTimeZone}
+            busyMeetingId={busyMeetingId}
+            socialError={socialError}
+            socialNotice={socialNotice}
+            onUpdateMeeting={(meetingId, status) => void handleUpdateMeeting(meetingId, status)}
+            onRefresh={() => { if (activeEventId) void refreshSocialState(activeEventId, true) }}
+            refreshing={socialRefreshing}
+          />
         ) : tab === 'results' ? (
           recsLoading && recommendations === null ? (
             <div className="surface status-panel" role="status" aria-live="polite" aria-busy="true">
               <p>{t.loadingRecommendations}</p>
             </div>
           ) : (
-            <RecommendationResults
-              recommendations={recommendations ?? []}
-              onEdit={() => {
-                setTab('profile')
-                requestAnimationFrame(() => document.getElementById('event-profile-title')?.focus())
-              }}
-              onFeedback={(candidateId, response) => void handleServerFeedback(candidateId, response)}
-              message={recsMessage}
-              locale={locale}
-            />
+            <>
+              {socialError && <div className="error-banner" role="alert">{socialError}</div>}
+              {socialNotice && <div className="info-banner" role="status">{socialNotice}</div>}
+              <RecommendationResults
+                recommendations={recommendations ?? []}
+                onEdit={() => {
+                  setTab('profile')
+                  requestAnimationFrame(() => document.getElementById('event-profile-title')?.focus())
+                }}
+                onFeedback={(candidateId, response) => void handleServerFeedback(candidateId, response)}
+                onRequestIntro={candidateId => void handleRequestIntro(candidateId)}
+                introStatusByCandidate={introStatusByCandidate}
+                requestingIntroId={requestingIntroId}
+                message={recsMessage}
+                locale={locale}
+              />
+            </>
           )
         ) : (
           <form className="profile-form" aria-labelledby="event-profile-title" noValidate onSubmit={handleProfileSubmit}>
