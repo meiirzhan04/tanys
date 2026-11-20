@@ -143,6 +143,16 @@ function scoreCandidate(input: ProfileInput, candidate: Candidate, templates: Re
   const candidateNeeds = matchingTopics(input.skills, candidate.lookingFor ?? [], normalizeSkill)
   const participantNeeds = matchingTopics(candidate.skills, input.lookingFor ?? [], normalizeSkill)
   const sharedSkills = matchingTopics(candidate.skills, input.skills, normalizeSkill)
+
+  // Apply the employer's skill criteria in both directions before ranking job matches.
+  let hiringMatch: string[] | undefined
+  if (input.goal === 'hire') {
+    hiringMatch = input.lookingFor?.some(skill => skill.trim()) ? participantNeeds : sharedSkills
+  } else if (input.goal === 'find_job') {
+    hiringMatch = candidate.lookingFor?.some(skill => skill.trim()) ? candidateNeeds : sharedSkills
+  }
+  if (hiringMatch?.length === 0) return null
+
   const sharedInterests = matchingTopics(candidate.interests, input.interests)
   const isMoreExperienced = input.goal === 'find_mentor' && candidate.experienceYears > input.experienceYears
   const isLessExperienced = input.goal === 'be_mentor' && candidate.experienceYears < input.experienceYears
@@ -161,7 +171,7 @@ function scoreCandidate(input: ProfileInput, candidate: Candidate, templates: Re
   if (isLessExperienced) reasons.push(templates.lessExperienced)
   if (sharedInterests.length) reasons.push(templates.sharedInterests(sharedInterests.slice(0, 2).join(', ')))
 
-  const topic = candidateNeeds[0] ?? participantNeeds[0] ?? sharedSkills[0] ?? sharedInterests[0]
+  const topic = hiringMatch?.[0] ?? candidateNeeds[0] ?? participantNeeds[0] ?? sharedSkills[0] ?? sharedInterests[0]
   return { candidate, score, reasons, topic }
 }
 
@@ -176,8 +186,10 @@ export function recommend(
 
   for (const candidate of candidates) {
     if (candidate.goal !== reciprocalGoals[input.goal] || seen.has(candidate.id)) continue
+    const scored = scoreCandidate(input, candidate, templates)
+    if (!scored) continue
     seen.add(candidate.id)
-    ranked.push(scoreCandidate(input, candidate, templates))
+    ranked.push(scored)
   }
 
   return ranked
