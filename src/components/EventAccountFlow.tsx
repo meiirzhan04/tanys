@@ -11,6 +11,7 @@ import type {
   AuthPurpose,
   AuthUser,
   CommonSlot,
+  EventBooth,
   EventDetails,
   EventSummary,
   IntroductionItem,
@@ -22,10 +23,14 @@ import type {
 } from '../api/client'
 import { loadPendingInvite, savePendingInvite } from '../api/inviteRoute'
 import type { InviteTarget } from '../api/inviteRoute'
+import { recommendBooths } from '../data/booths'
+import type { PartnerBooth } from '../data/booths'
 import { getMessages } from '../i18n/messages'
 import type { Feedback } from '../matching/session'
 import type { Goal, Locale, Recommendation } from '../matching/types'
 import { getGoalLabels } from './goalLabels'
+import { OrganizerCabinet } from './OrganizerCabinet'
+import { PartnerBooths } from './PartnerBooths'
 import { RecommendationResults } from './RecommendationResults'
 import {
   countActionableMeetings,
@@ -50,7 +55,7 @@ interface EventProfileDraft {
 
 type ProfileErrorField = 'name' | 'goal' | 'role' | 'experience' | 'skills' | 'interests' | 'about' | 'consent'
 type ProfileErrors = Partial<Record<ProfileErrorField, string>>
-type EventTab = 'profile' | 'results' | 'introductions' | 'meetings'
+type EventTab = 'profile' | 'results' | 'introductions' | 'meetings' | 'organizer'
 
 function emptyDraft(): EventProfileDraft {
   return {
@@ -174,6 +179,7 @@ export function EventAccountFlow({
 
   // Recommendations & social state
   const [recommendations, setRecommendations] = useState<Recommendation[] | null>(null)
+  const [eventBooths, setEventBooths] = useState<EventBooth[]>([])
   const [recsLoading, setRecsLoading] = useState(false)
   const [recsMessage, setRecsMessage] = useState('')
   const [introductions, setIntroductions] = useState<IntroductionItem[]>([])
@@ -274,9 +280,15 @@ export function EventAccountFlow({
         setShowErrors(false)
       }
       setRecommendations(null)
+      setEventBooths([])
       setRecsMessage('')
       setTab('profile')
       await refreshSocialState(eventId, false)
+      try {
+        setEventBooths(await api.listEventBooths(eventId))
+      } catch {
+        setEventBooths([])
+      }
     } catch (error) {
       if (isApiError(error) && error.status === 401) {
         setUser(null)
@@ -746,6 +758,29 @@ export function EventAccountFlow({
   const pendingIncomingCount = countPendingIncomingIntros(introductions)
   const activeMeetingsCount = countActionableMeetings(meetings)
   const eventTimeZone = activeEvent?.timeZone || 'Asia/Almaty'
+  const activeEventSummary = events.find(item => item.id === activeEventId)
+  const isOrganizerOfActive = activeEventSummary?.role === 'organizer'
+
+  const matchedEventBooths = useMemo(() => {
+    const published: PartnerBooth[] = eventBooths
+      .filter(booth => booth.published)
+      .map(booth => ({
+        id: booth.id,
+        name: booth.name,
+        demo: false,
+        topics: booth.topics,
+        description: {
+          ru: booth.description ?? '',
+          kk: booth.description ?? '',
+          en: booth.description ?? '',
+        },
+      }))
+    if (!published.length) return []
+    const skills = parseTopics(draft.skills)
+    const interests = parseTopics(draft.interests)
+    const lookingFor = parseTopics(draft.lookingFor)
+    return recommendBooths({ skills, interests, lookingFor }, published, locale)
+  }, [draft.interests, draft.lookingFor, draft.skills, eventBooths, locale])
 
   const errors = showErrors ? validateDraft(draft, locale) : {}
   const showLookingFor = draft.goal === 'hire' || draft.goal === 'find_cofounder' || draft.goal === 'find_mentor'
@@ -948,6 +983,13 @@ export function EventAccountFlow({
         </button>
         <button
           type="button"
+          aria-current={tab === 'organizer' ? 'page' : undefined}
+          onClick={() => setTab('organizer')}
+        >
+          {messages.organizer.navLabel}
+        </button>
+        <button
+          type="button"
           disabled={loggingOut}
           onClick={() => void handleLogout()}
         >{loggingOut ? t.loggingOut : t.logout}</button>
@@ -1000,6 +1042,27 @@ export function EventAccountFlow({
           <div className="surface status-panel" role="status" aria-live="polite" aria-busy="true">
             <p>{t.loadingEvent}</p>
           </div>
+        ) : tab === 'organizer' ? (
+          <OrganizerCabinet
+            api={api}
+            locale={locale}
+            activeEvent={activeEvent}
+            isOrganizerOfActive={isOrganizerOfActive}
+            onEventCreated={async created => {
+              const list = await api.listEvents()
+              const merged = list.some(item => item.id === created.id)
+                ? list
+                : [{ id: created.id, name: created.name, role: 'organizer' as const, status: created.status, timeZone: created.timeZone }, ...list]
+              setEvents(merged)
+              await loadEventWorkspace(created.id)
+              setTab('organizer')
+            }}
+            onEventUpdated={updated => {
+              setActiveEvent(updated)
+              setEvents(current => current.map(item => (item.id === updated.id ? { ...item, name: updated.name, status: updated.status } : item)))
+            }}
+            onBoothsChanged={nextBooths => setEventBooths(nextBooths)}
+          />
         ) : !activeEventId ? (
           <section className="surface empty-state">
             <h1>{t.noEventsTitle}</h1>
@@ -1060,6 +1123,7 @@ export function EventAccountFlow({
                 message={recsMessage}
                 locale={locale}
               />
+              <PartnerBooths recommendations={matchedEventBooths} locale={locale} />
             </>
           )
         ) : (

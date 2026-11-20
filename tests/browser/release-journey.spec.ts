@@ -501,13 +501,14 @@ test('kk/ru/en switching, empty recommendations, expired invite, and keyboard fo
     await page.locator('input[name="consent"]').check()
     await page.locator('form button[type="submit"]').click()
 
-    await expect(page.locator('.empty-state')).toBeVisible()
+    const emptyState = page.locator('section[aria-labelledby="results-title"] .empty-state')
+    await expect(emptyState).toBeVisible()
     await page.locator('.lang-switcher button[lang="ru"]').click()
-    await expect(page.locator('.empty-state')).toContainText('Список рекомендаций пуст')
+    await expect(emptyState).toContainText('Список рекомендаций пуст')
     await page.locator('.lang-switcher button[lang="kk"]').click()
-    await expect(page.locator('.empty-state')).toContainText('Ұсыныстар тізімі бос')
+    await expect(emptyState).toContainText('Ұсыныстар тізімі бос')
     await page.locator('.lang-switcher button[lang="en"]').click()
-    await expect(page.locator('.empty-state')).toContainText('No matches found')
+    await expect(emptyState).toContainText('No matches found')
     await assertNoHorizontalOverflow(page)
   } finally {
     await context.close()

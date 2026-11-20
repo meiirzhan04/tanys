@@ -188,4 +188,64 @@ describe('createTanysApiClient', () => {
       'PATCH /api/v1/events/evt-1/meetings/m-1',
     ])
   })
+
+  it('calls organizer event, invite, member, interest, and booth endpoints', async () => {
+    const seen: string[] = []
+    const api = createTanysApiClient('/api/v1', async (input, init) => {
+      const url = String(input)
+      const method = init?.method ?? 'GET'
+      seen.push(`${method} ${url}`)
+      if (url.endsWith('/events') && method === 'POST') {
+        return new Response(JSON.stringify({ id: 'e-1', name: 'IT Meetup', status: 'active' }), { status: 201 })
+      }
+      if (url.endsWith('/events/e-1/invites') && method === 'POST') {
+        return new Response(JSON.stringify({ id: 'inv-1', token: 'tok-abc' }), { status: 201 })
+      }
+      if (url.endsWith('/events/e-1/members')) {
+        return new Response(JSON.stringify({ items: [{ userId: 'u-1', role: 'organizer' }], nextCursor: null }), { status: 200 })
+      }
+      if (url.endsWith('/events/e-1/interests')) {
+        return new Response(JSON.stringify({ topics: [{ name: 'API', count: 3 }], profileCount: 5 }), { status: 200 })
+      }
+      if (url.endsWith('/events/e-1/booths') && method === 'POST') {
+        return new Response(JSON.stringify({ id: 'b-1', name: 'Go Hub', topics: ['Go'], published: true }), { status: 201 })
+      }
+      if (url.endsWith('/events/e-1/booths/b-1') && method === 'PATCH') {
+        return new Response(JSON.stringify({ id: 'b-1', name: 'Go Hub', topics: ['Go'], published: false }), { status: 200 })
+      }
+      if (url.endsWith('/events/e-1/booths')) {
+        return new Response(JSON.stringify({ items: [{ id: 'b-1', name: 'Go Hub', topics: ['Go'], published: false }] }), { status: 200 })
+      }
+      return new Response(null, { status: 204 })
+    })
+
+    const created = await api.createEvent({
+      name: 'IT Meetup',
+      timeZone: 'Asia/Almaty',
+      startsAt: '2027-02-01T05:00:00Z',
+      endsAt: '2027-02-01T12:00:00Z',
+    })
+    assert.equal(created.id, 'e-1')
+    const inv = await api.createInvite('e-1', '2027-02-01T12:00:00Z')
+    assert.equal(inv.token, 'tok-abc')
+    await api.revokeInvite('e-1', 'inv-1')
+    assert.equal((await api.listEventMembers('e-1')).length, 1)
+    assert.equal((await api.getEventInterests('e-1')).topics[0].name, 'API')
+    const booth = await api.createEventBooth('e-1', { name: 'Go Hub', topics: ['Go'], published: true })
+    assert.equal(booth.id, 'b-1')
+    const unpublished = await api.updateEventBooth('e-1', 'b-1', { published: false })
+    assert.equal(unpublished.published, false)
+    assert.equal((await api.listEventBooths('e-1')).length, 1)
+
+    assert.deepEqual(seen, [
+      'POST /api/v1/events',
+      'POST /api/v1/events/e-1/invites',
+      'DELETE /api/v1/events/e-1/invites/inv-1',
+      'GET /api/v1/events/e-1/members',
+      'GET /api/v1/events/e-1/interests',
+      'POST /api/v1/events/e-1/booths',
+      'PATCH /api/v1/events/e-1/booths/b-1',
+      'GET /api/v1/events/e-1/booths',
+    ])
+  })
 })
