@@ -979,13 +979,12 @@ export function EventAccountFlow({
   useEffect(() => {
     if (!userId) return
     let active = true
-    let pending = false
+    let revision = 0
     async function refresh() {
-      if (document.hidden || pending) return
-      pending = true
+      const requested = ++revision
       try {
         const me = await api.getMe()
-        if (!active) return
+        if (!active || requested !== revision) return
         if (!me || me.id !== userId) {
           redirectToLogin()
           return
@@ -993,16 +992,18 @@ export function EventAccountFlow({
         setUser(me)
         if (!me.canCreateEvents) setTab(current => current === 'organizer' ? 'me' : current)
       } catch { /* A temporary network failure leaves the server-enforced session intact. */ }
-      finally { pending = false }
     }
-    const timer = window.setInterval(refresh, 30_000)
+    function refreshWhenVisible() {
+      if (!document.hidden) void refresh()
+    }
+    const timer = window.setInterval(refreshWhenVisible, 30_000)
     window.addEventListener('focus', refresh)
-    document.addEventListener('visibilitychange', refresh)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
     return () => {
       active = false
       window.clearInterval(timer)
       window.removeEventListener('focus', refresh)
-      document.removeEventListener('visibilitychange', refresh)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
     }
   }, [api, redirectToLogin, userId])
 
