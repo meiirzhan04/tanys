@@ -35,7 +35,7 @@ async function common(client: pg.PoolClient, event: string, pair: Pair) {
 
 const meetingList = `SELECT m.id,i.id AS "introductionId",m.starts_at AS start,m.ends_at AS end,m.status,
   CASE WHEN m.proposer=$2 THEN 'outgoing' ELSE 'incoming' END AS direction,
-  COALESCE(NULLIF(btrim(p.name),''),u.username) AS "participantName",p.role AS "participantRole"
+  COALESCE(NULLIF(btrim(p.name),''),u.handle) AS "participantName",p.role AS "participantRole",u.handle AS "participantHandle"
   FROM meetings m JOIN introductions i ON i.id=m.introduction_id
   LEFT JOIN event_profiles p ON p.event_id=i.event_id AND p.visible AND p.user_id=CASE WHEN i.sender=$2 THEN i.recipient ELSE i.sender END
   LEFT JOIN users u ON u.id=CASE WHEN i.sender=$2 THEN i.recipient ELSE i.sender END
@@ -122,6 +122,7 @@ export async function meetingRoute(req: IncomingMessage, res: ServerResponse, pa
     ])
     if (creating) {
       const start = instant(body.slotId)
+      if (!isQuarterHour(start)) throw new HttpError(400, 'invalid_time_step')
       const existing = await client.query(
         "SELECT id FROM meetings WHERE introduction_id=$1 AND starts_at=$2 AND status IN ('confirmed','pending')",
         [pair.id, start],
