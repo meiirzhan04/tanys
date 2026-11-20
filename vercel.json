@@ -2,6 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": { "deploymentEnabled": false },
   "installCommand": "npm ci && npm ci --prefix server && npm run build --prefix server",
+  "buildCommand": "node -e \"const u=process.env.DATABASE_URL_UNPOOLED||process.env.DATABASE_URL||'';let h='';try{h=new URL(u).hostname}catch{};if(process.env.VERCEL_ENV!=='preview'&&h.includes('.'))require('node:child_process').execFileSync('node',['server/dist/migrate.js'],{stdio:'inherit',env:{...process.env,DATABASE_URL:u}})\" && npm run build",
   "rewrites": [
     { "source": "/api/v1/:path*", "destination": "/api/gateway?__route=:path*" },
     { "source": "/invite/:eventId/:token?", "destination": "/index.html" },
