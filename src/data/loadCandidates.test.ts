@@ -3,6 +3,7 @@ import { test } from 'node:test'
 import type { Candidate } from '../matching/types'
 import { parseCandidates, resolveAppCandidates } from './loadCandidates.ts'
 import './interestSummary.test.ts'
+import './profilesIntegrity.test.ts'
 
 function validProfile(id: string): Candidate {
   return {
