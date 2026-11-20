@@ -1,3 +1,5 @@
+import { getMessages } from '../i18n/messages'
+import type { Locale } from '../matching/types'
 import {
   EVENT_TIMEZONE_LABEL,
   formatSlotLabel,
@@ -13,11 +15,13 @@ export interface CandidateMeetingPickerProps {
   bookings: readonly MeetingBooking[]
   onBook: (candidate: { id: string; name: string; role?: string }, slotId: string) => void
   onCancel: (slotId: string) => void
+  locale?: Locale
 }
 
 export interface SchedulePanelProps {
   bookings: readonly MeetingBooking[]
   onCancel: (slotId: string) => void
+  locale?: Locale
 }
 
 /** Displays intersecting 1:1 free slots for a candidate and handles conflicts. */
@@ -28,19 +32,21 @@ export function CandidateMeetingPicker({
   bookings,
   onBook,
   onCancel,
+  locale = 'ru',
 }: CandidateMeetingPickerProps) {
   const options = getSlotAvailabilityForCandidate(candidateId, bookings)
+  const t = getMessages(locale).meetings
 
   return (
-    <div className="meeting-picker" aria-label={`Слоты 1:1 с ${candidateName}`}>
+    <div className="meeting-picker" aria-label={t.pickerAriaLabel(candidateName)}>
       <div className="meeting-picker__header">
-        <span className="meeting-picker__title">Встреча 1:1</span>
+        <span className="meeting-picker__title">{t.title}</span>
         <span className="meeting-picker__tz">{EVENT_TIMEZONE_LABEL}</span>
       </div>
 
       {options.length === 0 ? (
         <p className="meeting-picker__empty">
-          Нет общих свободных слотов с этим участником.
+          {t.noCommonSlots}
         </p>
       ) : (
         <div className="meeting-picker__slots">
@@ -54,14 +60,14 @@ export function CandidateMeetingPicker({
                     disabled
                     aria-disabled="true"
                   >
-                    {slot.label} · назначено
+                    {slot.label} · {t.bookedSuffix}
                   </button>
                   <button
                     type="button"
                     className="meeting-slot-cancel"
                     onClick={() => onCancel(slot.id)}
                   >
-                    Отменить
+                    {t.cancel}
                   </button>
                 </div>
               )
@@ -76,15 +82,15 @@ export function CandidateMeetingPicker({
                 disabled={isConflict}
                 title={
                   isConflict && conflictBooking
-                    ? `Время занято: ${conflictBooking.candidateName}`
-                    : `Выбрать ${slot.label}`
+                    ? t.busyTitle(conflictBooking.candidateName)
+                    : t.selectTitle(slot.label)
                 }
                 onClick={() =>
                   onBook({ id: candidateId, name: candidateName, role: candidateRole }, slot.id)
                 }
               >
                 {slot.label}
-                {isConflict && conflictBooking ? ` (занято: ${conflictBooking.candidateName})` : ''}
+                {isConflict && conflictBooking ? t.busyInline(conflictBooking.candidateName) : ''}
               </button>
             )
           })}
@@ -95,17 +101,19 @@ export function CandidateMeetingPicker({
 }
 
 /** Shows the participant's scheduled 1:1 meetings with cancel actions. */
-export function SchedulePanel({ bookings, onCancel }: SchedulePanelProps) {
+export function SchedulePanel({ bookings, onCancel, locale = 'ru' }: SchedulePanelProps) {
+  const t = getMessages(locale).meetings
+
   return (
-    <section className="schedule-panel" aria-label="Моё расписание 1:1">
+    <section className="schedule-panel" aria-label={t.scheduleTitle}>
       <div className="schedule-panel__header">
-        <h2 className="schedule-panel__title">Моё расписание 1:1</h2>
+        <h2 className="schedule-panel__title">{t.scheduleTitle}</h2>
         <span className="meeting-picker__tz">{EVENT_TIMEZONE_LABEL}</span>
       </div>
 
       {bookings.length === 0 ? (
         <p className="schedule-panel__empty">
-          Пока нет запланированных встреч — выберите слот в карточке собеседника.
+          {t.scheduleEmpty}
         </p>
       ) : (
         <ul className="schedule-panel__list">
@@ -123,7 +131,7 @@ export function SchedulePanel({ bookings, onCancel }: SchedulePanelProps) {
                 className="meeting-slot-cancel"
                 onClick={() => onCancel(booking.slotId)}
               >
-                Отменить
+                {t.cancel}
               </button>
             </li>
           ))}

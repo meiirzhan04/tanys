@@ -1,3 +1,5 @@
+export type Locale = 'ru' | 'kk' | 'en'
+
 export type Goal =
   | 'find_job'
   | 'hire'
