@@ -94,7 +94,7 @@
 .meeting-slot-btn:hover:not(:disabled) {
   background: var(--accent-soft);
   border-color: rgba(255, 85, 0, 0.45);
-  color: var(--accent);
+  color: var(--accent-text, var(--accent));
 }
 
 .meeting-slot-btn:focus-visible,
@@ -106,7 +106,7 @@
 .meeting-slot-btn--booked {
   background: var(--accent-soft);
   border-color: rgba(255, 85, 0, 0.45);
-  color: var(--accent);
+  color: var(--accent-text, var(--accent));
   cursor: default;
 }
 
@@ -183,5 +183,5 @@
 }
 .schedule-panel__meta strong {
   font-family: var(--font-mono, inherit);
-  color: var(--accent);
+  color: var(--accent-text, var(--accent));
 }
