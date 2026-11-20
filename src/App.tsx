@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { SchedulePanel } from './components/MeetingSlots'
 import { ProfileForm } from './components/ProfileForm'
 import { RecommendationResults } from './components/RecommendationResults'
 import profiles from './data/profiles.json'
@@ -7,6 +8,8 @@ import { recommend } from './matching/recommend'
 import { recordRecommendationFeedback, startRecommendationSession } from './matching/session'
 import type { Feedback, RecommendationSession } from './matching/session'
 import type { Candidate, ProfileInput } from './matching/types'
+import { bookSlot, cancelSlotBooking, loadBookings, saveBookings } from './scheduling/slots'
+import type { MeetingBooking } from './scheduling/slots'
 import './styles.css'
 
 const candidates: readonly Candidate[] = [...profiles as Candidate[], ...previewProfiles]
@@ -15,6 +18,7 @@ const sample = recommend(sampleProfile, candidates)[0]
 export default function App() {
   const [profile, setProfile] = useState<ProfileInput>()
   const [session, setSession] = useState<RecommendationSession>()
+  const [bookings, setBookings] = useState<MeetingBooking[]>(() => loadBookings())
 
   useEffect(() => {
     if (session) document.getElementById('results-title')?.focus()
@@ -27,6 +31,23 @@ export default function App() {
 
   function handleFeedback(id: string, response: Feedback) {
     setSession(current => current && recordRecommendationFeedback(current, id, response))
+  }
+
+  function handleBookSlot(candidate: { id: string; name: string; role?: string }, slotId: string) {
+    setBookings(current => {
+      const result = bookSlot(current, candidate, slotId)
+      if (!result.ok) return current
+      saveBookings(result.bookings)
+      return result.bookings
+    })
+  }
+
+  function handleCancelSlot(slotId: string) {
+    setBookings(current => {
+      const next = cancelSlotBooking(current, slotId)
+      saveBookings(next)
+      return next
+    })
   }
 
   return (
@@ -44,6 +65,9 @@ export default function App() {
           onEdit={() => setSession(undefined)}
           onFeedback={handleFeedback}
           message={session.feedback.size ? `Отметка сохранена. Рекомендаций · ${session.recommendations.length}` : ""}
+          bookings={bookings}
+          onBookSlot={handleBookSlot}
+          onCancelSlot={handleCancelSlot}
         /> : <>
           <div className="intro">
             <h1>С кем познакомиться<br className="intro-break" /> на митапе?</h1>
@@ -69,6 +93,7 @@ export default function App() {
               </div>
             </aside>
           </div>
+          {bookings.length > 0 && <SchedulePanel bookings={bookings} onCancel={handleCancelSlot} />}
         </>}
       </main>
     </>
