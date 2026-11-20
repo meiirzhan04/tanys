@@ -16,9 +16,9 @@ type CopyState = '' | 'copied' | 'fallback'
 interface RecommendationCardProps {
   recommendation: Recommendation
   onFeedback: FeedbackHandler
-  bookings: readonly MeetingBooking[]
-  onBookSlot: BookSlotHandler
-  onCancelSlot: CancelSlotHandler
+  bookings?: readonly MeetingBooking[]
+  onBookSlot?: BookSlotHandler
+  onCancelSlot?: CancelSlotHandler
   locale: Locale
 }
 
@@ -81,7 +81,7 @@ function RecommendationCard({
           <p>{icebreaker}</p>
           <span className="copy-status" aria-live="polite">{copyStatus}</span>
         </div>}
-        <CandidateMeetingPicker
+        {bookings && onBookSlot && onCancelSlot && <CandidateMeetingPicker
           candidateId={candidate.id}
           candidateName={candidate.name}
           candidateRole={candidate.role}
@@ -89,7 +89,7 @@ function RecommendationCard({
           onBook={onBookSlot}
           onCancel={onCancelSlot}
           locale={locale}
-        />
+        />}
         <RecommendationFeedback candidateId={candidate.id} candidateName={candidate.name} onFeedback={onFeedback} locale={locale} />
       </div>
     </article>
@@ -108,9 +108,9 @@ export function RecommendationResults({
 }: ResultsProps & {
   onFeedback: FeedbackHandler
   message: string
-  bookings: readonly MeetingBooking[]
-  onBookSlot: BookSlotHandler
-  onCancelSlot: CancelSlotHandler
+  bookings?: readonly MeetingBooking[]
+  onBookSlot?: BookSlotHandler
+  onCancelSlot?: CancelSlotHandler
   locale?: Locale
 }) {
   const t = getMessages(locale).results

@@ -1,0 +1,947 @@
+import { useCallback, useEffect, useId, useState } from 'react'
+import type { FormEvent } from 'react'
+import {
+  defaultApiClient,
+  isApiError,
+  isInviteExpiredError,
+  isNetworkError,
+} from '../api/client'
+import type {
+  AuthPurpose,
+  AuthUser,
+  EventDetails,
+  EventSummary,
+  ServerProfile,
+  TanysApiClient,
+} from '../api/client'
+import { loadPendingInvite, savePendingInvite } from '../api/inviteRoute'
+import type { InviteTarget } from '../api/inviteRoute'
+import { getMessages } from '../i18n/messages'
+import type { Feedback } from '../matching/session'
+import type { Goal, Locale, Recommendation } from '../matching/types'
+import { getGoalLabels } from './goalLabels'
+import { RecommendationResults } from './RecommendationResults'
+
+interface EventProfileDraft {
+  name: string
+  goal: Goal | ''
+  role: string
+  experience: string
+  skills: string
+  interests: string
+  about: string
+  lookingFor: string
+  visible: boolean
+  consentAccepted: boolean
+}
+
+type ProfileErrorField = 'name' | 'goal' | 'role' | 'experience' | 'skills' | 'interests' | 'about' | 'consent'
+type ProfileErrors = Partial<Record<ProfileErrorField, string>>
+type EventTab = 'profile' | 'results'
+
+function emptyDraft(): EventProfileDraft {
+  return {
+    name: '',
+    goal: '',
+    role: '',
+    experience: '',
+    skills: '',
+    interests: '',
+    about: '',
+    lookingFor: '',
+    visible: false,
+    consentAccepted: false,
+  }
+}
+
+function profileToDraft(profile: ServerProfile | null): EventProfileDraft {
+  if (!profile) return emptyDraft()
+  return {
+    name: profile.name,
+    goal: profile.goal,
+    role: profile.role,
+    experience: String(profile.experienceYears),
+    skills: profile.skills.join(', '),
+    interests: profile.interests.join(', '),
+    about: profile.about,
+    lookingFor: profile.lookingFor?.join(', ') ?? '',
+    visible: profile.visible,
+    consentAccepted: profile.consentVersion === 'v1',
+  }
+}
+
+function parseTopics(value: string): string[] {
+  return value.split(/[,\n]/).map(item => item.trim()).filter(Boolean)
+}
+
+function validateDraft(draft: EventProfileDraft, locale: Locale): ProfileErrors {
+  const formErrors = getMessages(locale).form.errors
+  const accountErrors = getMessages(locale).account.errors
+  const errors: ProfileErrors = {}
+  const experience = Number(draft.experience)
+
+  if (!draft.name.trim()) errors.name = accountErrors.nameRequired
+  if (!draft.goal) errors.goal = formErrors.goal
+  if (!draft.role.trim()) errors.role = formErrors.role
+  if (!draft.experience || !Number.isInteger(experience) || experience < 0 || experience > 60) {
+    errors.experience = formErrors.experience
+  }
+  if (!parseTopics(draft.skills).length) errors.skills = formErrors.skills
+  if (!parseTopics(draft.interests).length) errors.interests = formErrors.interests
+  if (!draft.about.trim()) errors.about = formErrors.about
+  if (!draft.consentAccepted) errors.consent = accountErrors.consentRequired
+  return errors
+}
+
+function formatApiError(error: unknown, locale: Locale, context: 'auth' | 'save' | 'general'): string {
+  const err = getMessages(locale).account.errors
+  if (isNetworkError(error)) {
+    return context === 'save' ? err.networkSavePreserved : err.networkGeneral
+  }
+  if (isApiError(error)) {
+    if (error.status === 401) {
+      return context === 'auth' ? err.invalidCode : err.sessionExpired
+    }
+    if (error.status === 429) return err.rateLimited
+    if (context === 'auth' && (error.code === 'invalid_code' || error.code === 'code_expired' || error.status === 400)) {
+      return err.invalidCode
+    }
+  }
+  return context === 'save' ? err.genericSave : err.genericRequest
+}
+
+export interface EventAccountFlowProps {
+  locale: Locale
+  initialInvite: InviteTarget | null
+  onExitToDemo: () => void
+  api?: TanysApiClient
+}
+
+export function EventAccountFlow({
+  locale,
+  initialInvite,
+  onExitToDemo,
+  api = defaultApiClient,
+}: EventAccountFlowProps) {
+  const id = useId()
+  const messages = getMessages(locale)
+  const t = messages.account
+  const formText = messages.form
+  const goalLabels = getGoalLabels(locale)
+
+  const [pendingInvite, setPendingInvite] = useState<InviteTarget | null>(() => {
+    const resolved = initialInvite ?? loadPendingInvite()
+    if (resolved) savePendingInvite(resolved)
+    return resolved
+  })
+  const [user, setUser] = useState<AuthUser | null>(null)
+  const [phase, setPhase] = useState<'checking' | 'auth' | 'joining' | 'expired' | 'ready'>('checking')
+
+  // Auth form state
+  const [purpose, setPurpose] = useState<AuthPurpose>('login')
+  const [email, setEmail] = useState('')
+  const [challengeId, setChallengeId] = useState('')
+  const [code, setCode] = useState('')
+  const [authBusy, setAuthBusy] = useState(false)
+  const [authError, setAuthError] = useState('')
+
+  // Event & profile state
+  const [events, setEvents] = useState<EventSummary[]>([])
+  const [activeEventId, setActiveEventId] = useState<string>('')
+  const [activeEvent, setActiveEvent] = useState<EventDetails | null>(null)
+  const [eventLoading, setEventLoading] = useState(false)
+  const [eventError, setEventError] = useState('')
+  const [tab, setTab] = useState<EventTab>('profile')
+  const [hasSavedProfile, setHasSavedProfile] = useState(false)
+  const [draft, setDraft] = useState<EventProfileDraft>(() => emptyDraft())
+  const [showErrors, setShowErrors] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
+  const [saveSuccess, setSaveSuccess] = useState(false)
+
+  // Recommendations state
+  const [recommendations, setRecommendations] = useState<Recommendation[] | null>(null)
+  const [recsLoading, setRecsLoading] = useState(false)
+  const [recsMessage, setRecsMessage] = useState('')
+  const [loggingOut, setLoggingOut] = useState(false)
+  const [leavingEvent, setLeavingEvent] = useState(false)
+
+  const loadEventWorkspace = useCallback(async (eventId: string, preserveDraft = false) => {
+    setEventLoading(true)
+    setEventError('')
+    setSaveError('')
+    setSaveSuccess(false)
+    try {
+      const [details, profile] = await Promise.all([
+        api.getEvent(eventId),
+        api.getEventProfile(eventId),
+      ])
+      setActiveEventId(eventId)
+      setActiveEvent(details)
+      setHasSavedProfile(Boolean(profile))
+      if (!preserveDraft) {
+        setDraft(profileToDraft(profile))
+        setShowErrors(false)
+      }
+      setRecommendations(null)
+      setRecsMessage('')
+      setTab('profile')
+    } catch (error) {
+      if (isApiError(error) && error.status === 401) {
+        setUser(null)
+        setPhase('auth')
+        setAuthError(formatApiError(error, locale, 'general'))
+        return
+      }
+      setEventError(formatApiError(error, locale, 'general'))
+    } finally {
+      setEventLoading(false)
+    }
+  }, [api, locale])
+
+  const enterAuthenticated = useCallback(async (invite: InviteTarget | null, preserveDraft = false) => {
+    if (invite?.token) {
+      setPhase('joining')
+      try {
+        await api.joinEvent(invite.eventId, invite.token)
+        savePendingInvite(null)
+        setPendingInvite(null)
+      } catch (error) {
+        if (isApiError(error) && error.status === 401) {
+          setUser(null)
+          setPhase('auth')
+          setAuthError(formatApiError(error, locale, 'general'))
+          return
+        }
+        if (isInviteExpiredError(error)) {
+          savePendingInvite(null)
+          setPendingInvite(null)
+          try {
+            const existingEvents = await api.listEvents()
+            setEvents(existingEvents)
+          } catch {
+            setEvents([])
+          }
+          setPhase('expired')
+          return
+        }
+        setEventError(formatApiError(error, locale, 'general'))
+      }
+    }
+
+    setPhase('ready')
+    try {
+      const list = await api.listEvents()
+      setEvents(list)
+      const preferredId = invite?.eventId && list.some(item => item.id === invite.eventId)
+        ? invite.eventId
+        : invite?.eventId && !invite.token
+          ? invite.eventId
+          : list[0]?.id ?? ''
+      if (preferredId) {
+        await loadEventWorkspace(preferredId, preserveDraft)
+      } else {
+        setActiveEventId('')
+        setActiveEvent(null)
+      }
+    } catch (error) {
+      if (isApiError(error) && error.status === 401) {
+        setUser(null)
+        setPhase('auth')
+        setAuthError(formatApiError(error, locale, 'general'))
+        return
+      }
+      setEventError(formatApiError(error, locale, 'general'))
+    }
+  }, [api, loadEventWorkspace, locale])
+
+  useEffect(() => {
+    let cancelled = false
+    async function bootstrap() {
+      setPhase('checking')
+      try {
+        const me = await api.getMe()
+        if (cancelled) return
+        if (!me) {
+          setUser(null)
+          setPhase('auth')
+          return
+        }
+        setUser(me)
+        await enterAuthenticated(pendingInvite, false)
+      } catch (error) {
+        if (cancelled) return
+        setUser(null)
+        setPhase('auth')
+        setAuthError(formatApiError(error, locale, 'general'))
+      }
+    }
+    void bootstrap()
+    return () => { cancelled = true }
+    // Run initial session check once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api])
+
+  // Refetch server recommendations when switching language while viewing results.
+  useEffect(() => {
+    if (phase !== 'ready' || tab !== 'results' || !activeEventId || recommendations === null) return
+    let cancelled = false
+    async function reloadLocalizedRecs() {
+      setRecsLoading(true)
+      try {
+        const items = await api.getEventRecommendations(activeEventId, locale)
+        if (!cancelled) setRecommendations(items)
+      } catch {
+        // Keep current recommendations visible if locale reload fails.
+      } finally {
+        if (!cancelled) setRecsLoading(false)
+      }
+    }
+    void reloadLocalizedRecs()
+    return () => { cancelled = true }
+    // Trigger only when locale changes while viewing server recommendations.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [locale])
+
+  async function handleRequestCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const trimmed = email.trim()
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setAuthError(t.errors.emailInvalid)
+      return
+    }
+    setAuthBusy(true)
+    setAuthError('')
+    try {
+      const result = await api.requestAuthChallenge(trimmed, purpose)
+      setChallengeId(result.challengeId)
+      setCode('')
+    } catch (error) {
+      setAuthError(formatApiError(error, locale, 'auth'))
+    } finally {
+      setAuthBusy(false)
+    }
+  }
+
+  async function handleVerifyCode(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!code.trim()) {
+      setAuthError(t.errors.codeInvalid)
+      return
+    }
+    setAuthBusy(true)
+    setAuthError('')
+    try {
+      const me = await api.verifyAuthChallenge(challengeId, code)
+      setUser(me)
+      setChallengeId('')
+      setCode('')
+      const preserveDraft = Boolean(draft.name || draft.role || draft.skills || draft.about)
+      await enterAuthenticated(pendingInvite ?? (activeEventId ? { eventId: activeEventId } : null), preserveDraft)
+    } catch (error) {
+      setAuthError(formatApiError(error, locale, 'auth'))
+    } finally {
+      setAuthBusy(false)
+    }
+  }
+
+  async function handleLogout() {
+    setLoggingOut(true)
+    try {
+      await api.logout()
+    } catch {
+      // Clear local session view even if session already expired.
+    } finally {
+      setLoggingOut(false)
+      setUser(null)
+      setEvents([])
+      setActiveEventId('')
+      setActiveEvent(null)
+      setRecommendations(null)
+      setDraft(emptyDraft())
+      setHasSavedProfile(false)
+      setShowErrors(false)
+      setSaveError('')
+      setSaveSuccess(false)
+      setAuthError('')
+      setPhase('auth')
+    }
+  }
+
+  async function handleLeaveEvent() {
+    if (!activeEventId) return
+    setLeavingEvent(true)
+    setEventError('')
+    try {
+      await api.leaveEvent(activeEventId)
+      const remaining = events.filter(item => item.id !== activeEventId)
+      setEvents(remaining)
+      if (remaining[0]) {
+        await loadEventWorkspace(remaining[0].id)
+      } else {
+        setActiveEventId('')
+        setActiveEvent(null)
+        setRecommendations(null)
+        setDraft(emptyDraft())
+        setHasSavedProfile(false)
+      }
+    } catch (error) {
+      setEventError(formatApiError(error, locale, 'general'))
+    } finally {
+      setLeavingEvent(false)
+    }
+  }
+
+  async function loadRecommendations(eventId: string, afterFeedback = false) {
+    setRecsLoading(true)
+    setEventError('')
+    try {
+      const items = await api.getEventRecommendations(eventId, locale)
+      setRecommendations(items)
+      if (afterFeedback) {
+        setRecsMessage(messages.results.feedbackSaved(items.length))
+      } else if (items.length > 0 && items.length < 5) {
+        setRecsMessage(messages.results.partialMatches(items.length))
+      } else {
+        setRecsMessage('')
+      }
+      setTab('results')
+      requestAnimationFrame(() => document.getElementById('results-title')?.focus())
+    } catch (error) {
+      if (isApiError(error) && error.status === 401) {
+        setUser(null)
+        setPhase('auth')
+        setAuthError(formatApiError(error, locale, 'general'))
+        return
+      }
+      setEventError(formatApiError(error, locale, 'general'))
+    } finally {
+      setRecsLoading(false)
+    }
+  }
+
+  async function saveProfileAndFetch() {
+    if (!activeEventId || !draft.goal) return
+    setSaving(true)
+    setSaveError('')
+    setSaveSuccess(false)
+    const showLookingFor = draft.goal === 'hire' || draft.goal === 'find_cofounder' || draft.goal === 'find_mentor'
+    try {
+      const saved = await api.saveEventProfile(activeEventId, {
+        name: draft.name.trim(),
+        goal: draft.goal,
+        role: draft.role.trim(),
+        experienceYears: Number(draft.experience),
+        skills: parseTopics(draft.skills),
+        interests: parseTopics(draft.interests),
+        about: draft.about.trim(),
+        ...(showLookingFor && draft.lookingFor.trim() ? { lookingFor: parseTopics(draft.lookingFor) } : {}),
+        visible: draft.visible,
+        consentVersion: 'v1',
+      })
+      setHasSavedProfile(true)
+      setDraft(profileToDraft(saved))
+      setSaveSuccess(true)
+      await loadRecommendations(activeEventId)
+    } catch (error) {
+      if (isApiError(error) && error.status === 401) {
+        // Keep draft intact so user does not lose typed fields on re-login.
+        setUser(null)
+        setPhase('auth')
+        setAuthError(t.errors.sessionExpired)
+        return
+      }
+      setSaveError(formatApiError(error, locale, 'save'))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function handleProfileSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const currentErrors = validateDraft(draft, locale)
+    const firstInvalid = Object.keys(currentErrors)[0]
+    if (firstInvalid) {
+      setShowErrors(true)
+      const control = event.currentTarget.elements.namedItem(firstInvalid)
+      if (control instanceof HTMLElement) requestAnimationFrame(() => control.focus())
+      return
+    }
+    setShowErrors(false)
+    void saveProfileAndFetch()
+  }
+
+  async function handleServerFeedback(candidateId: string, response: Feedback) {
+    if (!activeEventId) return
+    try {
+      await api.sendEventFeedback(activeEventId, candidateId, response)
+      await loadRecommendations(activeEventId, true)
+    } catch (error) {
+      setEventError(formatApiError(error, locale, 'general'))
+    }
+  }
+
+  const errors = showErrors ? validateDraft(draft, locale) : {}
+  const showLookingFor = draft.goal === 'hire' || draft.goal === 'find_cofounder' || draft.goal === 'find_mentor'
+  const isClosed = activeEvent?.status === 'closed'
+
+  function updateField<K extends keyof EventProfileDraft>(key: K, value: EventProfileDraft[K]) {
+    setDraft(current => ({ ...current, [key]: value }))
+    setSaveSuccess(false)
+  }
+
+  if (phase === 'checking' || phase === 'joining') {
+    return (
+      <main className="site-width account-main">
+        <div className="surface status-panel" role="status" aria-live="polite" aria-busy="true">
+          <p>{phase === 'joining' ? t.joiningInvite : t.loadingSession}</p>
+        </div>
+      </main>
+    )
+  }
+
+  if (phase === 'expired') {
+    return (
+      <main className="site-width account-main">
+        <section className="surface status-panel" aria-labelledby="expired-invite-title">
+          <h1 id="expired-invite-title">{t.expiredTitle}</h1>
+          <p>{t.expiredBody}</p>
+          <div className="status-actions">
+            {events.length > 0 && (
+              <button
+                type="button"
+                className="primary-button"
+                onClick={() => {
+                  setPhase('ready')
+                  void loadEventWorkspace(events[0].id)
+                }}
+              >{t.openMyEvents}</button>
+            )}
+            <button type="button" className="secondary-button" onClick={onExitToDemo}>{t.backToDemo}</button>
+          </div>
+        </section>
+      </main>
+    )
+  }
+
+  if (phase === 'auth' || !user) {
+    return (
+      <main className="site-width account-main">
+        <section className="auth-card surface" aria-labelledby="auth-title">
+          <div className="page-heading">
+            <div>
+              <h1 id="auth-title">{t.signInTitle}</h1>
+              <p>{t.signInSubtitle}</p>
+            </div>
+          </div>
+
+          {pendingInvite && (
+            <div className="info-banner" role="status">
+              {t.inviteNotice}
+            </div>
+          )}
+
+          {authError && (
+            <div className="error-banner" role="alert">
+              {authError}
+            </div>
+          )}
+
+          {!challengeId ? (
+            <form noValidate onSubmit={handleRequestCode} className="auth-form">
+              <div className="purpose-toggle" role="group" aria-label={t.signInTitle}>
+                <button
+                  type="button"
+                  aria-pressed={purpose === 'login'}
+                  onClick={() => setPurpose('login')}
+                >{t.purposeLogin}</button>
+                <button
+                  type="button"
+                  aria-pressed={purpose === 'recover'}
+                  onClick={() => setPurpose('recover')}
+                >{t.purposeRecover}</button>
+              </div>
+
+              <div className="field">
+                <label htmlFor={`${id}-email`}>{t.emailLabel}</label>
+                <input
+                  id={`${id}-email`}
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  placeholder={t.emailPlaceholder}
+                  value={email}
+                  disabled={authBusy}
+                  onChange={event => {
+                    setEmail(event.target.value)
+                    if (authError) setAuthError('')
+                  }}
+                />
+              </div>
+
+              <div className="auth-actions">
+                <button type="submit" className="primary-button" disabled={authBusy}>
+                  {authBusy ? t.sendingCode : t.sendCode}
+                </button>
+                <button type="button" className="secondary-button" onClick={onExitToDemo}>
+                  {t.backToDemo}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <form noValidate onSubmit={handleVerifyCode} className="auth-form">
+              <p className="auth-hint" role="status">{t.codeSentHint(email.trim())}</p>
+
+              <div className="field">
+                <label htmlFor={`${id}-code`}>{t.codeLabel}</label>
+                <input
+                  id={`${id}-code`}
+                  name="code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  maxLength={12}
+                  required
+                  placeholder={t.codePlaceholder}
+                  value={code}
+                  disabled={authBusy}
+                  onChange={event => {
+                    setCode(event.target.value)
+                    if (authError) setAuthError('')
+                  }}
+                />
+              </div>
+
+              <div className="auth-actions">
+                <button type="submit" className="primary-button" disabled={authBusy}>
+                  {authBusy ? t.verifyingCode : t.verifyCode}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={authBusy}
+                  onClick={() => {
+                    setChallengeId('')
+                    setCode('')
+                    setAuthError('')
+                  }}
+                >{t.changeEmail}</button>
+              </div>
+            </form>
+          )}
+        </section>
+      </main>
+    )
+  }
+
+  return (
+    <div className="site-width workspace">
+      <nav className="workspace-nav" aria-label={messages.nav.label}>
+        <button
+          type="button"
+          aria-current={tab === 'profile' ? 'page' : undefined}
+          disabled={!activeEventId}
+          onClick={() => setTab('profile')}
+        >{messages.nav.profile}</button>
+        <button
+          type="button"
+          aria-current={tab === 'results' ? 'page' : undefined}
+          disabled={!activeEventId || !hasSavedProfile}
+          onClick={() => {
+            if (recommendations === null && activeEventId) {
+              void loadRecommendations(activeEventId)
+            } else {
+              setTab('results')
+            }
+          }}
+        >
+          {messages.nav.results} {recommendations && <span className="nav-count">{recommendations.length}</span>}
+        </button>
+        <button
+          type="button"
+          disabled={loggingOut}
+          onClick={() => void handleLogout()}
+        >{loggingOut ? t.loggingOut : t.logout}</button>
+      </nav>
+
+      <main className="main-content">
+        <div className="event-toolbar surface">
+          {events.length > 0 ? (
+            <label className="event-picker">
+              <span>{t.eventSelectorLabel}</span>
+              <select
+                value={activeEventId}
+                disabled={eventLoading || saving}
+                onChange={event => void loadEventWorkspace(event.target.value)}
+              >
+                {events.map(item => (
+                  <option key={item.id} value={item.id}>
+                    {item.name || item.id}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : (
+            <span className="event-picker-empty">{t.noEventsTitle}</span>
+          )}
+
+          <div className="event-toolbar-actions">
+            {activeEventId && (
+              <button
+                type="button"
+                className="text-button"
+                disabled={leavingEvent || saving}
+                onClick={() => void handleLeaveEvent()}
+              >{leavingEvent ? t.leavingEvent : t.leaveEvent}</button>
+            )}
+            <button type="button" className="secondary-button" onClick={onExitToDemo}>
+              {t.backToDemo}
+            </button>
+          </div>
+        </div>
+
+        {eventError && <div className="error-banner" role="alert">{eventError}</div>}
+
+        {eventLoading ? (
+          <div className="surface status-panel" role="status" aria-live="polite" aria-busy="true">
+            <p>{t.loadingEvent}</p>
+          </div>
+        ) : !activeEventId ? (
+          <section className="surface empty-state">
+            <h1>{t.noEventsTitle}</h1>
+            <p>{t.noEventsBody}</p>
+          </section>
+        ) : tab === 'results' ? (
+          recsLoading && recommendations === null ? (
+            <div className="surface status-panel" role="status" aria-live="polite" aria-busy="true">
+              <p>{t.loadingRecommendations}</p>
+            </div>
+          ) : (
+            <RecommendationResults
+              recommendations={recommendations ?? []}
+              onEdit={() => {
+                setTab('profile')
+                requestAnimationFrame(() => document.getElementById('event-profile-title')?.focus())
+              }}
+              onFeedback={(candidateId, response) => void handleServerFeedback(candidateId, response)}
+              message={recsMessage}
+              locale={locale}
+            />
+          )
+        ) : (
+          <form className="profile-form" aria-labelledby="event-profile-title" noValidate onSubmit={handleProfileSubmit}>
+            <div className="page-heading">
+              <div>
+                <h1 id="event-profile-title" tabIndex={-1}>
+                  {hasSavedProfile ? t.profileEditTitle : t.profileTitle}
+                </h1>
+                <p>{activeEvent?.name ? `${activeEvent.name} · ` : ''}{t.profileSubtitle}</p>
+              </div>
+              <span className={`visibility-pill ${draft.visible ? 'visibility-pill--on' : ''}`}>
+                {draft.visible ? t.visibilityStatusVisible : t.visibilityStatusHidden}
+              </span>
+            </div>
+
+            {isClosed && <div className="info-banner" role="status">{t.eventClosedNotice}</div>}
+
+            {saveError && (
+              <div className="error-banner error-banner--actions" role="alert">
+                <span>{saveError}</span>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  disabled={saving}
+                  onClick={() => void saveProfileAndFetch()}
+                >{t.retrySave}</button>
+              </div>
+            )}
+
+            {saveSuccess && <div className="info-banner" role="status">{t.savedNotice}</div>}
+
+            <div className="form-panel surface">
+              <div className="form-fields">
+                <div className="field">
+                  <label htmlFor={`${id}-name`}>{t.nameLabel}</label>
+                  <input
+                    id={`${id}-name`}
+                    name="name"
+                    required
+                    maxLength={80}
+                    disabled={saving || isClosed}
+                    placeholder={t.namePlaceholder}
+                    aria-invalid={errors.name ? true : undefined}
+                    aria-describedby={errors.name ? `${id}-name-error` : undefined}
+                    value={draft.name}
+                    onChange={event => updateField('name', event.target.value)}
+                  />
+                  {errors.name && <span id={`${id}-name-error`} className="field-error">{errors.name}</span>}
+                </div>
+
+                <div className="field">
+                  <label htmlFor={`${id}-goal`}>{formText.goalLabel}</label>
+                  <select
+                    id={`${id}-goal`}
+                    name="goal"
+                    required
+                    disabled={saving || isClosed}
+                    aria-invalid={errors.goal ? true : undefined}
+                    aria-describedby={errors.goal ? `${id}-goal-error` : undefined}
+                    value={draft.goal}
+                    onChange={event => updateField('goal', event.target.value as Goal | '')}
+                  >
+                    <option disabled value="">{formText.goalPlaceholder}</option>
+                    {Object.entries(goalLabels).map(([goal, label]) => (
+                      <option key={goal} value={goal}>{label}</option>
+                    ))}
+                  </select>
+                  {errors.goal && <span id={`${id}-goal-error`} className="field-error">{errors.goal}</span>}
+                </div>
+
+                <div className="field">
+                  <label htmlFor={`${id}-role`}>{formText.roleLabel}</label>
+                  <input
+                    id={`${id}-role`}
+                    name="role"
+                    required
+                    maxLength={80}
+                    disabled={saving || isClosed}
+                    placeholder={formText.rolePlaceholder}
+                    aria-invalid={errors.role ? true : undefined}
+                    aria-describedby={errors.role ? `${id}-role-error` : undefined}
+                    value={draft.role}
+                    onChange={event => updateField('role', event.target.value)}
+                  />
+                  {errors.role && <span id={`${id}-role-error`} className="field-error">{errors.role}</span>}
+                </div>
+
+                <div className="field">
+                  <label htmlFor={`${id}-experience`}>{formText.experienceLabel}</label>
+                  <input
+                    id={`${id}-experience`}
+                    name="experience"
+                    type="number"
+                    min={0}
+                    max={60}
+                    required
+                    disabled={saving || isClosed}
+                    placeholder="0"
+                    aria-invalid={errors.experience ? true : undefined}
+                    aria-describedby={errors.experience ? `${id}-experience-error` : undefined}
+                    value={draft.experience}
+                    onChange={event => updateField('experience', event.target.value)}
+                  />
+                  {errors.experience && <span id={`${id}-experience-error`} className="field-error">{errors.experience}</span>}
+                </div>
+
+                <div className="field">
+                  <label htmlFor={`${id}-skills`}>{formText.skillsLabel}</label>
+                  <input
+                    id={`${id}-skills`}
+                    name="skills"
+                    required
+                    maxLength={160}
+                    disabled={saving || isClosed}
+                    placeholder={formText.skillsPlaceholder}
+                    aria-invalid={errors.skills ? true : undefined}
+                    aria-describedby={errors.skills ? `${id}-skills-error` : undefined}
+                    value={draft.skills}
+                    onChange={event => updateField('skills', event.target.value)}
+                  />
+                  {errors.skills && <span id={`${id}-skills-error`} className="field-error">{errors.skills}</span>}
+                </div>
+
+                <div className="field">
+                  <label htmlFor={`${id}-interests`}>{formText.interestsLabel}</label>
+                  <input
+                    id={`${id}-interests`}
+                    name="interests"
+                    required
+                    maxLength={160}
+                    disabled={saving || isClosed}
+                    placeholder={formText.interestsPlaceholder}
+                    aria-invalid={errors.interests ? true : undefined}
+                    aria-describedby={errors.interests ? `${id}-interests-error` : undefined}
+                    value={draft.interests}
+                    onChange={event => updateField('interests', event.target.value)}
+                  />
+                  {errors.interests && <span id={`${id}-interests-error`} className="field-error">{errors.interests}</span>}
+                </div>
+
+                {showLookingFor && (
+                  <label className="field field-full">
+                    <span>{formText.lookingForLabel} <small>{formText.optional}</small></span>
+                    <input
+                      maxLength={160}
+                      disabled={saving || isClosed}
+                      placeholder={formText.lookingForPlaceholder}
+                      value={draft.lookingFor}
+                      onChange={event => updateField('lookingFor', event.target.value)}
+                    />
+                  </label>
+                )}
+
+                <div className="field field-full">
+                  <label htmlFor={`${id}-about`}>{formText.aboutLabel}</label>
+                  <textarea
+                    id={`${id}-about`}
+                    name="about"
+                    rows={2}
+                    maxLength={400}
+                    required
+                    disabled={saving || isClosed}
+                    placeholder={formText.aboutPlaceholder}
+                    aria-invalid={errors.about ? true : undefined}
+                    aria-describedby={errors.about ? `${id}-about-error` : undefined}
+                    value={draft.about}
+                    onChange={event => updateField('about', event.target.value)}
+                  />
+                  {errors.about && <span id={`${id}-about-error`} className="field-error">{errors.about}</span>}
+                </div>
+
+                <div className="field field-full privacy-box">
+                  <span className="privacy-box__heading">{t.visibilityHeading}</span>
+                  <label className="checkbox-row">
+                    <input
+                      type="checkbox"
+                      name="visible"
+                      disabled={saving || isClosed}
+                      checked={draft.visible}
+                      onChange={event => updateField('visible', event.target.checked)}
+                    />
+                    <span>{t.visibilityToggleLabel}</span>
+                  </label>
+                  <p className="privacy-box__note">{t.visibilityNotice}</p>
+                </div>
+
+                <div className="field field-full">
+                  <label className="checkbox-row">
+                    <input
+                      id={`${id}-consent`}
+                      type="checkbox"
+                      name="consent"
+                      required
+                      disabled={saving || isClosed}
+                      aria-invalid={errors.consent ? true : undefined}
+                      aria-describedby={errors.consent ? `${id}-consent-error` : undefined}
+                      checked={draft.consentAccepted}
+                      onChange={event => updateField('consentAccepted', event.target.checked)}
+                    />
+                    <span className="consent-text">{t.consentLabel}</span>
+                  </label>
+                  {errors.consent && <span id={`${id}-consent-error`} className="field-error">{errors.consent}</span>}
+                </div>
+              </div>
+
+              <div className="form-footer">
+                <button type="submit" className="primary-button" disabled={saving || isClosed}>
+                  {saving ? t.savingProfile : t.saveProfile}
+                </button>
+                <span>{draft.visible ? t.visibilityStatusVisible : t.visibilityStatusHidden}</span>
+              </div>
+            </div>
+          </form>
+        )}
+      </main>
+    </div>
+  )
+}

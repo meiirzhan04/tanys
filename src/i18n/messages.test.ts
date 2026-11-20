@@ -30,6 +30,14 @@ test('provides complete, distinct translations for ru, kk, and en', () => {
     for (const [field, errorText] of Object.entries(messages.form.errors)) {
       assert.ok(errorText.trim(), `missing validation error ${field} for ${code}`)
     }
+
+    assert.ok(messages.account.signInTitle.trim())
+    assert.ok(messages.account.visibilityNotice.trim())
+    assert.ok(messages.account.consentLabel.trim())
+    assert.ok(messages.account.expiredTitle.trim())
+    for (const [field, errorText] of Object.entries(messages.account.errors)) {
+      assert.ok(errorText.trim(), `missing account error ${field} for ${code}`)
+    }
   }
 
   assert.notEqual(messagesByLocale.ru.form.title, messagesByLocale.kk.form.title)
