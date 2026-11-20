@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { recommend } from './recommend.ts'
 import { normalizeSkill } from '../../server/src/matching/recommend.ts'
@@ -155,12 +156,66 @@ test('falls back to local matching on model failure or when models are disabled'
 })
 
 test('prefers complementary skills when seeking a cofounder', () => {
-  const results = recommend({ ...input, goal: 'find_cofounder', lookingFor: ['Продажи'] }, [
-    candidate('developer', 'find_cofounder'),
-    candidate('sales', 'find_cofounder', { skills: ['Продажи'], lookingFor: ['Python'] }),
+  const skills = ['Python', 'FastAPI', 'PostgreSQL', 'Redis']
+  const results = recommend({ ...input, goal: 'find_cofounder', skills, lookingFor: ['Sales', 'Product management'] }, [
+    candidate('developer', 'find_cofounder', { skills, lookingFor: skills }),
+    candidate('sales', 'find_cofounder', { skills: ['B2B-продажи'] }),
+    candidate('product-and-sales', 'find_cofounder', { skills: ['Продажи', 'Продуктовая стратегия'] }),
   ])
-  assert.equal(results[0].candidate.id, 'sales')
-  assert.match(results[0].explanation, /Продажи/)
+  assert.deepEqual(results.map(result => result.candidate.id), ['product-and-sales', 'sales', 'developer'])
+  assert.match(results[0].explanation, /Продажи, Продуктовая стратегия/)
+  assert.match(results[1].icebreaker ?? '', /B2B-продажи/)
+})
+
+test('uses exact bilingual aliases and keeps specialized cofounder requests directional', () => {
+  assert.equal(normalizeSkill('Маркетинг'), normalizeSkill('Marketing'))
+  assert.equal(normalizeSkill('Управление продуктом'), normalizeSkill('Product management'))
+  assert.equal(normalizeSkill('Computer Vision'), normalizeSkill('Компьютерное зрение'))
+  assert.notEqual(normalizeSkill('B2B-продажи'), normalizeSkill('Продажи'))
+
+  const [match] = recommend(
+    { ...input, goal: 'find_cofounder', lookingFor: ['B2B Sales'], interests: ['A/B-тесты'] },
+    [
+      candidate('general', 'find_cofounder', { skills: ['Продажи'], interests: [] }),
+      candidate('specialist', 'find_cofounder', { skills: ['B2B-продажи'], interests: ['A/B-тестирование'] }),
+    ],
+  )
+  assert.equal(match.candidate.id, 'specialist')
+  assert.match(match.explanation, /общие интересы: A\/B-тестирование/)
+})
+
+test('finds at least three relevant people in each of the three audit scenarios', () => {
+  const pool: Candidate[] = JSON.parse(readFileSync(new URL('../data/profiles.json', import.meta.url), 'utf8'))
+  const j1 = recommend({
+    ...input, role: 'Junior Frontend-разработчик', skills: ['JavaScript', 'React', 'HTML', 'CSS'],
+    interests: ['Веб-доступность', 'Стартапы'],
+  }, pool)
+  const j2 = recommend({
+    ...input, role: 'Аналитик данных', goal: 'find_mentor', skills: ['SQL', 'Excel'],
+    lookingFor: ['Python', 'A/B-тестирование'], interests: ['Продуктовая аналитика', 'A/B-тесты'],
+  }, pool)
+  const j3 = recommend({
+    ...input, role: 'ML engineer', goal: 'find_cofounder', experienceYears: 4,
+    skills: ['Python', 'PyTorch', 'Computer Vision'], lookingFor: ['Sales', 'Marketing', 'Product management'],
+    interests: ['EdTech', 'Startups'],
+  }, pool)
+
+  const j1Skills = new Set(['javascript', 'react', 'html', 'css', 'typescript'])
+  const analyst = /аналитик|продуктов.*аналит/i
+  const businessSkills = new Set([
+    'sales', 'b2b sales', 'marketing', 'product management', 'product strategy', 'управление пилотами',
+  ])
+  const j1Relevant = j1.filter(({ candidate }) => candidate.goal === 'hire' &&
+    candidate.lookingFor?.some(skill => j1Skills.has(normalizeSkill(skill))))
+  const j2Experienced = j2.filter(({ candidate }) => candidate.goal === 'be_mentor' && candidate.experienceYears > 1)
+  const j2Strict = j2Experienced.filter(({ candidate }) => analyst.test(candidate.role))
+  const j2Formal = j2Experienced.filter(({ candidate }) => analyst.test(candidate.role) ||
+    candidate.skills.map(normalizeSkill).some(skill => skill === 'python' || skill === 'a/b testing'))
+  const j3Relevant = j3.filter(({ candidate }) => candidate.goal === 'find_cofounder' &&
+    candidate.skills.some(skill => businessSkills.has(normalizeSkill(skill))))
+  assert.ok(j1Relevant.length >= 3, `J1: ${j1Relevant.length}/5`)
+  assert.ok(j2Formal.length >= 3 && j2Strict.length >= 3, `J2: ${j2Formal.length}/5, strict ${j2Strict.length}/5`)
+  assert.ok(j3Relevant.length >= 3, `J3: ${j3Relevant.length}/5`)
 })
 
 test('rewards experience in the correct mentorship direction', () => {
