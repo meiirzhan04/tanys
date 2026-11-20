@@ -20,6 +20,15 @@ try {
     await client.query('INSERT INTO schema_migrations VALUES ($1,$2)', [name, checksum])
     console.log('Applied', name)
   }
+  const organizerLogin = (process.env.ORGANIZER_LOGIN ?? '').trim().toLowerCase()
+  if (organizerLogin) {
+    const granted = await client.query(
+      'UPDATE users SET can_create_events=true WHERE username=$1 OR email=$1 RETURNING id',
+      [organizerLogin],
+    )
+    if (!granted.rowCount) throw new Error('Account not found for ORGANIZER_LOGIN: ' + organizerLogin)
+    console.log('Granted organizer permission to', organizerLogin)
+  }
   await client.query('COMMIT')
 } catch (error) {
   await client.query('ROLLBACK')
