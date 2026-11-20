@@ -181,6 +181,7 @@ export interface Messages {
     saveContact: string
     savingContact: string
     contactSaved: string
+    currentContact: string
     requestIntro: string
     requestingIntro: string
     alreadyRequested: string
@@ -504,6 +505,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       saveContact: 'Сохранить контакт',
       savingContact: 'Сохраняем…',
       contactSaved: 'Контакт сохранён.',
+      currentContact: 'Сохранённый контакт:',
       requestIntro: 'Предложить знакомство',
       requestingIntro: 'Отправляем…',
       alreadyRequested: 'Запрос уже отправлен',
@@ -825,6 +827,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       saveContact: 'Байланысты сақтау',
       savingContact: 'Сақталуда…',
       contactSaved: 'Байланыс сақталды.',
+      currentContact: 'Сақталған байланыс:',
       requestIntro: 'Танысуды ұсыну',
       requestingIntro: 'Жіберілуде…',
       alreadyRequested: 'Сұрау жіберілген',
@@ -1146,6 +1149,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       saveContact: 'Save contact',
       savingContact: 'Saving…',
       contactSaved: 'Contact saved.',
+      currentContact: 'Saved contact:',
       requestIntro: 'Request introduction',
       requestingIntro: 'Sending…',
       alreadyRequested: 'Request already sent',

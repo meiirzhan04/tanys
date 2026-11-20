@@ -79,7 +79,7 @@ export interface IntroductionsPanelProps {
   contactSaved: boolean
   socialError: string
   socialNotice: string
-  onSaveContact: (value: string) => void
+  onSaveContact: (value: string) => Promise<boolean>
   onUpdateIntro: (introId: string, status: Exclude<IntroductionStatus, 'pending'>) => void
   onToggleSlots: (introId: string) => void
   onProposeMeeting: (introId: string, slotId: string) => void
@@ -108,14 +108,14 @@ export function IntroductionsPanel({
   refreshing,
 }: IntroductionsPanelProps) {
   const s = getMessages(locale).social
-  const [contactInput, setContactInput] = useState(contactValue)
+  const [contactInput, setContactInput] = useState('')
   const incoming = introductions.filter(item => item.direction === 'incoming')
   const outgoing = introductions.filter(item => item.direction === 'outgoing')
 
-  function submitContact(event: FormEvent<HTMLFormElement>) {
+  async function submitContact(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!contactInput.trim()) return
-    onSaveContact(contactInput.trim())
+    if (savingContact || !contactInput.trim()) return
+    if (await onSaveContact(contactInput.trim())) setContactInput('')
   }
 
   function renderIntroCard(item: IntroductionItem) {
@@ -242,6 +242,7 @@ export function IntroductionsPanel({
         </label>
         <p className="privacy-box__note">{s.contactNotice}</p>
         {contactSaved && <p className="copy-status" role="status">{s.contactSaved}</p>}
+        {contactValue && <p className="contact-reveal"><strong>{s.currentContact}</strong> {contactValue}</p>}
       </form>
 
       <div className="social-group">
