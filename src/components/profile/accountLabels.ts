@@ -1,5 +1,5 @@
 export const accountLabels = {
-  ru: { event: 'Анкета мероприятия', name: 'Имя', profession: 'Профессия', save: 'Сохранить', copy: 'Скопировать из анкеты', saved: 'Профиль сохранён', error: 'Не удалось загрузить или сохранить профиль', retry: 'Повторить' },
-  kk: { event: 'Іс-шара сауалнамасы', name: 'Аты', profession: 'Мамандық', save: 'Сақтау', copy: 'Сауалнамадан көшіру', saved: 'Профиль сақталды', error: 'Профильді жүктеу немесе сақтау мүмкін болмады', retry: 'Қайталау' },
-  en: { event: 'Event questionnaire', name: 'Name', profession: 'Profession', save: 'Save', copy: 'Copy from questionnaire', saved: 'Profile saved', error: 'Could not load or save profile', retry: 'Retry' },
+  ru: { details: 'Личные данные', scope: 'Эти данные принадлежат вашему аккаунту. Для каждого мероприятия можно заполнить отдельную анкету.', event: 'Анкета мероприятия', name: 'Имя', profession: 'Профессия', save: 'Сохранить', copy: 'Скопировать из анкеты', saved: 'Профиль сохранён', error: 'Не удалось загрузить или сохранить профиль', retry: 'Повторить' },
+  kk: { details: 'Жеке мәліметтер', scope: 'Бұл мәліметтер аккаунтыңызда сақталады. Әр іс-шараға бөлек сауалнама толтыра аласыз.', event: 'Іс-шара сауалнамасы', name: 'Аты', profession: 'Мамандық', save: 'Сақтау', copy: 'Сауалнамадан көшіру', saved: 'Профиль сақталды', error: 'Профильді жүктеу немесе сақтау мүмкін болмады', retry: 'Қайталау' },
+  en: { details: 'Personal details', scope: 'These details belong to your account. You can fill out a separate questionnaire for each event.', event: 'Event questionnaire', name: 'Name', profession: 'Profession', save: 'Save', copy: 'Copy from questionnaire', saved: 'Profile saved', error: 'Could not load or save profile', retry: 'Retry' },
 }

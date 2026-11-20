@@ -1136,6 +1136,33 @@ export function EventAccountFlow({
     )
   }
 
+  const eventToolbar = (
+    <div className="event-toolbar surface">
+      {events.length > 0 ? (
+        <label className="event-picker">
+          <span>{t.eventSelectorLabel}</span>
+          <select
+            value={activeEventId}
+            disabled={eventLoading || saving}
+            onChange={event => {
+              const nextId = event.target.value
+              guardNavigation(() => void loadEventWorkspace(nextId), event.currentTarget)
+            }}
+          >
+            {events.map(item => (
+              <option key={item.id} value={item.id}>
+                {item.name || item.id}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : (
+        <span className="event-picker-empty">{t.noEventsTitle}</span>
+      )}
+
+    </div>
+  )
+
   return (
     <div className="site-width workspace">
       <nav className="workspace-nav" aria-label={messages.nav.label}>
@@ -1208,30 +1235,7 @@ export function EventAccountFlow({
           locale={locale}
           onDismiss={() => setNotifications([])}
         />
-        <div className="event-toolbar surface">
-          {events.length > 0 ? (
-            <label className="event-picker">
-              <span>{t.eventSelectorLabel}</span>
-              <select
-                value={activeEventId}
-                disabled={eventLoading || saving}
-                onChange={event => {
-                  const nextId = event.target.value
-                  guardNavigation(() => void loadEventWorkspace(nextId), event.currentTarget)
-                }}
-              >
-                {events.map(item => (
-                  <option key={item.id} value={item.id}>
-                    {item.name || item.id}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : (
-            <span className="event-picker-empty">{t.noEventsTitle}</span>
-          )}
-
-        </div>
+        {tab !== 'me' && eventToolbar}
 
         {eventError && <div className="error-banner" role="alert">{eventError}</div>}
 
@@ -1266,6 +1270,7 @@ export function EventAccountFlow({
           <AccountProfilePanel
             locale={locale}
             key={user.id}
+            eventToolbar={events.length ? eventToolbar : null}
             readAccount={readAccount}
             saveAccount={async profile => {
               const previous = accountCache.current
