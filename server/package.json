@@ -4,9 +4,10 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "test": "node --test tests/observability.test.mjs",
+    "test": "node --test tests/observability.test.mjs tests/retention.test.mjs",
     "start": "node dist/main.js",
-    "migrate": "node dist/migrate.js"
+    "migrate": "node dist/migrate.js",
+    "retention": "node dist/retention-job.js"
   },
   "dependencies": {
     "nodemailer": "^10.6.1",

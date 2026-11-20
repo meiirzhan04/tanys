@@ -207,6 +207,7 @@ export interface TanysApiClient {
   verifyAuthChallenge(challengeId: string, code: string): Promise<AuthUser>
   getMe(): Promise<AuthUser | null>
   logout(): Promise<void>
+  deleteAccount(confirmation?: { confirm: boolean }): Promise<void>
   saveContact(value: string): Promise<void>
   listEvents(): Promise<EventSummary[]>
   getEvent(eventId: string): Promise<EventDetails>
@@ -328,6 +329,13 @@ export function createTanysApiClient(
 
     async logout() {
       await request<null>('/auth/session', { method: 'DELETE' })
+    },
+
+    async deleteAccount(confirmation = { confirm: true }) {
+      await request<null>('/me', {
+        method: 'DELETE',
+        body: JSON.stringify(confirmation),
+      })
     },
 
     async saveContact(value) {

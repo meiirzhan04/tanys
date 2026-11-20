@@ -52,6 +52,17 @@ docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T db \
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T db \
   pg_restore -U "$POSTGRES_USER" -d "$VERIFY_DB" --no-owner --no-privileges --exit-on-error < "$BACKUP_FILE"
 
+# Replay deleted account tombstones to enforce deletion rights after restoring backup (Issue #57)
+docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T db \
+  psql -U "$POSTGRES_USER" -d "$VERIFY_DB" -v ON_ERROR_STOP=1 -c "
+    DO \$\$
+    BEGIN
+      IF to_regclass('public.deleted_account_tombstones') IS NOT NULL THEN
+        DELETE FROM users WHERE id IN (SELECT user_id FROM deleted_account_tombstones);
+      END IF;
+    END \$\$;
+  "
+
 MIGRATION_COUNT="$(docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T db \
   psql -U "$POSTGRES_USER" -d "$VERIFY_DB" -tAc "SELECT count(*) FROM schema_migrations;" | tr -d '[:space:]')"
 

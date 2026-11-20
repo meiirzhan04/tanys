@@ -94,7 +94,8 @@ export async function eventRoute(req: IncomingMessage, res: ServerResponse, path
       if (body.status !== undefined && !['active','closed'].includes(String(body.status))) throw new HttpError(400,'invalid_status')
       if (Object.keys(body).some(key=>!['name','timeZone','startsAt','endsAt','status'].includes(key))) throw new HttpError(400,'unknown_field')
       const args = fields({ ...row,...body })
-      const updated = await client.query(`UPDATE events AS e SET name=$1,time_zone=$2,starts_at=$3,ends_at=$4,status=$5
+      const updated = await client.query(`UPDATE events AS e SET name=$1,time_zone=$2,starts_at=$3,ends_at=$4,status=$5,
+        closed_at=CASE WHEN $5='closed' AND e.closed_at IS NULL THEN now() ELSE e.closed_at END
         WHERE id=$6 RETURNING ${columns}`, [...args,body.status ?? row.status,event])
       return { status:200,data:updated.rows[0] }
     }
