@@ -334,6 +334,37 @@ test('preserves eligible candidate IDs and raw profile facts across ru, kk, and 
   assert.notEqual(kk[0].explanation, en[0].explanation)
 })
 
+test('keeps requested hiring skills once in explanations in all locales', () => {
+  const employer = candidate('employer', 'hire', {
+    skills: ['Golang', 'Postgres'], lookingFor: ['Go', 'PostgreSQL'],
+  })
+  const backend = candidate('backend', 'find_job', { skills: ['Go', 'PostgreSQL'] })
+  const ios = candidate('ios', 'find_job', { role: 'iOS Developer', skills: ['Swift'] })
+
+  for (const locale of ['ru', 'kk', 'en'] as const) {
+    const results = recommend(employer, [ios, backend], locale)
+    assert.deepEqual(results.map(result => result.candidate.id), ['backend'])
+    assert.deepEqual(recommend(ios, [employer], locale), [])
+    for (const result of [results[0], ...recommend(backend, [employer], locale)]) {
+      assert.deepEqual(result.explanation.match(/\b(?:Go|Golang|Postgres|PostgreSQL)\b/g), ['Go', 'PostgreSQL'])
+      assert.match(result.explanation, /API/)
+      assert.match(result.icebreaker ?? '', /\bGo\b/)
+    }
+  }
+})
+
+test('gives the requested cofounder skills priority in a deduplicated explanation', () => {
+  const [result] = recommend(
+    { ...input, goal: 'find_cofounder', skills: ['JS', 'Python'], lookingFor: ['Sales', 'JavaScript'] },
+    [candidate('cofounder', 'find_cofounder', {
+      skills: ['JavaScript', 'Продажи'], lookingFor: ['JavaScript', 'Python'], interests: [],
+    })],
+    'en',
+  )
+  assert.match(result.explanation, /this participant has skills you need: JavaScript, Продажи, this participant is looking for your skills: Python/)
+  assert.doesNotMatch(result.explanation, /\bJS\b/)
+})
+
 test('matches common skill aliases for skills and lookingFor without mutating labels (#92)', () => {
   const pool = [
     candidate('java-only', 'hire', { skills: ['Java'], lookingFor: ['Java'], interests: [] }),

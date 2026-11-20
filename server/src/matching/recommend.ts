@@ -1,4 +1,5 @@
 import type { Candidate, Goal, Locale, ProfileInput, Recommendation } from './types.js'
+import { deduplicateExplanationSkills } from './explanation-skills.ts'
 
 const reciprocalGoals: Record<Goal, Goal> = {
   find_job: 'hire',
@@ -287,10 +288,19 @@ function scoreCandidate(
 
   const reasons: string[] = []
   if (roleMatch) reasons.push(input.goal === 'hire' ? templates.applicantRole(roleMatch) : templates.requestedRole(roleMatch))
-  if (candidateNeeds.length) reasons.push(templates.candidateNeeds(candidateNeeds.slice(0, 2).join(', ')))
-  if (participantNeeds.length) reasons.push(templates.participantNeeds(participantNeeds.slice(0, 2).join(', ')))
-  if (isCofounder) reasons.reverse()
-  if (sharedSkills.length) reasons.push(templates.sharedSkills(sharedSkills.slice(0, 2).join(', ')))
+  const skillReasons = [
+    { labels: candidateNeeds, format: templates.candidateNeeds },
+    { labels: participantNeeds, format: templates.participantNeeds },
+  ]
+  if (isCofounder) skillReasons.reverse()
+  skillReasons.push({ labels: sharedSkills, format: templates.sharedSkills })
+
+  const uniqueLabels = deduplicateExplanationSkills(
+    skillReasons.map(({ labels }) => labels.map(label => ({ key: skillKey(label), label }))),
+  )
+  for (const [index, labels] of uniqueLabels.entries()) {
+    if (labels.length) reasons.push(skillReasons[index].format(labels.slice(0, 2).join(', ')))
+  }
   if (isMoreExperienced) reasons.push(templates.moreExperienced)
   if (isLessExperienced) reasons.push(templates.lessExperienced)
   if (sharedInterests.length) reasons.push(templates.sharedInterests(sharedInterests.slice(0, 2).join(', ')))
