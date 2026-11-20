@@ -1427,7 +1427,9 @@ export function EventAccountFlow({
                 message={recsMessage}
                 locale={locale}
               />
-              <PartnerBooths recommendations={matchedEventBooths} locale={locale} />
+              {eventBooths.some(booth => booth.published) && (
+                <PartnerBooths recommendations={matchedEventBooths} locale={locale} />
+              )}
             </>
           )
         ) : (

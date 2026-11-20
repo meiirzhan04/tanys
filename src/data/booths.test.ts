@@ -45,6 +45,9 @@ test('returns an empty list when a profile has no thematic overlap and localizes
   })
   assert.deepEqual(none, [])
 
+  // Aliases and case match like in people matching.
+  const alias = recommendBooths({ skills: ['golang', 'k8s'], interests: [] }, DEMO_PARTNER_BOOTHS, 'ru')
+  assert.ok(alias.some(item => item.matchedTopics.includes('Go')), JSON.stringify(alias))
   const kk = recommendBooths({ skills: ['Kubernetes'], interests: ['Наблюдаемость'] }, DEMO_PARTNER_BOOTHS, 'kk')
   const en = recommendBooths({ skills: ['Kubernetes'], interests: ['Наблюдаемость'] }, DEMO_PARTNER_BOOTHS, 'en')
   assert.match(kk[0].explanation, /Сәйкес тақырыптар:.*Kubernetes/)

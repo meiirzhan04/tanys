@@ -5,19 +5,11 @@ import { getMessages } from '../i18n/messages'
 import type { Locale } from '../matching/types'
 import { formatMeetingInterval } from './socialHelpers'
 import { TimeSelect } from './TimeSelect'
-import { isQuarterHourInstant, isQuarterHourTime } from '../scheduling/timeStep'
+import { QUARTER_HOUR_MS, fromLocalParts, isQuarterHourInstant, isQuarterHourTime, toLocalParts } from '../scheduling/timeStep'
 
 type Slot = { start: string; end: string }
-const minimumDuration = 15 * 60 * 1000
-
-function localDate(value?: string) {
-  if (!value) return undefined
-  const date = new Date(value)
-  if (!Number.isFinite(+date)) return undefined
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${date.getFullYear()}-${month}-${day}`
-}
+type ErrorKind = 'request' | 'invalid' | 'step' | 'beforeEvent' | 'afterEvent' | 'tooShort' | 'tooLong' | 'overlap'
+const maximumDuration = 24 * 60 * 60 * 1000
 
 function openDatePicker(event: MouseEvent<HTMLInputElement>) {
   try {
@@ -27,55 +19,99 @@ function openDatePicker(event: MouseEvent<HTMLInputElement>) {
   }
 }
 
+function parseInstant(value?: string): Date | undefined {
+  const date = value ? new Date(value) : undefined
+  return date && Number.isFinite(+date) ? date : undefined
+}
+
+/** Device-local date and time, the same clock the inputs use. */
+function formatLocal(date: Date, locale: Locale): string {
+  return new Intl.DateTimeFormat(locale === 'kk' ? 'kk-KZ' : locale === 'en' ? 'en-GB' : 'ru-RU', {
+    day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+  }).format(date)
+}
+
 const labels = {
   ru: {
     title: 'Моё свободное время',
+    intro: 'Отметьте, когда вы готовы к встречам 1:1 на мероприятии. Собеседник увидит общее свободное время и сможет предложить встречу.',
+    example: 'Например: свободны в обед — укажите 12:00–13:00; ещё и после докладов — добавьте второй интервал 16:30–17:30.',
+    window: (from: string, until: string) => `Мероприятие идёт: ${from} — ${until}. Время можно выбрать только внутри этого периода.`,
     startDate: 'Дата начала',
     endDate: 'Дата окончания',
     startTime: 'Время начала',
     endTime: 'Время окончания',
     add: 'Добавить интервал',
     remove: 'Убрать',
-    local: 'Ввод в часовом поясе устройства',
-    invalid:
-      'Укажите свободное время в пределах события, минимум 15 минут. Интервалы не должны пересекаться.',
+    empty: 'Интервалов пока нет. Добавьте хотя бы один — без него встречу не предложить.',
+    local: 'Время по часовому поясу устройства',
     timePlaceholder: 'Выберите время',
-    step: 'Время выбирается с шагом 15 минут: :00, :15, :30 или :45.',
+    step: 'Шаг 15 минут, минимум 15 минут. Интервалы не должны пересекаться.',
     legacyOption: (time: string) => `${time} — недопустимо`,
     legacySlot: 'Сохранено со временем не по шагу 15 минут. Удалите интервал и добавьте его заново с допустимым временем.',
-    invalidStep: 'Выберите время с шагом 15 минут: :00, :15, :30 или :45.',
+    errors: {
+      invalid: 'Сервер не принял интервал: он должен быть внутри мероприятия, не короче 15 минут и не пересекаться с другими.',
+      step: 'Выберите время с шагом 15 минут: :00, :15, :30 или :45.',
+      beforeEvent: (from: string) => `Начало раньше старта мероприятия. Выберите время не раньше ${from}.`,
+      afterEvent: (until: string) => `Окончание позже конца мероприятия. Выберите время не позже ${until}.`,
+      tooShort: 'Окончание должно быть хотя бы на 15 минут позже начала. Например, 12:00–12:15.',
+      tooLong: 'Один интервал — не больше 24 часов. Разбейте время на несколько интервалов.',
+      overlap: (slot: string) => `Интервал пересекается с уже добавленным: ${slot}. Измените время или уберите старый интервал.`,
+    },
   },
   kk: {
     title: 'Бос уақытым',
+    intro: 'Іс-шарада 1:1 кездесуге дайын уақытыңызды белгілеңіз. Әңгімелесуші ортақ бос уақытты көріп, кездесу ұсына алады.',
+    example: 'Мысалы: түскі үзілісте бос болсаңыз — 12:00–13:00 көрсетіңіз; баяндамалардан кейін де бос болсаңыз — 16:30–17:30 екінші аралығын қосыңыз.',
+    window: (from: string, until: string) => `Іс-шара уақыты: ${from} — ${until}. Уақытты тек осы аралықтан таңдауға болады.`,
     startDate: 'Басталу күні',
     endDate: 'Аяқталу күні',
     startTime: 'Басталу уақыты',
     endTime: 'Аяқталу уақыты',
     add: 'Аралық қосу',
     remove: 'Алып тастау',
-    local: 'Құрылғының уақыт белдеуі',
-    invalid: 'Іс-шара шегінде кемінде 15 минут таңдаңыз. Аралықтар қабаттаспауы керек.',
+    empty: 'Әзірге аралық жоқ. Кемінде біреуін қосыңыз — онсыз кездесу ұсыну мүмкін емес.',
+    local: 'Құрылғының уақыт белдеуі бойынша',
     timePlaceholder: 'Уақытты таңдаңыз',
-    step: 'Уақыт 15 минут қадаммен таңдалады: :00, :15, :30 немесе :45.',
+    step: 'Қадамы 15 минут, кемінде 15 минут. Аралықтар қабаттаспауы керек.',
     legacyOption: (time: string) => `${time} — жарамсыз`,
     legacySlot: '15 минут қадамына сай емес уақытпен сақталған. Аралықты жойып, жарамды уақытпен қайта қосыңыз.',
-    invalidStep: 'Уақытты 15 минут қадаммен таңдаңыз: :00, :15, :30 немесе :45.',
+    errors: {
+      invalid: 'Сервер аралықты қабылдамады: ол іс-шара ішінде, кемінде 15 минут және басқаларымен қабаттаспауы керек.',
+      step: 'Уақытты 15 минут қадаммен таңдаңыз: :00, :15, :30 немесе :45.',
+      beforeEvent: (from: string) => `Басталуы іс-шарадан ерте. ${from} уақытынан ерте емес таңдаңыз.`,
+      afterEvent: (until: string) => `Аяқталуы іс-шарадан кеш. ${until} уақытынан кеш емес таңдаңыз.`,
+      tooShort: 'Аяқталуы басталуынан кемінде 15 минут кейін болуы керек. Мысалы, 12:00–12:15.',
+      tooLong: 'Бір аралық 24 сағаттан аспауы керек. Уақытты бірнеше аралыққа бөліңіз.',
+      overlap: (slot: string) => `Аралық бұрын қосылғанмен қабаттасады: ${slot}. Уақытты өзгертіңіз немесе ескі аралықты алып тастаңыз.`,
+    },
   },
   en: {
     title: 'My availability',
+    intro: 'Mark when you are free for 1:1 meetings at the event. The other person sees your shared free time and can propose a meeting.',
+    example: 'For example: free at lunch — add 12:00–13:00; also free after the talks — add a second interval 16:30–17:30.',
+    window: (from: string, until: string) => `The event runs ${from} — ${until}. Times can only be picked inside this period.`,
     startDate: 'Start date',
     endDate: 'End date',
     startTime: 'Start time',
     endTime: 'End time',
     add: 'Add interval',
     remove: 'Remove',
-    local: 'Enter times in your device time zone',
-    invalid: 'Choose at least 15 minutes within the event. Intervals must not overlap.',
+    empty: 'No intervals yet. Add at least one — without it nobody can propose a meeting.',
+    local: 'Times in your device time zone',
     timePlaceholder: 'Choose a time',
-    step: 'Times use 15-minute steps: :00, :15, :30 or :45.',
+    step: '15-minute steps, at least 15 minutes. Intervals must not overlap.',
     legacyOption: (time: string) => `${time} — not allowed`,
     legacySlot: 'Saved with a time outside the 15-minute steps. Remove the interval and add it again with an allowed time.',
-    invalidStep: 'Choose a time in 15-minute steps: :00, :15, :30 or :45.',
+    errors: {
+      invalid: 'The server rejected the interval: it must be inside the event, at least 15 minutes and not overlap others.',
+      step: 'Choose a time in 15-minute steps: :00, :15, :30 or :45.',
+      beforeEvent: (from: string) => `The start is before the event begins. Choose ${from} or later.`,
+      afterEvent: (until: string) => `The end is after the event ends. Choose ${until} or earlier.`,
+      tooShort: 'The end must be at least 15 minutes after the start, e.g. 12:00–12:15.',
+      tooLong: 'One interval can be at most 24 hours. Split the time into several intervals.',
+      overlap: (slot: string) => `This overlaps an interval you already added: ${slot}. Change the time or remove the old interval.`,
+    },
   },
 }
 
@@ -95,15 +131,20 @@ export function AvailabilityEditor({
   endsAt?: string
 }) {
   const t = labels[locale]
+  const eventStart = parseInstant(startsAt)
+  const eventEnd = parseInstant(endsAt)
+  const firstDay = toLocalParts(eventStart).date || undefined
+  const lastDay = toLocalParts(eventEnd).date || undefined
+  // A one-day event needs no date choice: both dates start on that day.
+  const defaultDay = firstDay && firstDay === lastDay ? firstDay : ''
   const [slots, setSlots] = useState<Slot[]>()
-  const [startDate, setStartDate] = useState('')
+  const [startDate, setStartDate] = useState(defaultDay)
   const [endDate, setEndDate] = useState('')
   const [startTime, setStartTime] = useState('')
   const [endTime, setEndTime] = useState('')
-  const firstDay = localDate(startsAt)
-  const lastDay = localDate(endsAt)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<'request' | 'invalid' | 'step'>()
+  const [error, setError] = useState<ErrorKind>()
+  const [overlapWith, setOverlapWith] = useState<Slot>()
   useEffect(() => {
     let active = true
     api
@@ -119,6 +160,41 @@ export function AvailabilityEditor({
     }
   }, [api, event])
 
+  const endDay = endDate || startDate
+  const chosenStart = fromLocalParts(startDate, startTime)
+
+  function startAllowed(time: string) {
+    if (!startDate) return true
+    const at = +fromLocalParts(startDate, time)
+    return (!eventStart || at >= +eventStart) && (!eventEnd || at + QUARTER_HOUR_MS <= +eventEnd)
+  }
+
+  function endAllowed(time: string) {
+    if (!endDay) return true
+    const at = +fromLocalParts(endDay, time)
+    if (eventEnd && at > +eventEnd) return false
+    if (eventStart && at < +eventStart + QUARTER_HOUR_MS) return false
+    return !Number.isFinite(+chosenStart) || (at - +chosenStart >= QUARTER_HOUR_MS && at - +chosenStart <= maximumDuration)
+  }
+
+  function changeStartDate(date: string) {
+    setStartDate(date)
+    if (endDate && endDate < date) setEndDate('')
+    setStartTime('')
+    setEndTime('')
+    setError(undefined)
+  }
+
+  function changeStartTime(time: string) {
+    setStartTime(time)
+    setError(undefined)
+    // Drop an end time that no longer fits after the new start.
+    if (endTime && endDay) {
+      const gap = +fromLocalParts(endDay, endTime) - +fromLocalParts(startDate, time)
+      if (gap < QUARTER_HOUR_MS || gap > maximumDuration) setEndTime('')
+    }
+  }
+
   async function save(next: Slot[], resetForm = false) {
     setBusy(true)
     setError(undefined)
@@ -126,7 +202,7 @@ export function AvailabilityEditor({
       await api.saveAvailability(event, next)
       setSlots(next)
       if (resetForm) {
-        setStartDate('')
+        setStartDate(defaultDay)
         setEndDate('')
         setStartTime('')
         setEndTime('')
@@ -147,41 +223,57 @@ export function AvailabilityEditor({
       setError('step')
       return
     }
-    const from = new Date(`${startDate}T${startTime}`)
-    const until = new Date(`${endDate || startDate}T${endTime}`)
+    const from = fromLocalParts(startDate, startTime)
+    const until = fromLocalParts(endDay, endTime)
     const duration = +until - +from
-    if (
-      !Number.isFinite(duration) ||
-      duration < minimumDuration ||
-      duration > 24 * 60 * 60 * 1000 ||
-      (startsAt && +from < Date.parse(startsAt)) ||
-      (endsAt && +until > Date.parse(endsAt)) ||
-      slots.some(slot => +from < Date.parse(slot.end) && +until > Date.parse(slot.start))
-    ) {
-      setError('invalid')
+    const overlap = slots.find(slot => +from < Date.parse(slot.end) && +until > Date.parse(slot.start))
+    const problem: ErrorKind | undefined =
+      !Number.isFinite(duration) || duration < QUARTER_HOUR_MS ? 'tooShort'
+        : duration > maximumDuration ? 'tooLong'
+          : eventStart && +from < +eventStart ? 'beforeEvent'
+            : eventEnd && +until > +eventEnd ? 'afterEvent'
+              : overlap ? 'overlap'
+                : undefined
+    if (problem) {
+      setOverlapWith(overlap)
+      setError(problem)
       return
     }
     const next = [...slots, { start: from.toISOString(), end: until.toISOString() }]
     next.sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
     void save(next, true)
   }
+
+  function errorText(kind: ErrorKind): string {
+    switch (kind) {
+      case 'beforeEvent': return t.errors.beforeEvent(eventStart ? formatLocal(eventStart, locale) : '')
+      case 'afterEvent': return t.errors.afterEvent(eventEnd ? formatLocal(eventEnd, locale) : '')
+      case 'overlap': return t.errors.overlap(overlapWith ? formatMeetingInterval(overlapWith.start, overlapWith.end, zone, locale) : '')
+      case 'tooShort': return t.errors.tooShort
+      case 'tooLong': return t.errors.tooLong
+      case 'step': return t.errors.step
+      case 'invalid': return t.errors.invalid
+      default: return getMessages(locale).account.errors.genericRequest
+    }
+  }
+
   return (
-    <section className="surface contact-panel">
+    <section className="surface contact-panel availability-panel">
       <h2>{t.title}</h2>
-      <p>
-        {t.local} · {Intl.DateTimeFormat().resolvedOptions().timeZone}
-      </p>
+      <p>{t.intro}</p>
+      {eventStart && eventEnd && (
+        <p className="availability-window" data-event-window>
+          {t.window(formatLocal(eventStart, locale), formatLocal(eventEnd, locale))}
+        </p>
+      )}
+      <p className="field-hint availability-example">{t.example}</p>
       <form className="availability-form" onSubmit={add}>
         <div className="form-fields">
           <label className="field">
             <span>{t.startDate}</span>
-            <input required disabled={busy} type="date" min={firstDay} max={lastDay} value={startDate}
+            <input required disabled={busy} type="date" name="availabilityStartDate" min={firstDay} max={lastDay} value={startDate}
               onClick={openDatePicker}
-              onChange={e => {
-                const date = e.target.value
-                setStartDate(date)
-                if (endDate < date) setEndDate('')
-              }}
+              onChange={e => changeStartDate(e.target.value)}
             />
           </label>
           <label className="field">
@@ -193,13 +285,15 @@ export function AvailabilityEditor({
               value={startTime}
               placeholder={t.timePlaceholder}
               legacyLabel={t.legacyOption}
-              onChange={setStartTime}
+              isAllowed={startAllowed}
+              onChange={changeStartTime}
             />
           </label>
           <label className="field">
             <span>{t.endDate}</span>
-            <input required disabled={busy} type="date" min={startDate || firstDay} max={lastDay}
-              value={endDate || startDate} onClick={openDatePicker} onChange={e => setEndDate(e.target.value)}
+            <input required disabled={busy} type="date" name="availabilityEndDate" min={startDate || firstDay} max={lastDay}
+              value={endDay} onClick={openDatePicker}
+              onChange={e => { setEndDate(e.target.value); setEndTime(''); setError(undefined) }}
             />
           </label>
           <label className="field">
@@ -211,11 +305,12 @@ export function AvailabilityEditor({
               value={endTime}
               placeholder={t.timePlaceholder}
               legacyLabel={t.legacyOption}
-              onChange={setEndTime}
+              isAllowed={endAllowed}
+              onChange={time => { setEndTime(time); setError(undefined) }}
             />
           </label>
         </div>
-        <p className="field-hint">{t.step}</p>
+        <p className="field-hint">{t.step} {t.local} · {Intl.DateTimeFormat().resolvedOptions().timeZone}</p>
         <div className="social-card__actions">
           <button className="secondary-button" type="submit" disabled={!slots || busy}>
             {t.add}
@@ -243,11 +338,11 @@ export function AvailabilityEditor({
             </li>
           ))}
         </ul>
+      ) : slots ? (
+        <p className="field-hint availability-empty">{t.empty}</p>
       ) : null}
       {error && (
-        <p className="error-banner" role="alert">
-          {error === 'invalid' ? t.invalid : error === 'step' ? t.invalidStep : getMessages(locale).account.errors.genericRequest}
-        </p>
+        <p className="error-banner" role="alert">{errorText(error)}</p>
       )}
     </section>
   )

@@ -39,6 +39,9 @@ export function CustomSelect({
   const rootRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const selectRef = useRef<HTMLSelectElement>(null)
+  // Only opening the menu or keyboard moves scroll the list. Hover must not: re-centering under the pointer
+  // highlighted the next row, which scrolled again, and the list raced away.
+  const scrollMode = useRef<'center' | 'nearest' | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -69,17 +72,27 @@ export function CustomSelect({
   }, [open, options])
 
   useEffect(() => {
-    if (!open || highlight < 0) return
+    const mode = scrollMode.current
+    scrollMode.current = null
+    if (!open || highlight < 0 || !mode) return
     const menu = menuRef.current
     const item = menu?.children[highlight] as HTMLElement | undefined
-    // Scroll only the list (never the page) so the highlighted option sits in the middle.
-    if (menu && item) menu.scrollTop = item.offsetTop - (menu.clientHeight - item.offsetHeight) / 2
+    if (!menu || !item) return
+    // Scroll only the list (never the page): centre the choice on open, keep it just in view for arrows.
+    if (mode === 'center') {
+      menu.scrollTop = item.offsetTop - (menu.clientHeight - item.offsetHeight) / 2
+    } else if (item.offsetTop < menu.scrollTop) {
+      menu.scrollTop = item.offsetTop - 6
+    } else if (item.offsetTop + item.offsetHeight > menu.scrollTop + menu.clientHeight) {
+      menu.scrollTop = item.offsetTop + item.offsetHeight - menu.clientHeight + 6
+    }
   }, [open, highlight])
 
   function openMenu() {
     if (disabled) return
     const selected = options.findIndex(opt => opt.value === value)
     const fallback = initialHighlight ? options.findIndex(opt => opt.value === initialHighlight) : -1
+    scrollMode.current = 'center'
     setHighlight(Math.max(0, selected >= 0 ? selected : fallback))
     setOpen(true)
   }
@@ -116,9 +129,11 @@ export function CustomSelect({
     } else if (key === 'ArrowDown' || key === 'ArrowUp') {
       event.preventDefault()
       const step = key === 'ArrowDown' ? 1 : -1
+      scrollMode.current = 'nearest'
       setHighlight(current => Math.min(options.length - 1, Math.max(0, current + step)))
     } else if (key === 'Home' || key === 'End') {
       event.preventDefault()
+      scrollMode.current = 'nearest'
       setHighlight(key === 'Home' ? 0 : options.length - 1)
     } else if (key === 'Enter' || key === ' ') {
       event.preventDefault()

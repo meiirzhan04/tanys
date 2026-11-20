@@ -148,17 +148,39 @@ test('availability times offer only 15-minute steps and flag a saved off-grid sl
     const start = page.locator('select[name="availabilityStartTime"]')
     await expect(start).toBeVisible()
     const values = await start.locator('option:not([disabled])').evaluateAll(options => options.map(option => (option as HTMLOptionElement).value))
-    expect(values).toHaveLength(96)
+    // One-day event 08:00–19:00: the date is prefilled and starts are limited to the event window.
+    expect(values[0]).toBe('08:00')
+    expect(values.at(-1)).toBe('18:45')
     expect(values.every(value => /:(00|15|30|45)$/.test(value))).toBe(true)
     expect(values).toContain('09:15')
+    expect(values).not.toContain('07:45')
     expect(values).not.toContain('09:46')
+    await expect(page.locator('[data-event-window]')).toBeVisible()
     await expect(page.locator('.legacy-time-hint')).toContainText('outside the 15-minute steps')
 
     await start.click()
-    await expect(page.locator('.custom-select__menu')).toBeVisible()
+    const menu = page.locator('.custom-select__menu')
+    await expect(menu).toBeVisible()
+    // Hovering options must not scroll the list by itself.
+    const before = await menu.evaluate(element => element.scrollTop)
+    const box = await menu.boundingBox()
+    if (box) {
+      for (let y = box.y + 8; y < box.y + box.height - 8; y += 12) await page.mouse.move(box.x + box.width / 2, y)
+    }
+    expect(await menu.evaluate(element => element.scrollTop)).toBe(before)
     await page.keyboard.press('Escape')
-    await expect(page.locator('.custom-select__menu')).toHaveCount(0)
+    await expect(menu).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false)
+
+    // A specific reason instead of a generic error: pick an end before the start is impossible, so try an overlap.
+    await start.selectOption('12:00')
+    await page.locator('select[name="availabilityEndTime"]').selectOption('12:30')
+    await page.getByRole('button', { name: 'Add interval' }).click()
+    await expect(page.locator('.availability-slots li')).toHaveCount(2)
+    await start.selectOption('12:15')
+    await page.locator('select[name="availabilityEndTime"]').selectOption('13:00')
+    await page.getByRole('button', { name: 'Add interval' }).click()
+    await expect(page.getByRole('alert')).toContainText('overlaps an interval you already added')
   } finally {
     await context.close()
   }

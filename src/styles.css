@@ -1557,3 +1557,16 @@ input[type='search']::-webkit-search-cancel-button { cursor: pointer; }
 /* Keep option badges in one column whether or not the row carries the check mark */
 .custom-select__option:not(.custom-select__option--active)::after { content: ''; width: 15px; flex-shrink: 0; }
 .empty-state .auth-form { max-width: 640px; }
+
+/* Availability: the event window stands out, the example stays quiet */
+.availability-window {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--accent-border);
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.availability-panel .availability-example,
+.availability-panel .availability-empty { color: var(--muted); }
