@@ -10,7 +10,7 @@ test('участник получает рекомендации, оценива
   await page.getByLabel('О себе').fill('Ищу стажировку в команде backend-разработки.')
   await page.getByRole('button', { name: 'Найти участников' }).click()
 
-  const cards = page.getByRole('article')
+  const cards = page.locator('section[aria-labelledby="results-title"]').getByRole('article')
   await expect(cards).toHaveCount(5)
   const names = await cards.getByRole('heading').allTextContents()
   expect(new Set(names).size).toBe(5)

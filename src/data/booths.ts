@@ -3,7 +3,7 @@ import type { Locale, ProfileInput } from '../matching/types'
 export interface PartnerBooth {
   readonly id: string
   readonly name: string
-  readonly demo: true
+  readonly demo?: boolean
   readonly topics: readonly string[]
   readonly description: Record<Locale, string>
 }

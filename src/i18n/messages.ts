@@ -214,6 +214,64 @@ export interface Messages {
       meetingCancelled: (name?: string) => string
     }
   }
+  organizer: {
+    navLabel: string
+    title: string
+    subtitle: string
+    createEventTitle: string
+    editEventTitle: string
+    eventNameLabel: string
+    eventNamePlaceholder: string
+    timeZoneLabel: string
+    startsAtLabel: string
+    endsAtLabel: string
+    createEventButton: string
+    creatingEvent: string
+    saveEventButton: string
+    closeEventButton: string
+    eventSaved: string
+    eventClosedBadge: string
+    eventActiveBadge: string
+    invitesTitle: string
+    createInviteButton: string
+    creatingInvite: string
+    copyInvite: string
+    inviteCopied: string
+    revokeInvite: string
+    inviteRevoked: string
+    noInvites: string
+    membersTitle: string
+    memberNameCol: string
+    memberRoleCol: string
+    memberGoalCol: string
+    memberVisibilityCol: string
+    roleOrganizer: string
+    roleParticipant: string
+    profileVisible: string
+    profileHidden: string
+    profileIncomplete: string
+    noMembers: string
+    boothsTitle: string
+    boothNameLabel: string
+    boothNamePlaceholder: string
+    boothTopicsLabel: string
+    boothTopicsPlaceholder: string
+    boothDescLabel: string
+    boothDescPlaceholder: string
+    boothPublishedLabel: string
+    addBoothButton: string
+    saveBoothButton: string
+    editBoothButton: string
+    cancelEditButton: string
+    publishButton: string
+    unpublishButton: string
+    statusPublished: string
+    statusHidden: string
+    noBooths: string
+    forbiddenCreate: string
+    invalidEventFields: string
+    invalidBoothFields: string
+  }
 }
 
 export const messagesByLocale: Record<Locale, Messages> = {
@@ -432,6 +490,64 @@ export const messagesByLocale: Record<Locale, Messages> = {
         meetingCancelled: name => name ? `Встреча с ${name} отменена.` : 'Встреча отменена.',
       },
     },
+    organizer: {
+      navLabel: 'Организатор',
+      title: 'Кабинет организатора',
+      subtitle: 'Управляйте мероприятием, приглашениями, списком участников, картой интересов и стендами.',
+      createEventTitle: 'Новое мероприятие',
+      editEventTitle: 'Настройки мероприятия',
+      eventNameLabel: 'Название события',
+      eventNamePlaceholder: 'Например, Qazaq IT Meetup',
+      timeZoneLabel: 'Часовой пояс',
+      startsAtLabel: 'Начало (UTC ISO)',
+      endsAtLabel: 'Окончание (UTC ISO)',
+      createEventButton: 'Создать событие',
+      creatingEvent: 'Создаём…',
+      saveEventButton: 'Сохранить изменения',
+      closeEventButton: 'Завершить событие',
+      eventSaved: 'Изменения события сохранены.',
+      eventClosedBadge: 'Завершено',
+      eventActiveBadge: 'Активно',
+      invitesTitle: 'Приглашения участников',
+      createInviteButton: 'Выпустить приглашение',
+      creatingInvite: 'Создаём ссылку…',
+      copyInvite: 'Скопировать ссылку',
+      inviteCopied: 'Ссылка скопирована',
+      revokeInvite: 'Отозвать',
+      inviteRevoked: 'Отозвано',
+      noInvites: 'Выпустите ссылку-приглашение, чтобы пригласить участников в это событие.',
+      membersTitle: 'Участники события',
+      memberNameCol: 'Участник',
+      memberRoleCol: 'Роль',
+      memberGoalCol: 'Цель',
+      memberVisibilityCol: 'Видимость',
+      roleOrganizer: 'Организатор',
+      roleParticipant: 'Участник',
+      profileVisible: 'Виден',
+      profileHidden: 'Скрыт',
+      profileIncomplete: 'Анкета не заполнена',
+      noMembers: 'В этом событии пока нет участников.',
+      boothsTitle: 'Стенды партнёров события',
+      boothNameLabel: 'Название стенда',
+      boothNamePlaceholder: 'Например, Сообщество Go',
+      boothTopicsLabel: 'Темы (через запятую)',
+      boothTopicsPlaceholder: 'Go, Backend, Cloud',
+      boothDescLabel: 'Краткое описание',
+      boothDescPlaceholder: 'О чём можно поговорить на стенде?',
+      boothPublishedLabel: 'Опубликовать сразу',
+      addBoothButton: 'Добавить стенд',
+      saveBoothButton: 'Сохранить стенд',
+      editBoothButton: 'Изменить',
+      cancelEditButton: 'Отмена',
+      publishButton: 'Опубликовать',
+      unpublishButton: 'Снять с публикации',
+      statusPublished: 'Опубликован',
+      statusHidden: 'Снят с публикации',
+      noBooths: 'В этом событии пока нет стендов.',
+      forbiddenCreate: 'Создание мероприятий доступно аккаунтам с ролью организатора.',
+      invalidEventFields: 'Укажите название события и корректный интервал времени.',
+      invalidBoothFields: 'Укажите название стенда и хотя бы одну тему.',
+    },
   },
   kk: {
     languageSwitcherLabel: 'Тілді таңдау',
@@ -648,6 +764,64 @@ export const messagesByLocale: Record<Locale, Messages> = {
         meetingCancelled: name => name ? `${name} қатысушысымен кездесу болдырылмады.` : 'Кездесу болдырылмады.',
       },
     },
+    organizer: {
+      navLabel: 'Ұйымдастырушы',
+      title: 'Ұйымдастырушы кабинеті',
+      subtitle: 'Іс-шараны, шақыруларды, қатысушылар тізімін, қызығушылықтар картасын және стендтерді басқарыңыз.',
+      createEventTitle: 'Жаңа іс-шара',
+      editEventTitle: 'Іс-шара баптаулары',
+      eventNameLabel: 'Іс-шара атауы',
+      eventNamePlaceholder: 'Мысалы, Qazaq IT Meetup',
+      timeZoneLabel: 'Уақыт белдеуі',
+      startsAtLabel: 'Басталуы (UTC ISO)',
+      endsAtLabel: 'Аяқталуы (UTC ISO)',
+      createEventButton: 'Іс-шара құру',
+      creatingEvent: 'Құрылуда…',
+      saveEventButton: 'Өзгерістерді сақтау',
+      closeEventButton: 'Іс-шараны аяқтау',
+      eventSaved: 'Іс-шара өзгерістері сақталды.',
+      eventClosedBadge: 'Аяқталды',
+      eventActiveBadge: 'Белсенді',
+      invitesTitle: 'Қатысушыларға шақырулар',
+      createInviteButton: 'Шақыру шығару',
+      creatingInvite: 'Сілтеме жасалуда…',
+      copyInvite: 'Сілтемені көшіру',
+      inviteCopied: 'Сілтеме көшірілді',
+      revokeInvite: 'Қайтарып алу',
+      inviteRevoked: 'Қайтарып алынды',
+      noInvites: 'Қатысушыларды шақыру үшін шақыру сілтемесін шығарыңыз.',
+      membersTitle: 'Іс-шара қатысушылары',
+      memberNameCol: 'Қатысушы',
+      memberRoleCol: 'Рөл',
+      memberGoalCol: 'Мақсат',
+      memberVisibilityCol: 'Көрінуі',
+      roleOrganizer: 'Ұйымдастырушы',
+      roleParticipant: 'Қатысушы',
+      profileVisible: 'Көрінеді',
+      profileHidden: 'Жасырын',
+      profileIncomplete: 'Анкета толтырылмаған',
+      noMembers: 'Бұл іс-шарада әлі қатысушылар жоқ.',
+      boothsTitle: 'Іс-шара серіктес стендтері',
+      boothNameLabel: 'Стенд атауы',
+      boothNamePlaceholder: 'Мысалы, Go қауымдастығы',
+      boothTopicsLabel: 'Тақырыптар (үтір арқылы)',
+      boothTopicsPlaceholder: 'Go, Backend, Cloud',
+      boothDescLabel: 'Қысқаша сипаттама',
+      boothDescPlaceholder: 'Стендте не туралы сөйлесуге болады?',
+      boothPublishedLabel: 'Бірден жариялау',
+      addBoothButton: 'Стенд қосу',
+      saveBoothButton: 'Стендті сақтау',
+      editBoothButton: 'Өзгерту',
+      cancelEditButton: 'Болдырмау',
+      publishButton: 'Жариялау',
+      unpublishButton: 'Жарияланымнан алу',
+      statusPublished: 'Жарияланған',
+      statusHidden: 'Жарияланбаған',
+      noBooths: 'Бұл іс-шарада әлі стендтер жоқ.',
+      forbiddenCreate: 'Іс-шара құру тек ұйымдастырушы рөлі бар аккаунттарға қолжетімді.',
+      invalidEventFields: 'Іс-шара атауын және дұрыс уақыт аралығын көрсетіңіз.',
+      invalidBoothFields: 'Стенд атауын және кемінде бір тақырыпты көрсетіңіз.',
+    },
   },
   en: {
     languageSwitcherLabel: 'Language selector',
@@ -863,6 +1037,64 @@ export const messagesByLocale: Record<Locale, Messages> = {
         meetingConfirmed: name => name ? `Meeting with ${name} is confirmed.` : 'Meeting confirmed.',
         meetingCancelled: name => name ? `Meeting with ${name} was cancelled.` : 'Meeting cancelled.',
       },
+    },
+    organizer: {
+      navLabel: 'Organizer',
+      title: 'Organizer cabinet',
+      subtitle: 'Manage event settings, invites, participants, real interest aggregates, and booths.',
+      createEventTitle: 'New event',
+      editEventTitle: 'Event settings',
+      eventNameLabel: 'Event name',
+      eventNamePlaceholder: 'e.g. Qazaq IT Meetup',
+      timeZoneLabel: 'Time zone',
+      startsAtLabel: 'Starts at (UTC ISO)',
+      endsAtLabel: 'Ends at (UTC ISO)',
+      createEventButton: 'Create event',
+      creatingEvent: 'Creating…',
+      saveEventButton: 'Save changes',
+      closeEventButton: 'Close event',
+      eventSaved: 'Event changes saved.',
+      eventClosedBadge: 'Closed',
+      eventActiveBadge: 'Active',
+      invitesTitle: 'Participant invites',
+      createInviteButton: 'Issue invite link',
+      creatingInvite: 'Issuing…',
+      copyInvite: 'Copy link',
+      inviteCopied: 'Link copied',
+      revokeInvite: 'Revoke',
+      inviteRevoked: 'Revoked',
+      noInvites: 'Issue an invite link to invite participants into this event.',
+      membersTitle: 'Event participants',
+      memberNameCol: 'Participant',
+      memberRoleCol: 'Role',
+      memberGoalCol: 'Goal',
+      memberVisibilityCol: 'Visibility',
+      roleOrganizer: 'Organizer',
+      roleParticipant: 'Participant',
+      profileVisible: 'Visible',
+      profileHidden: 'Hidden',
+      profileIncomplete: 'Profile not filled',
+      noMembers: 'No participants in this event yet.',
+      boothsTitle: 'Partner booths',
+      boothNameLabel: 'Booth name',
+      boothNamePlaceholder: 'e.g. Go Community',
+      boothTopicsLabel: 'Topics (comma-separated)',
+      boothTopicsPlaceholder: 'Go, Backend, Cloud',
+      boothDescLabel: 'Short description',
+      boothDescPlaceholder: 'What can participants discuss at this booth?',
+      boothPublishedLabel: 'Publish immediately',
+      addBoothButton: 'Add booth',
+      saveBoothButton: 'Save booth',
+      editBoothButton: 'Edit',
+      cancelEditButton: 'Cancel',
+      publishButton: 'Publish',
+      unpublishButton: 'Unpublish',
+      statusPublished: 'Published',
+      statusHidden: 'Unpublished',
+      noBooths: 'No booths in this event yet.',
+      forbiddenCreate: 'Only accounts with the organizer role can create events.',
+      invalidEventFields: 'Enter an event name and a valid start/end interval.',
+      invalidBoothFields: 'Enter a booth name and at least one topic.',
     },
   },
 }

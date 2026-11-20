@@ -38,6 +38,64 @@ export interface ServerMeeting {
   participantRole?: string
 }
 
+export interface CreateEventPayload {
+  name: string
+  timeZone: string
+  startsAt: string
+  endsAt: string
+}
+
+export interface UpdateEventPayload {
+  name?: string
+  timeZone?: string
+  startsAt?: string
+  endsAt?: string
+  status?: EventStatus
+}
+
+export interface EventInvite {
+  id: string
+  token: string
+  expiresAt: string
+  revoked?: boolean
+}
+
+export interface EventMemberItem {
+  userId: string
+  role: EventRole
+  name?: string | null
+  profileRole?: string | null
+  goal?: Goal | null
+  visible?: boolean | null
+}
+
+export interface EventInterestsPayload {
+  topics: Array<{ name: string; count: number }>
+  profileCount?: number
+}
+
+export interface EventBooth {
+  id: string
+  name: string
+  description?: string
+  topics: string[]
+  published: boolean
+}
+
+export interface CreateBoothPayload {
+  name: string
+  description?: string
+  topics: string[]
+  published?: boolean
+}
+
+export interface UpdateBoothPayload {
+  name?: string
+  description?: string
+  topics?: string[]
+  published?: boolean
+}
+
 export interface AuthUser {
   id: string
 }
@@ -146,6 +204,15 @@ export interface TanysApiClient {
     meetingId: string,
     status: Exclude<ServerMeetingStatus, 'pending'>,
   ): Promise<ServerMeeting>
+  createEvent(payload: CreateEventPayload): Promise<EventDetails>
+  updateEvent(eventId: string, payload: UpdateEventPayload): Promise<EventDetails>
+  createInvite(eventId: string, expiresAt: string): Promise<EventInvite>
+  revokeInvite(eventId: string, inviteId: string): Promise<void>
+  listEventMembers(eventId: string): Promise<EventMemberItem[]>
+  getEventInterests(eventId: string): Promise<EventInterestsPayload>
+  listEventBooths(eventId: string): Promise<EventBooth[]>
+  createEventBooth(eventId: string, payload: CreateBoothPayload): Promise<EventBooth>
+  updateEventBooth(eventId: string, boothId: string, payload: UpdateBoothPayload): Promise<EventBooth>
 }
 
 type FetchLike = typeof fetch
@@ -366,6 +433,82 @@ export function createTanysApiClient(
         {
           method: 'PATCH',
           body: JSON.stringify({ status }),
+        },
+      )
+    },
+
+    createEvent(payload) {
+      return request<EventDetails>('/events', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      })
+    },
+
+    updateEvent(eventId, payload) {
+      return request<EventDetails>(`/events/${encodeURIComponent(eventId)}`, {
+        method: 'PATCH',
+        body: JSON.stringify(payload),
+      })
+    },
+
+    async createInvite(eventId, expiresAt) {
+      const created = await request<{ id: string; token: string }>(
+        `/events/${encodeURIComponent(eventId)}/invites`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ expiresAt }),
+        },
+      )
+      return { id: created.id, token: created.token, expiresAt }
+    },
+
+    async revokeInvite(eventId, inviteId) {
+      await request<null>(
+        `/events/${encodeURIComponent(eventId)}/invites/${encodeURIComponent(inviteId)}`,
+        { method: 'DELETE' },
+      )
+    },
+
+    async listEventMembers(eventId) {
+      const data = await request<{ items?: EventMemberItem[] }>(
+        `/events/${encodeURIComponent(eventId)}/members`,
+      )
+      return Array.isArray(data?.items) ? data.items : []
+    },
+
+    async getEventInterests(eventId) {
+      const data = await request<EventInterestsPayload>(
+        `/events/${encodeURIComponent(eventId)}/interests`,
+      )
+      return {
+        topics: Array.isArray(data?.topics) ? data.topics : [],
+        profileCount: typeof data?.profileCount === 'number' ? data.profileCount : undefined,
+      }
+    },
+
+    async listEventBooths(eventId) {
+      const data = await request<{ items?: EventBooth[] }>(
+        `/events/${encodeURIComponent(eventId)}/booths`,
+      )
+      return Array.isArray(data?.items) ? data.items : []
+    },
+
+    createEventBooth(eventId, payload) {
+      return request<EventBooth>(
+        `/events/${encodeURIComponent(eventId)}/booths`,
+        {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        },
+      )
+    },
+
+    updateEventBooth(eventId, boothId, payload) {
+      return request<EventBooth>(
+        `/events/${encodeURIComponent(eventId)}/booths/${encodeURIComponent(boothId)}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify(payload),
         },
       )
     },
