@@ -1,7 +1,9 @@
 #!/usr/bin/env sh
 set -eu
 
-# Usage: ./deploy/backup-db.sh <staging|production> [backup_dir]
+# Usage:
+#   Docker Compose VPS: ./deploy/backup-db.sh <staging|production> [backup_dir]
+#   Managed PostgreSQL: DATABASE_URL="postgres://..." ./deploy/backup-db.sh <staging|production> [backup_dir]
 
 ENV_NAME="${1:-}"
 BACKUP_DIR="${2:-/var/backups/tanys}"
@@ -15,15 +17,16 @@ SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 ENV_FILE="$SCRIPT_DIR/.env.$ENV_NAME"
 COMPOSE_FILE="$SCRIPT_DIR/compose.deploy.yaml"
 
-if [ ! -f "$ENV_FILE" ]; then
-  echo "Missing env file: $ENV_FILE" >&2
-  exit 1
+if [ -z "${DATABASE_URL:-}" ]; then
+  if [ ! -f "$ENV_FILE" ]; then
+    echo "Missing env file: $ENV_FILE (or provide DATABASE_URL for managed PostgreSQL)" >&2
+    exit 1
+  fi
+  set -a
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+  set +a
 fi
-
-set -a
-# shellcheck disable=SC1090
-. "$ENV_FILE"
-set +a
 
 RETENTION_DAYS="${BACKUP_RETENTION_DAYS:-30}"
 TARGET_DIR="$BACKUP_DIR/$ENV_NAME"
@@ -34,8 +37,12 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 OUT_FILE="$TARGET_DIR/tanys_${ENV_NAME}_${STAMP}.dump"
 START_TS="$(date +%s)"
 
-docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T db \
-  pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc --no-owner --no-privileges > "$OUT_FILE"
+if [ -n "${DATABASE_URL:-}" ]; then
+  pg_dump "$DATABASE_URL" -Fc --no-owner --no-privileges > "$OUT_FILE"
+else
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T db \
+    pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Fc --no-owner --no-privileges > "$OUT_FILE"
+fi
 
 chmod 600 "$OUT_FILE"
 sha256sum "$OUT_FILE" > "${OUT_FILE}.sha256"
