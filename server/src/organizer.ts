@@ -65,7 +65,7 @@ export async function organizerRoute(req: IncomingMessage, res: ServerResponse, 
       const result = await pool.query(
         `SELECT m.user_id AS "userId", m.role, p.name, p.role AS "profileRole", p.goal, p.visible
          FROM memberships m
-         LEFT JOIN event_profiles p ON p.event_id = m.event_id AND p.user_id = m.user_id
+         LEFT JOIN event_profiles p ON p.event_id = m.event_id AND p.user_id = m.user_id AND p.visible
          WHERE m.event_id = $1
          ORDER BY m.role DESC, m.user_id ASC`,
         [eventId],
@@ -94,7 +94,7 @@ export async function organizerRoute(req: IncomingMessage, res: ServerResponse, 
     }
 
     const result = await pool.query(
-      `SELECT interests FROM event_profiles WHERE event_id = $1`,
+      `SELECT interests FROM event_profiles WHERE event_id = $1 AND visible`,
       [eventId],
     )
     const counts = new Map<string, { name: string; count: number }>()
