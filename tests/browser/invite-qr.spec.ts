@@ -148,6 +148,8 @@ test('generates invite QR locally without external requests, closes with Escape,
     await entrant.goto('/join')
     await entrant.locator('input[inputmode=url]').fill(inviteUrl)
     await entrant.locator('button[type=submit]').click()
+    await expect(entrant).toHaveURL(inviteUrl)
+    await expect(entrant.locator('#auth-title')).toBeVisible()
     await entrant.reload()
     await entrant.locator('.purpose-toggle button').last().click()
     await entrant.locator('input[name=username]').fill('newuser')
@@ -167,6 +169,22 @@ test('generates invite QR locally without external requests, closes with Escape,
     await orgCtx.close()
     await guestCtx.close()
   }
+})
+
+test('retry keeps the invited event even when it is outside the first events page', async ({ page, context }) => {
+  await createInviteQrBackend().attach(context, 'guest-1')
+  let joins = 0
+  await page.route('**/api/v1/events/evt-qr-1/members/me', route => {
+    joins += 1
+    return route.fulfill({ json: joins === 1 ? { error: { code: 'unavailable' } } : { role: 'participant' },
+      status: joins === 1 ? 503 : 200 })
+  })
+  await page.goto('/invite/evt-qr-1/' + 'a'.repeat(64))
+  await expect(page.locator('#expired-invite-title')).toHaveText(getMessages('ru').account.inviteUnavailable)
+  await page.getByRole('button', { name: getMessages('ru').account.inviteRetry }).click()
+  await expect(page.locator('#event-profile-title')).toBeVisible()
+  await expect(page).toHaveURL(/\/events\/evt-qr-1$/)
+  expect(joins).toBe(2)
 })
 
 async function fitsViewport(page: Page, selector: string) {

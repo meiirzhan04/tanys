@@ -701,9 +701,10 @@ test('security and event isolation matrix across guest, participants, and cross-
     )
 
     // Register actors: two organizers (Event A and Event B) + participants
+    const partA1 = await registerAccount('pa1')
+    assert.equal((await api(partA1.cookie, 'GET', '/admin/overview')).status, 403)
     const orgA = await registerAccount('orga', true)
     const orgB = await registerAccount('orgb', true)
-    const partA1 = await registerAccount('pa1')
     const partA2 = await registerAccount('pa2')
     const partA3 = await registerAccount('pa3')
     const partB1 = await registerAccount('pb1')

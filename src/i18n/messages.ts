@@ -131,6 +131,7 @@ export interface Messages {
     inviteLink: string
     joinWithLink: string
     inviteInvalid: string
+    inviteUnavailable: string
     inviteRetry: string
     inviteClosed: string
     downloadQr: string
@@ -479,6 +480,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       inviteLink: 'Ссылка приглашения',
       joinWithLink: 'Присоединиться по ссылке',
       inviteInvalid: 'Вставьте полную ссылку приглашения Tanys, полученную от организатора.',
+      inviteUnavailable: 'Сервис приглашений временно недоступен. Попробуйте присоединиться ещё раз.',
       inviteRetry: 'Повторить присоединение',
       inviteClosed: 'Мероприятие закрыто для новых участников',
       downloadQr: 'Скачать QR-код',
@@ -825,6 +827,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       inviteLink: 'Шақыру сілтемесі',
       joinWithLink: 'Сілтеме арқылы қосылу',
       inviteInvalid: 'Ұйымдастырушы жіберген толық Tanys шақыру сілтемесін енгізіңіз.',
+      inviteUnavailable: 'Шақыру қызметі уақытша қолжетімсіз. Қайта қосылып көріңіз.',
       inviteRetry: 'Қайта қосылу',
       inviteClosed: 'Іс-шараға жаңа қатысушылар қабылданбайды',
       downloadQr: 'QR-кодты жүктеу',
@@ -1171,6 +1174,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       inviteLink: 'Invitation link',
       joinWithLink: 'Join with link',
       inviteInvalid: 'Paste the full Tanys invitation link from your organizer.',
+      inviteUnavailable: 'The invitation service is temporarily unavailable. Try joining again.',
       inviteRetry: 'Retry joining',
       inviteClosed: 'This event is closed to new participants',
       downloadQr: 'Download QR code',

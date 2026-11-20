@@ -212,6 +212,10 @@ export function EventAccountFlow({
   const [proposingSlotKey, setProposingSlotKey] = useState('')
   const [contactValue, setContactValue] = useState('')
   const endingSession = useRef(false)
+  const redirectToLogin = useCallback(() => {
+    endingSession.current = true
+    window.location.replace('/login')
+  }, [])
   const [logoutOpen, setLogoutOpen] = useState(false)
   const [logoutError, setLogoutError] = useState('')
   const [loggingOut, setLoggingOut] = useState(false)
@@ -262,15 +266,14 @@ export function EventAccountFlow({
       setMeetings(nextMeetings)
     } catch (error) {
       if (isApiError(error) && error.status === 401) {
-        endingSession.current = true
-        window.location.replace('/login')
+        redirectToLogin()
         return
       }
       // Keep existing state intact if background refresh fails (e.g., backend #52/#53 not yet mounted).
     } finally {
       setSocialRefreshing(false)
     }
-  }, [api, locale])
+  }, [api, locale, redirectToLogin])
 
   const accountCache = useRef<Promise<AccountProfile> | null>(null)
   const readAccount = useCallback(() => {
@@ -337,8 +340,7 @@ export function EventAccountFlow({
       return true
     } catch (error) {
       if (isApiError(error) && error.status === 401) {
-        endingSession.current = true
-        window.location.replace('/login')
+        redirectToLogin()
         return
       }
       setEventError(isApiError(error) && error.status === 404 ? getMessages(locale).account.expiredBody : formatApiError(error, locale, 'general'))
@@ -346,7 +348,7 @@ export function EventAccountFlow({
     } finally {
       setEventLoading(false)
     }
-  }, [api, locale, readAccount, refreshSocialState])
+  }, [api, locale, readAccount, redirectToLogin, refreshSocialState])
 
   const enterAuthenticated = useCallback(async (invite: InviteTarget | null, preserveDraft = false) => {
     accountCache.current = null
@@ -359,24 +361,18 @@ export function EventAccountFlow({
         await api.joinEvent(invite.eventId, invite.token)
       } catch (error) {
         if (isApiError(error) && error.status === 401) {
-          endingSession.current = true
-          window.location.replace('/login')
+          redirectToLogin()
           return
         }
         if (isInviteExpiredError(error) || (isApiError(error) && error.code === 'event_closed')) {
           setEventError(isApiError(error) && error.code === 'event_closed' ? getMessages(locale).account.inviteClosed : '')
           savePendingInvite(null)
           setPendingInvite(null)
-          try {
-            const existingEvents = await api.listEvents()
-            setEvents(existingEvents)
-          } catch {
-            setEvents([])
-          }
           setPhase('expired')
           return
         }
-        setEventError(formatApiError(error, locale, 'general'))
+        setEventError(isApiError(error) && error.status >= 500
+          ? getMessages(locale).account.inviteUnavailable : formatApiError(error, locale, 'general'))
         setPhase('inviteError')
         return
       }
@@ -401,14 +397,13 @@ export function EventAccountFlow({
       setPhase('ready')
     } catch (error) {
       if (isApiError(error) && error.status === 401) {
-        endingSession.current = true
-        window.location.replace('/login')
+        redirectToLogin()
         return
       }
       setEventError(formatApiError(error, locale, 'general'))
       setPhase(invite ? 'inviteError' : 'ready')
     }
-  }, [api, loadEventWorkspace, locale])
+  }, [api, loadEventWorkspace, locale, redirectToLogin])
 
   useEffect(() => {
     let cancelled = false
@@ -565,9 +560,8 @@ export function EventAccountFlow({
         return
       }
     }
-    endingSession.current = true
     savePendingInvite(null)
-    window.location.replace('/login')
+    redirectToLogin()
   }
 
   async function handleLeaveEvent(): Promise<string> {
@@ -638,8 +632,7 @@ export function EventAccountFlow({
       requestAnimationFrame(() => document.getElementById('results-title')?.focus({ preventScroll: true }))
     } catch (error) {
       if (isApiError(error) && error.status === 401) {
-        endingSession.current = true
-        window.location.replace('/login')
+        redirectToLogin()
         return
       }
       setEventError(formatApiError(error, locale, 'general'))
@@ -994,8 +987,7 @@ export function EventAccountFlow({
         const me = await api.getMe()
         if (!active) return
         if (!me || me.id !== userId) {
-          endingSession.current = true
-          window.location.replace('/login')
+          redirectToLogin()
           return
         }
         setUser(me)
@@ -1012,7 +1004,7 @@ export function EventAccountFlow({
       window.removeEventListener('focus', refresh)
       document.removeEventListener('visibilitychange', refresh)
     }
-  }, [api, userId])
+  }, [api, redirectToLogin, userId])
 
 
   function handleStayOnProfile() {
@@ -1074,17 +1066,7 @@ export function EventAccountFlow({
           {phase === 'expired' && <p>{t.expiredBody}</p>}
           {phase === 'inviteError' && <button className="primary-button" onClick={() => void enterAuthenticated(pendingInvite)}>{t.inviteRetry}</button>}
           <div className="status-actions">
-            {events.length > 0 && (
-              <button
-                type="button"
-                className="primary-button"
-                onClick={() => {
-                  setPhase('ready')
-                  void loadEventWorkspace(events[0].id)
-                }}
-              >{t.openMyEvents}</button>
-            )}
-            {events.length === 0 && <a className="secondary-button" href="/login">{t.openMyEvents}</a>}
+            <a className="secondary-button" href="/account" onClick={() => savePendingInvite(null)}>{t.openMyEvents}</a>
             <button type="button" className="secondary-button" onClick={onExitToDemo}>{t.backToDemo}</button>
           </div>
         </section>
@@ -1294,7 +1276,7 @@ export function EventAccountFlow({
           </div>
         ) : tab === 'organizer' && canOrganize ? (
           <Suspense fallback={<div className="surface status-panel" role="status" aria-live="polite" aria-busy="true"><p>{t.loadingEvent}</p></div>}>
-            <OrganizerCabinet
+            <OrganizerCabinet key={activeEvent?.id ?? 'new-event'}
               api={api}
               locale={locale}
               activeEvent={activeEvent}
