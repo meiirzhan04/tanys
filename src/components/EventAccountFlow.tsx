@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import {
   defaultApiClient,
   isApiError,
+  isBlockedOrRestrictedError,
   isInviteExpiredError,
   isNetworkError,
   isSlotConflictError,
@@ -16,6 +17,7 @@ import type {
   EventSummary,
   IntroductionItem,
   IntroductionStatus,
+  ReportReason,
   ServerMeeting,
   ServerMeetingStatus,
   ServerProfile,
@@ -639,9 +641,39 @@ export function EventAccountFlow({
       })
       await refreshSocialState(activeEventId, false)
     } catch (error) {
-      setSocialError(formatApiError(error, locale, 'general'))
+      if (isBlockedOrRestrictedError(error)) {
+        setSocialError(messages.moderation.interactionBlockedError)
+      } else {
+        setSocialError(formatApiError(error, locale, 'general'))
+      }
     } finally {
       setRequestingIntroId('')
+    }
+  }
+
+  async function handleBlockParticipant(candidateId: string) {
+    if (!activeEventId) return
+    setSocialError('')
+    setSocialNotice('')
+    try {
+      await api.blockParticipant(activeEventId, candidateId)
+      setRecommendations(current => current && current.filter(item => item.candidate.id !== candidateId))
+      setSocialNotice(messages.moderation.blockedNotice)
+      await refreshSocialState(activeEventId, false)
+    } catch (error) {
+      setSocialError(formatApiError(error, locale, 'general'))
+    }
+  }
+
+  async function handleReportParticipant(candidateId: string, reason: ReportReason, details: string) {
+    if (!activeEventId) return
+    setSocialError('')
+    setSocialNotice('')
+    try {
+      await api.submitReport(activeEventId, { subjectId: candidateId, reason, details })
+      setSocialNotice(messages.moderation.reportedNotice)
+    } catch (error) {
+      setSocialError(formatApiError(error, locale, 'general'))
     }
   }
 
@@ -1120,6 +1152,8 @@ export function EventAccountFlow({
                 onRequestIntro={candidateId => void handleRequestIntro(candidateId)}
                 introStatusByCandidate={introStatusByCandidate}
                 requestingIntroId={requestingIntroId}
+                onBlockParticipant={candidateId => void handleBlockParticipant(candidateId)}
+                onReportParticipant={(candidateId, reason, details) => void handleReportParticipant(candidateId, reason, details)}
                 message={recsMessage}
                 locale={locale}
               />
@@ -1339,6 +1373,9 @@ export function EventAccountFlow({
             </div>
           </form>
         )}
+        <footer className="support-footer">
+          <p>{messages.moderation.supportNotice}</p>
+        </footer>
       </main>
     </div>
   )

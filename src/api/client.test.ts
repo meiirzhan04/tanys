@@ -248,4 +248,38 @@ describe('createTanysApiClient', () => {
       'GET /api/v1/events/e-1/booths',
     ])
   })
+
+  it('calls block, report, moderation queue, and resolve endpoints', async () => {
+    const seen: string[] = []
+    const api = createTanysApiClient('/api/v1', async (input, init) => {
+      const url = String(input)
+      const method = init?.method ?? 'GET'
+      seen.push(`${method} ${url}`)
+      if (url.endsWith('/reports') && method === 'POST') {
+        return new Response(JSON.stringify({ id: 'rep-1', status: 'open' }), { status: 201 })
+      }
+      if (url.endsWith('/reports') && method === 'GET') {
+        return new Response(JSON.stringify({ items: [{ id: 'rep-1', subjectId: 'u-2', reason: 'spam', status: 'open' }] }), { status: 200 })
+      }
+      if (url.endsWith('/reports/rep-1') && method === 'PATCH') {
+        return new Response(JSON.stringify({ id: 'rep-1', subjectId: 'u-2', reason: 'spam', status: 'resolved', action: 'restrict' }), { status: 200 })
+      }
+      return new Response(null, { status: 204 })
+    })
+
+    await api.blockParticipant('e-1', 'u-2')
+    const submitted = await api.submitReport('e-1', { subjectId: 'u-2', reason: 'spam', details: 'Unwanted promo' })
+    assert.equal(submitted.id, 'rep-1')
+    const queue = await api.listEventReports('e-1')
+    assert.equal(queue.length, 1)
+    const resolved = await api.resolveEventReport('e-1', 'rep-1', 'restrict')
+    assert.equal(resolved.action, 'restrict')
+
+    assert.deepEqual(seen, [
+      'PUT /api/v1/events/e-1/blocks/u-2',
+      'POST /api/v1/events/e-1/reports',
+      'GET /api/v1/events/e-1/reports',
+      'PATCH /api/v1/events/e-1/reports/rep-1',
+    ])
+  })
 })

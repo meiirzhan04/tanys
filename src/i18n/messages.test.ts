@@ -44,6 +44,9 @@ test('provides complete, distinct translations for ru, kk, and en', () => {
     assert.ok(messages.organizer.title.trim())
     assert.ok(messages.organizer.createEventButton.trim())
     assert.ok(messages.organizer.noBooths.trim())
+    assert.ok(messages.moderation.blockButton.trim())
+    assert.ok(messages.moderation.reportedNotice.trim())
+    assert.ok(messages.moderation.supportNotice.trim())
   }
 
   assert.notEqual(messagesByLocale.ru.form.title, messagesByLocale.kk.form.title)

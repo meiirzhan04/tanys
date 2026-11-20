@@ -7,6 +7,8 @@ import type {
   EventInterestsPayload,
   EventInvite,
   EventMemberItem,
+  EventReportItem,
+  ModerationAction,
   TanysApiClient,
 } from '../api/client'
 import type { InterestSummary } from '../data/interestSummary'
@@ -76,6 +78,8 @@ export function OrganizerCabinet({
   const [members, setMembers] = useState<EventMemberItem[]>([])
   const [interests, setInterests] = useState<EventInterestsPayload | null>(null)
   const [booths, setBooths] = useState<EventBooth[]>([])
+  const [reports, setReports] = useState<EventReportItem[]>([])
+  const [resolvingReportId, setResolvingReportId] = useState('')
   const [loadingData, setLoadingData] = useState(false)
 
   // Booth create/edit form state
@@ -95,6 +99,7 @@ export function OrganizerCabinet({
     setMembers([])
     setInterests(null)
     setBooths([])
+    setReports([])
     setEditingBoothId(null)
     setBoothName('')
     setBoothTopics('')
@@ -109,15 +114,17 @@ export function OrganizerCabinet({
     async function loadOrganizerData(eventId: string) {
       setLoadingData(true)
       try {
-        const [memberList, interestData, boothList] = await Promise.all([
+        const [memberList, interestData, boothList, reportList] = await Promise.all([
           api.listEventMembers(eventId),
           api.getEventInterests(eventId),
           api.listEventBooths(eventId),
+          api.listEventReports(eventId).catch(() => [] as EventReportItem[]),
         ])
         if (cancelled) return
         setMembers(memberList)
         setInterests(interestData)
         setBooths(boothList)
+        setReports(reportList)
         onBoothsChanged(boothList)
       } catch (err) {
         if (!cancelled) {
@@ -306,6 +313,20 @@ export function OrganizerCabinet({
       onBoothsChanged(next)
     } catch {
       setError(messages.account.errors.genericRequest)
+    }
+  }
+
+  async function handleResolveReport(reportId: string, action: ModerationAction) {
+    if (!activeEvent || resolvingReportId) return
+    setResolvingReportId(reportId)
+    setError('')
+    try {
+      const resolved = await api.resolveEventReport(activeEvent.id, reportId, action)
+      setReports(current => current.map(item => (item.id === resolved.id ? resolved : item)))
+    } catch {
+      setError(messages.account.errors.genericRequest)
+    } finally {
+      setResolvingReportId('')
     }
   }
 
@@ -580,6 +601,68 @@ export function OrganizerCabinet({
                     </div>
                   </article>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* 7. Closed moderation & reports queue (#56) */}
+          <div className="surface organizer-card" aria-labelledby="moderation-queue-title">
+            <div>
+              <h2 id="moderation-queue-title">{messages.moderation.queueTitle}</h2>
+              <p className="social-card__role">{messages.moderation.queueSubtitle}</p>
+            </div>
+            {reports.length === 0 ? (
+              <p className="social-card__hint">{messages.moderation.queueEmpty}</p>
+            ) : (
+              <div className="social-list">
+                {reports.map(report => {
+                  const isBusy = resolvingReportId === report.id
+                  const actionLabel = report.action === 'restrict'
+                    ? messages.moderation.actionRestrict
+                    : report.action === 'warn'
+                      ? messages.moderation.actionWarn
+                      : report.action === 'dismiss'
+                        ? messages.moderation.actionDismiss
+                        : ''
+                  return (
+                    <article key={report.id} className="social-card surface" data-report-id={report.id}>
+                      <div className="social-card__header">
+                        <div>
+                          <h3>{report.subjectName || report.subjectId}</h3>
+                          <p className="social-card__role">{messages.moderation.reasons[report.reason]}</p>
+                        </div>
+                        <span className={`status-badge ${report.status === 'resolved' ? 'status-badge--accepted' : 'status-badge--pending'}`}>
+                          {report.status === 'resolved' ? messages.moderation.statusResolved : messages.moderation.statusOpen}
+                        </span>
+                      </div>
+                      {report.details && <p className="social-card__hint">{report.details}</p>}
+                      {report.status === 'open' ? (
+                        <div className="social-card__actions">
+                          <button
+                            type="button"
+                            className="meeting-slot-cancel"
+                            disabled={isBusy}
+                            onClick={() => void handleResolveReport(report.id, 'restrict')}
+                          >{messages.moderation.actionRestrict}</button>
+                          <button
+                            type="button"
+                            className="secondary-button"
+                            disabled={isBusy}
+                            onClick={() => void handleResolveReport(report.id, 'warn')}
+                          >{messages.moderation.actionWarn}</button>
+                          <button
+                            type="button"
+                            className="text-button"
+                            disabled={isBusy}
+                            onClick={() => void handleResolveReport(report.id, 'dismiss')}
+                          >{messages.moderation.actionDismiss}</button>
+                        </div>
+                      ) : (
+                        actionLabel && <p className="social-card__hint">{messages.moderation.resolvedWithAction(actionLabel)}</p>
+                      )}
+                    </article>
+                  )
+                })}
               </div>
             )}
           </div>

@@ -1,4 +1,5 @@
 import { eventRoute } from './events.js'
+import { moderationRoute } from './moderation.js'
 import { organizerRoute } from './organizer.js'
 import { authRoute, appOrigin } from './auth.js'
 import { createServer } from 'node:http'
@@ -10,7 +11,7 @@ const migrations = (await readdir(new URL('../migrations/', import.meta.url))).f
 const metrics = createMetricsTracker()
 const handler = createObservedRequestHandler({
   appOrigin,
-  routes: [authRoute, eventRoute, organizerRoute],
+  routes: [authRoute, eventRoute, organizerRoute, moderationRoute],
   checkReady: async () => {
     const result = await pool.query('SELECT name FROM schema_migrations WHERE name = ANY($1::text[])', [migrations])
     return result.rowCount === migrations.length
