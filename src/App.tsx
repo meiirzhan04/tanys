@@ -29,6 +29,8 @@ import type { Feedback, RecommendationSession } from './matching/session'
 import type { Candidate, Locale, ProfileInput } from './matching/types'
 import { bookSlot, cancelSlotBooking, loadBookings, saveBookings } from './scheduling/slots'
 import type { MeetingBooking } from './scheduling/slots'
+import { resolveInitialTheme, saveThemePreference, subscribeSystemTheme } from './theme/themeStorage'
+import type { Theme } from './theme/themeStorage'
 import './styles.css'
 
 const AdminDashboard = lazy(() =>
@@ -38,28 +40,6 @@ const AdminDashboard = lazy(() =>
 const candidates: readonly Candidate[] = resolveAppCandidates(profiles, previewProfiles)
 const interestSummary = summarizeInterests(parseCandidates(profiles))
 type View = 'profile' | 'results' | 'schedule' | 'interests'
-type Theme = 'light' | 'dark'
-const THEME_STORAGE_KEY = 'tanys.theme.v3'
-
-function readSavedThemePreference(): Theme | null {
-  try {
-    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(THEME_STORAGE_KEY) : null
-    if (saved === 'light' || saved === 'dark') return saved
-  } catch {
-    // Ignore storage restrictions.
-  }
-  return null
-}
-
-function resolveInitialTheme(): Theme {
-  const saved = readSavedThemePreference()
-  if (saved) return saved
-  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
-    if (window.matchMedia('(prefers-color-scheme: light)').matches) return 'light'
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark'
-  }
-  return 'dark'
-}
 
 const HEADER_EXTRA = {
   ru: { toDark: 'Тёмная тема', toLight: 'Светлая тема' },
@@ -247,26 +227,12 @@ export default function App() {
     document.documentElement.dataset.theme = theme
   }, [theme])
 
-  useEffect(() => {
-    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
-    const media = window.matchMedia('(prefers-color-scheme: light)')
-    const onChange = () => {
-      if (!readSavedThemePreference()) {
-        setTheme(media.matches ? 'light' : 'dark')
-      }
-    }
-    media.addEventListener?.('change', onChange)
-    return () => media.removeEventListener?.('change', onChange)
-  }, [])
+  useEffect(() => subscribeSystemTheme(setTheme), [])
 
   function handleToggleTheme() {
     setTheme(current => {
       const next: Theme = current === 'dark' ? 'light' : 'dark'
-      try {
-        localStorage.setItem(THEME_STORAGE_KEY, next)
-      } catch {
-        // Ignore storage restrictions.
-      }
+      saveThemePreference(next)
       return next
     })
   }
