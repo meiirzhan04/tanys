@@ -296,7 +296,7 @@ export default function App() {
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
       if (view === 'results' || view === 'interests' || view === 'schedule') {
-        window.scrollTo(0, 0)
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
       }
     }
     if (view === 'results') {
@@ -318,7 +318,7 @@ export default function App() {
   function handleEditProfile() {
     setView('profile')
     if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
-      window.scrollTo(0, 0)
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     }
     requestAnimationFrame(() => document.getElementById('profile-title')?.focus({ preventScroll: true }))
   }

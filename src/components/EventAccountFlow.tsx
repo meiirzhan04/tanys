@@ -616,7 +616,7 @@ export function EventAccountFlow({
       }
       setTab('results')
       if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
-        window.scrollTo(0, 0)
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
       }
       requestAnimationFrame(() => document.getElementById('results-title')?.focus({ preventScroll: true }))
     } catch (error) {
@@ -1330,7 +1330,7 @@ export function EventAccountFlow({
                 onEdit={() => {
                   setTab('profile')
                   if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
-                    window.scrollTo(0, 0)
+                    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
                   }
                   requestAnimationFrame(() => document.getElementById('event-profile-title')?.focus({ preventScroll: true }))
                 }}
