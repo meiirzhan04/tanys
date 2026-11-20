@@ -114,3 +114,60 @@ test('preserves top-5 candidate IDs and raw profile facts across ru, kk, and en 
   assert.notEqual(ru[0].explanation, en[0].explanation)
   assert.notEqual(kk[0].explanation, en[0].explanation)
 })
+
+test('matches common skill aliases for skills and lookingFor without mutating labels (#92)', () => {
+  const pool = [
+    candidate('java-only', 'hire', { skills: ['Java'], lookingFor: ['Java'], interests: [] }),
+    candidate('web-stack', 'hire', {
+      skills: ['JavaScript', 'TypeScript', 'PostgreSQL', 'Node.js'],
+      lookingFor: ['JavaScript', 'TypeScript', 'PostgreSQL', 'Node.js'],
+      interests: [],
+    }),
+    candidate('partial', 'hire', { skills: ['TypeScript'], lookingFor: ['PostgreSQL'], interests: [] }),
+  ]
+
+  const shortForm = recommend(
+    { ...input, skills: ['JS', 'TS', 'Postgres', 'NodeJS'], interests: [] },
+    pool,
+  )
+  const longForm = recommend(
+    { ...input, skills: ['JavaScript', 'TypeScript', 'PostgreSQL', 'Node.js'], interests: [] },
+    pool,
+  )
+
+  assert.deepEqual(
+    shortForm.map(item => item.candidate.id),
+    longForm.map(item => item.candidate.id),
+  )
+  assert.equal(shortForm[0].candidate.id, 'web-stack')
+  assert.match(shortForm[0].explanation, /JS, TS/)
+  assert.deepEqual(shortForm[0].candidate.skills, ['JavaScript', 'TypeScript', 'PostgreSQL', 'Node.js'])
+  assert.doesNotMatch(shortForm[2].explanation, /Java|JS/)
+
+  // JS and Java stay distinct.
+  const jsVsJava = recommend({ ...input, skills: ['JS'], interests: [] }, [
+    candidate('java', 'hire', { skills: ['Java'], lookingFor: ['Java'], interests: [] }),
+    candidate('js', 'hire', { skills: ['JavaScript'], lookingFor: ['JavaScript'], interests: [] }),
+  ])
+  assert.deepEqual(jsVsJava.map(item => item.candidate.id), ['js', 'java'])
+  assert.doesNotMatch(jsVsJava[1].explanation, /JS|Java/)
+
+  // Repeating both aliases in one profile must not double-count score.
+  const deduped = recommend(
+    { ...input, goal: 'hire', skills: ['JS', 'JavaScript'], lookingFor: ['JS', 'JavaScript'], interests: [] },
+    [
+      candidate('duplicate-alias', 'find_job', { skills: ['JS', 'JavaScript'], interests: [] }),
+      candidate('two-distinct', 'find_job', { skills: ['JavaScript', 'Postgres'], interests: [] }),
+    ],
+  )
+  assert.equal(deduped[0].candidate.id, 'duplicate-alias')
+
+  const noBoost = recommend(
+    { ...input, goal: 'hire', skills: ['Postgres'], lookingFor: ['JS', 'Postgres'], interests: [] },
+    [
+      candidate('only-js-duplicated', 'find_job', { skills: ['JS', 'JavaScript'], interests: [] }),
+      candidate('js-and-postgres', 'find_job', { skills: ['JavaScript', 'PostgreSQL'], interests: [] }),
+    ],
+  )
+  assert.deepEqual(noBoost.map(item => item.candidate.id), ['js-and-postgres', 'only-js-duplicated'])
+})
