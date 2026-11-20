@@ -26,9 +26,18 @@ services:
       db:
         condition: service_healthy
 
+  mailbox:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "127.0.0.1:${MAILBOX_PORT:-8025}:8025"
+
   api:
     build: ./server
-    environment: *database
+    environment:
+      <<: *database
+      APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
+      SMTP_URL: ${SMTP_URL:-smtp://mailbox:1025}
+      MAIL_FROM: ${MAIL_FROM:-Tanys <login@tanys.test>}
     ports:
       - "127.0.0.1:${API_PORT:-3000}:3000"
     depends_on:

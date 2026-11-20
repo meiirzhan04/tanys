@@ -61,3 +61,5 @@ npm run dev
 ## Локальный сервер Tanys 1.0
 
 Для разработки API запустите `docker compose -f compose.api.yaml up --build -d`. Compose поднимает PostgreSQL, применяет миграции и запускает сервер на `127.0.0.1:3000`. Проверки — `GET /health` и `GET /ready`. База изначально пуста. Команда `docker compose -f compose.api.yaml down` сохраняет данные в томе. Для другого локального порта задайте API_PORT. Для внешнего размещения передайте отдельные реквизиты БД через секреты окружения. [Контракт публичного API](docs/service-v1.md)
+
+Для локальной проверки входа письма попадают в [тестовый почтовый ящик](http://localhost:8025). После запуска Compose выполните `node --test server/tests/auth.test.mjs`. В рабочем окружении задайте HTTPS-адрес приложения в APP_ORIGIN, защищённое SMTP-подключение в SMTP_URL и адрес отправителя в MAIL_FROM.

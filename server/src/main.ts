@@ -1,9 +1,24 @@
+import { authRoute, appOrigin } from './auth.js'
+import { HttpError, json } from './http.js'
 import { createServer } from 'node:http'
 import { readdir } from 'node:fs/promises'
 import { pool } from './db.js'
 
 const migrations = (await readdir(new URL('../migrations/', import.meta.url))).filter(name => name.endsWith('.sql'))
 const server = createServer(async (request, response) => {
+  if (request.url?.startsWith('/api/v1/')) {
+    try {
+      if (request.method !== 'GET' && request.headers.origin && request.headers.origin !== appOrigin) {
+        throw new HttpError(403, 'invalid_origin')
+      }
+      const path = request.url.split('?')[0].slice('/api/v1'.length)
+      if (await authRoute(request, response, path)) return
+      throw new HttpError(404, 'not_found')
+    } catch (error) {
+      const known = error instanceof HttpError
+      return json(response, known ? error.status : 500, { error: { code: known ? error.code : 'internal_error' } })
+    }
+  }
   let status = 404
   let message = 'not_found'
   if (request.method === 'GET' && request.url === '/health') {
