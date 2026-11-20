@@ -1,4 +1,12 @@
+import type { ProfileInput } from './types.js'
+
 type SkillKey = (label: string) => string
+
+export function hiringResolverLabels(profile: ProfileInput, candidates: readonly ProfileInput[]): string[] {
+  const reciprocal = profile.goal === 'hire' ? 'find_job' : 'hire'
+  return [profile, ...candidates.filter(person => person.goal === reciprocal)].flatMap(person =>
+    [...person.skills, ...(person.lookingFor ?? []), ...(person.goal === 'find_job' ? [person.role] : [])])
+}
 
 const roles = [
   ['backend', 'Backend developer, server-side software engineer'],

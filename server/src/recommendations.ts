@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { viewer } from './auth.js'
 import { HttpError, json, readBody, transaction, uuid } from './http.js'
 import { normalizeSkill, recommend } from './matching/recommend.js'
-import { createAiSkillResolver } from './matching/skill-ai.js'
+import { createAiSkillResolver, hiringResolverLabels } from './matching/skill-ai.js'
 import type { Candidate } from './matching/types.js'
 
 const fields = 'p.user_id AS id,p.name,p.role,p.skills,p.experience_years AS "experienceYears",p.interests,p.about,p.goal,p.looking_for AS "lookingFor"'
@@ -50,9 +50,7 @@ export async function recommendationRoute(req: IncomingMessage,res: ServerRespon
   const { profile, candidates } = result
   let skillKey = normalizeSkill
   if (profile.goal === 'hire' || profile.goal === 'find_job') {
-    const reciprocal = profile.goal === 'hire' ? 'find_job' : 'hire'
-    const labels = [profile, ...candidates.filter(item => item.goal === reciprocal)]
-      .flatMap(item => [...item.skills, ...(item.lookingFor ?? [])])
+    const labels = hiringResolverLabels(profile, candidates)
     skillKey = await resolveSkill(labels, normalizeSkill)
   }
   // Release the database transaction before waiting on inference.

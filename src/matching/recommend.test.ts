@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import { recommend } from './recommend.ts'
 import { normalizeSkill } from '../../server/src/matching/recommend.ts'
-import { createAiSkillResolver } from '../../server/src/matching/skill-ai.ts'
+import { createAiSkillResolver, hiringResolverLabels } from '../../server/src/matching/skill-ai.ts'
 import type { Candidate, Goal, ProfileInput } from './types'
 
 const input: ProfileInput = {
@@ -27,6 +27,71 @@ const pairs: ReadonlyArray<readonly [Goal, Goal]> = [
   ['find_cofounder', 'find_cofounder'],
   ['exchange_experience', 'exchange_experience'],
 ]
+
+// The mocked embedding coordinates follow the resolver's Backend, Frontend, Fullstack, iOS, Android order.
+const hiringQa: [number, string, string, string[], number?][] = [
+  [122, 'Backend', 'Lead Backend Developer', ['Go', 'FastAPI', 'PostgreSQL']],
+  [123, 'Backend', 'Staff Backend Engineer', ['Go']],
+  [124, 'Backend', 'Аға Backend әзірлеуші', ['Go']],
+  [127, 'Backend', 'Ведущий бэкенд-разработчик', ['Go']],
+  [131, 'iOS', 'Lead iOS Developer', ['Swift', 'SwiftUI', 'UIKit']],
+  [132, 'Android', 'Lead Android Developer', ['Kotlin', 'Jetpack Compose', 'Android SDK']],
+  [163, 'Server-side Engineer', 'Engineer', ['Backend'], 0],
+  [164, 'Серверный инженер', 'Engineer', ['Backend'], 0],
+  [165, 'Client-side Engineer', 'Engineer', ['Frontend'], 1],
+  [166, 'Apple Mobile Engineer', 'Engineer', ['iOS'], 3],
+  [167, 'Google mobile engineer', 'Engineer', ['Android'], 4],
+  [168, 'API platform developer', 'Engineer', ['Backend'], 0],
+  [169, 'Серверлік қолданба әзірлеуші', 'Engineer', ['Backend'], 0],
+  [170, 'Интерфейсный разработчик', 'Engineer', ['Frontend'], 1],
+  [171, 'End-to-end Web Engineer', 'Engineer', ['Fullstack'], 2],
+  [172, 'Universal web developer', 'Engineer', ['Fullstack'], 2],
+  [173, 'Әмбебап веб әзірлеуші', 'Engineer', ['Fullstack'], 2],
+  [174, 'Айфон қолданба әзірлеуші', 'Engineer', ['iOS'], 3],
+  [175, 'Backend', 'Server-side Engineer', ['Go'], 0],
+  [176, 'Server-side Engineer', 'Backend', ['Go'], 0],
+]
+
+for (const [id, request, role, skills, coordinate] of hiringQa) {
+  test(`hiring QA ${id}: matches the pair in both directions`, async () => {
+    const interests = ['API', 'Startups']
+    const employer = candidate('employer', 'hire', { role: 'Recruiter', skills: ['Talent acquisition'], lookingFor: [request], interests })
+    const seeker = candidate('seeker', 'find_job', { role, skills, interests })
+    for (const [viewer, other] of [[employer, seeker], [seeker, employer]]) {
+      const paths: string[] = []
+      const resolve = createAiSkillResolver({
+        baseUrl: coordinate === undefined ? undefined : 'http://ollama.test',
+        fetcher: async (url, init) => {
+          const path = new URL(String(url)).pathname
+          paths.push(path)
+          if (path === '/api/embed') {
+            const labels = JSON.parse(String(init?.body)).input.slice(5)
+            assert.deepEqual(labels, [normalizeSkill(id === 175 ? role : request)])
+            const basis = (i: number) => Array.from({ length: 5 }, (_, j) => Number(i === j))
+            return Response.json({ embeddings: [0, 1, 2, 3, 4, coordinate!].map(basis) })
+          }
+          return Response.json({ message: { content: '{"approved":[0]}' } })
+        },
+      })
+      const key = await resolve(hiringResolverLabels(viewer, [other]), normalizeSkill)
+      assert.deepEqual(paths, coordinate === undefined ? [] : ['/api/embed', '/api/chat'])
+      const results = recommend(viewer, [other], 'en', key)
+      assert.deepEqual(results.map(item => item.candidate.id), [other.id])
+      const fact = role === 'Engineer' ? skills[0] : viewer === employer ? role : request
+      assert.ok(results[0].explanation.includes(fact), results[0].explanation)
+      assert.ok(results[0].icebreaker?.includes(fact), results[0].icebreaker)
+    }
+  })
+}
+
+test('shared interests cannot fill a hiring pool without a matching specialization', () => {
+  const employer = candidate('employer', 'hire', { role: 'Recruiter', skills: ['Talent acquisition'], lookingFor: ['Backend'] })
+  const unrelated = Array.from({ length: 1000 }, (_, i) => candidate(String(i), 'find_job',
+    i % 2 ? { role: 'Lead iOS Developer', skills: ['Swift'] } : { role: 'Frontend Developer', skills: ['React'] }))
+  const backend = ['Lead Backend Developer', 'Staff Backend Engineer'].map(role => candidate(role, 'find_job', { role, skills: ['Go'] }))
+  assert.deepEqual(recommend(employer, unrelated), [])
+  assert.deepEqual(recommend(employer, [...unrelated, ...backend]).map(r => r.candidate.id), backend.map(p => p.id))
+})
 
 for (const [goal, reciprocal] of pairs) {
   test(`matches ${goal} only with ${reciprocal}`, () => {
