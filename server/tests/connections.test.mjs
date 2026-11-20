@@ -29,6 +29,8 @@ test('handle search finds the participant by any case or @, and never leaks emai
   assert.equal((await raw(c, 'PUT', '/me/handle', { handle: 'admin' })).status, 400)
   assert.equal((await raw(c, 'PUT', '/me/handle', { handle: 'a b' })).status, 400)
   await call(a, 'PUT', '/me/contact', 204, { value: `@private_${run}` })
+  assert.equal((await raw(a, 'GET', '/me/contact')).body.value, `@private_${run}`)
+  assert.equal((await raw(b, 'GET', '/me/contact')).body.value, null)
   assert.equal((await raw(a, 'PUT', '/me/contact', { value: 'javascript:alert(1)' })).status, 400)
   assert.equal((await raw(a, 'PUT', '/me/contact', { value: '<img src=x>' })).status, 400)
   for (const person of [a, b, c]) await call(person, 'PUT', '/profile', 200, { ...profile, visible: true })

@@ -1,26 +1,22 @@
-import { useState } from 'react'
-import type { FormEvent } from 'react'
+import { useId, useState } from 'react'
+import type { KeyboardEvent } from 'react'
 import type {
   CommonSlot,
   IntroductionItem,
   IntroductionStatus,
   ServerMeeting,
   ServerMeetingStatus,
+  TanysApiClient,
 } from '../api/client'
 import { getMessages } from '../i18n/messages'
 import type { Locale } from '../matching/types'
 import { formatMeetingInterval } from './socialHelpers'
 import type { SocialNotification } from './socialHelpers'
-
-function introStatusText(status: IntroductionStatus, locale: Locale): string {
-  const s = getMessages(locale).social
-  switch (status) {
-    case 'pending': return s.statusPending
-    case 'accepted': return s.statusAccepted
-    case 'declined': return s.statusDeclined
-    case 'withdrawn': return s.statusWithdrawn
-  }
-}
+import { introStatusText } from './connections/introStatus'
+import { connectionsCopy } from './connections/connectionsCopy'
+import { ContactValue } from './connections/ContactValue'
+import { initialsOf } from './connections/contactLink'
+import { ParticipantSearch } from './connections/ParticipantSearch'
 
 function meetingStatusText(status: ServerMeetingStatus, locale: Locale): string {
   const s = getMessages(locale).social
@@ -67,6 +63,8 @@ export function NotificationBanner({
 }
 
 export interface IntroductionsPanelProps {
+  api: TanysApiClient
+  eventId: string
   introductions: readonly IntroductionItem[]
   locale: Locale
   timeZone: string
@@ -74,12 +72,12 @@ export interface IntroductionsPanelProps {
   slotsByIntroId: Readonly<Record<string, readonly CommonSlot[]>>
   loadingSlotsIntroId: string
   proposingSlotKey: string
+  /** The viewer's own contact (owner-only), shown as a status line; editing lives in the profile. */
   contactValue: string
-  savingContact: boolean
-  contactSaved: boolean
   socialError: string
   socialNotice: string
-  onSaveContact: (value: string) => Promise<boolean>
+  onRequest: (userId: string, message: string) => Promise<string>
+  onOpenProfile: () => void
   onUpdateIntro: (introId: string, status: Exclude<IntroductionStatus, 'pending'>) => void
   onToggleSlots: (introId: string) => void
   onProposeMeeting: (introId: string, slotId: string) => void
@@ -87,7 +85,11 @@ export interface IntroductionsPanelProps {
   refreshing: boolean
 }
 
+type RequestTab = 'incoming' | 'outgoing'
+
 export function IntroductionsPanel({
+  api,
+  eventId,
   introductions,
   locale,
   timeZone,
@@ -96,11 +98,10 @@ export function IntroductionsPanel({
   loadingSlotsIntroId,
   proposingSlotKey,
   contactValue,
-  savingContact,
-  contactSaved,
   socialError,
   socialNotice,
-  onSaveContact,
+  onRequest,
+  onOpenProfile,
   onUpdateIntro,
   onToggleSlots,
   onProposeMeeting,
@@ -108,79 +109,84 @@ export function IntroductionsPanel({
   refreshing,
 }: IntroductionsPanelProps) {
   const s = getMessages(locale).social
-  const [contactInput, setContactInput] = useState('')
+  const c = connectionsCopy[locale]
   const incoming = introductions.filter(item => item.direction === 'incoming')
   const outgoing = introductions.filter(item => item.direction === 'outgoing')
+  const pendingIncoming = incoming.filter(item => item.status === 'pending').length
+  // Open the tab that needs attention first: pending incoming requests, otherwise where the history is.
+  const preferredTab: RequestTab = pendingIncoming || !outgoing.length ? 'incoming' : 'outgoing'
+  const [chosenTab, setChosenTab] = useState<RequestTab | null>(null)
+  const tab = chosenTab ?? preferredTab
+  const tabsId = useId()
 
-  async function submitContact(event: FormEvent<HTMLFormElement>) {
+  function showIntroduction(introId: string) {
+    const item = introductions.find(intro => intro.id === introId)
+    if (item) setChosenTab(item.direction)
+    requestAnimationFrame(() => document.getElementById(`intro-${introId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' }))
+  }
+
+  function handleTabKey(event: KeyboardEvent<HTMLButtonElement>) {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return
     event.preventDefault()
-    if (savingContact || !contactInput.trim()) return
-    if (await onSaveContact(contactInput.trim())) setContactInput('')
+    const next: RequestTab = tab === 'incoming' ? 'outgoing' : 'incoming'
+    setChosenTab(next)
+    requestAnimationFrame(() => document.getElementById(`${tabsId}-${next}`)?.focus())
   }
 
   function renderIntroCard(item: IntroductionItem) {
     const isBusy = busyIntroId === item.id
     const slots = slotsByIntroId[item.id]
     const isSlotsOpen = slots !== undefined || loadingSlotsIntroId === item.id
+    const name = item.participantName || (item.participantHandle ? `@${item.participantHandle}` : item.id)
 
     return (
-      <article key={item.id} className="social-card surface" data-intro-id={item.id}>
+      <article key={item.id} id={`intro-${item.id}`} className="social-card surface request-card" data-intro-id={item.id}>
         <div className="social-card__header">
-          <div>
-            <h3>{item.participantName || item.participantId || item.id}</h3>
-            {item.participantRole && <p className="social-card__role">{item.participantRole}</p>}
+          <span className="person-avatar" aria-hidden="true">{initialsOf(item.participantName, item.participantHandle)}</span>
+          <div className="request-card__id">
+            <h3>{name}</h3>
+            <p className="social-card__role">
+              {[item.participantHandle ? `@${item.participantHandle}` : null, item.participantRole].filter(Boolean).join(' · ')}
+            </p>
           </div>
           <span className={`status-badge status-badge--${item.status}`}>
             {introStatusText(item.status, locale)}
           </span>
         </div>
 
+        {item.message && (
+          <blockquote className="request-card__message">
+            <span className="visually-hidden">{c.messageFrom}: </span>{item.message}
+          </blockquote>
+        )}
+
         {item.status === 'pending' && item.direction === 'incoming' && (
           <div className="social-card__actions">
-            <button
-              type="button"
-              className="primary-button"
-              disabled={isBusy}
-              onClick={() => onUpdateIntro(item.id, 'accepted')}
-            >{s.accept}</button>
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={isBusy}
-              onClick={() => onUpdateIntro(item.id, 'declined')}
-            >{s.decline}</button>
+            <button type="button" className="primary-button" disabled={isBusy} onClick={() => onUpdateIntro(item.id, 'accepted')}>{s.accept}</button>
+            <button type="button" className="secondary-button" disabled={isBusy} onClick={() => onUpdateIntro(item.id, 'declined')}>{s.decline}</button>
           </div>
         )}
 
         {item.status === 'pending' && item.direction === 'outgoing' && (
           <div className="social-card__actions">
-            <button
-              type="button"
-              className="secondary-button"
-              disabled={isBusy}
-              onClick={() => onUpdateIntro(item.id, 'withdrawn')}
-            >{s.withdraw}</button>
+            <p className="social-card__hint">{c.sentPending}</p>
+            <button type="button" className="secondary-button" disabled={isBusy} onClick={() => onUpdateIntro(item.id, 'withdrawn')}>{s.withdraw}</button>
           </div>
         )}
 
         {item.status === 'accepted' && (
           <div className="social-card__accepted">
             <div className="contact-reveal">
-              <strong>{s.sharedContactLabel}:</strong>{' '}
-              <span>{item.contact?.trim() ? item.contact : s.contactNotShared}</span>
+              <strong>{s.sharedContactLabel}</strong>
+              {item.contact?.trim() ? <ContactValue value={item.contact} locale={locale} /> : <span className="lock-note">{c.noContact}</span>}
             </div>
             <div className="social-card__actions">
-              <button
-                type="button"
-                className="secondary-button"
-                aria-expanded={isSlotsOpen}
-                onClick={() => onToggleSlots(item.id)}
-              >{isSlotsOpen ? s.hideSlots : s.proposeMeeting}</button>
+              <button type="button" className="secondary-button" aria-expanded={isSlotsOpen} onClick={() => onToggleSlots(item.id)}>
+                {isSlotsOpen ? s.hideSlots : s.proposeMeeting}
+              </button>
             </div>
 
-            {loadingSlotsIntroId === item.id && (
-              <p className="social-card__hint" role="status">{s.loadingSlots}</p>
-            )}
+            {loadingSlotsIntroId === item.id && <p className="social-card__hint" role="status">{s.loadingSlots}</p>}
 
             {slots && (
               <div className="social-slots">
@@ -211,8 +217,10 @@ export function IntroductionsPanel({
     )
   }
 
+  const list = tab === 'incoming' ? incoming : outgoing
+
   return (
-    <section className="social-section" aria-labelledby="introductions-title">
+    <section className="social-section connections" aria-labelledby="introductions-title">
       <div className="page-heading">
         <h1 id="introductions-title" tabIndex={-1}>{s.introTitle}</h1>
         <button type="button" className="secondary-button" disabled={refreshing} onClick={onRefresh}>
@@ -220,49 +228,72 @@ export function IntroductionsPanel({
         </button>
       </div>
 
+      <ol className="how-steps" aria-label={c.howTitle}>
+        {c.howSteps.map((step, index) => (
+          <li key={step}>
+            <span className="how-steps__index" aria-hidden="true">{index + 1}</span>
+            <span className="how-steps__text"><strong>{step}</strong><span>{c.howHints[index]}</span></span>
+          </li>
+        ))}
+      </ol>
+
       {socialError && <div className="error-banner" role="alert">{socialError}</div>}
       {socialNotice && <div className="info-banner" role="status">{socialNotice}</div>}
 
-      <div className="bento-grid social-bento-grid">
-        <form className="surface contact-panel bento-card--wide" onSubmit={submitContact}>
-          <label className="field">
-            <span>{s.contactLabel}</span>
-            <div className="contact-row">
-              <input
-                name="contact"
-                maxLength={160}
-                placeholder={s.contactPlaceholder}
-                value={contactInput}
-                disabled={savingContact}
-                onChange={event => setContactInput(event.target.value)}
-              />
-              <button type="submit" className="secondary-button" disabled={savingContact || !contactInput.trim()}>
-                {savingContact ? s.savingContact : s.saveContact}
-              </button>
+      <div className="connections__grid">
+        <ParticipantSearch
+          key={eventId}
+          api={api}
+          eventId={eventId}
+          locale={locale}
+          introductions={introductions}
+          busyIntroId={busyIntroId}
+          onRequest={onRequest}
+          onUpdateIntro={onUpdateIntro}
+          onShowIntroduction={showIntroduction}
+        />
+
+        <section className="surface requests" aria-labelledby={`${tabsId}-title`}>
+          <div className="requests__head">
+            <h2 id={`${tabsId}-title`}>{c.requestsTitle}</h2>
+            <div className="segmented" role="tablist" aria-label={c.requestsTitle}>
+              {(['incoming', 'outgoing'] as const).map(value => {
+                const count = value === 'incoming' ? incoming.length : outgoing.length
+                return (
+                  <button
+                    key={value}
+                    id={`${tabsId}-${value}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === value}
+                    aria-controls={`${tabsId}-panel`}
+                    tabIndex={tab === value ? 0 : -1}
+                    className="segmented__tab"
+                    onClick={() => setChosenTab(value)}
+                    onKeyDown={handleTabKey}
+                  >
+                    {value === 'incoming' ? s.incomingHeading : s.outgoingHeading}
+                    <span className="nav-count">{count}</span>
+                  </button>
+                )
+              })}
             </div>
-          </label>
-          <p className="privacy-box__note">{s.contactNotice}</p>
-          {contactSaved && <p className="copy-status" role="status">{s.contactSaved}</p>}
-          {contactValue && <p className="contact-reveal"><strong>{s.currentContact}</strong> {contactValue}</p>}
-        </form>
-
-        <div className="social-group bento-card">
-          <h2>{s.incomingHeading}</h2>
-          {incoming.length ? (
-            <div className="social-list">{incoming.map(renderIntroCard)}</div>
-          ) : (
-            <div className="surface empty-state"><p>{s.noIncoming}</p></div>
-          )}
-        </div>
-
-        <div className="social-group bento-card">
-          <h2>{s.outgoingHeading}</h2>
-          {outgoing.length ? (
-            <div className="social-list">{outgoing.map(renderIntroCard)}</div>
-          ) : (
-            <div className="surface empty-state"><p>{s.noOutgoing}</p></div>
-          )}
-        </div>
+          </div>
+          <div id={`${tabsId}-panel`} role="tabpanel" aria-labelledby={`${tabsId}-${tab}`} className="requests__panel">
+            {list.length ? (
+              <div className="social-list">{list.map(renderIntroCard)}</div>
+            ) : (
+              <div className="requests__empty"><p>{tab === 'incoming' ? s.noIncoming : s.noOutgoing}</p></div>
+            )}
+          </div>
+          <div className="own-contact">
+            <p>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" /><path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="currentColor" strokeWidth="1.8" /></svg>
+              {contactValue ? c.ownContactSet(contactValue) : c.ownContactMissing}
+            </p>
+            <button type="button" className="text-button" onClick={onOpenProfile}>{c.openProfile}</button>
+          </div>
+        </section>
       </div>
     </section>
   )

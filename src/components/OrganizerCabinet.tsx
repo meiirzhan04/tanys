@@ -23,7 +23,7 @@ import { timeCopy } from '../i18n/timeCopy'
 import { fromLocalParts, isQuarterHourInstant, roundUpToQuarterHour, toLocalParts } from '../scheduling/timeStep'
 import { buildInviteUrl, getInviteState } from './inviteQr'
 import { InviteQrModal } from './InviteQrModal'
-import { filterEventMembers, getMemberDisplayName } from './memberSearch'
+import { MembersPanel } from './connections/MembersPanel'
 
 export interface OrganizerCabinetProps {
   api: TanysApiClient
@@ -120,8 +120,6 @@ export function OrganizerCabinet({
   const [copiedInviteId, setCopiedInviteId] = useState('')
   const [qrInviteId, setQrInviteId] = useState<string | null>(null)
   const qrTriggerRef = useRef<HTMLButtonElement | null>(null)
-  const [members, setMembers] = useState<EventMemberItem[]>([])
-  const [memberSearch, setMemberSearch] = useState('')
   const [interests, setInterests] = useState<EventInterestsPayload | null>(null)
   const [booths, setBooths] = useState<EventBooth[]>([])
   const [reports, setReports] = useState<EventReportItem[]>([])
@@ -145,8 +143,6 @@ export function OrganizerCabinet({
     setEditEnd(toLocalParts(activeEvent?.endsAt))
     setInvites([])
     setQrInviteId(null)
-    setMembers([])
-    setMemberSearch('')
     setInterests(null)
     setBooths([])
     setReports([])
@@ -164,14 +160,12 @@ export function OrganizerCabinet({
     async function loadOrganizerData(eventId: string) {
       setLoadingData(true)
       try {
-        const [memberList, interestData, boothList, reportList] = await Promise.all([
-          api.listEventMembers(eventId),
+        const [interestData, boothList, reportList] = await Promise.all([
           api.getEventInterests(eventId),
           api.listEventBooths(eventId),
           api.listEventReports(eventId).catch(() => [] as EventReportItem[]),
         ])
         if (cancelled) return
-        setMembers(memberList)
         setInterests(interestData)
         setBooths(boothList)
         setReports(reportList)
@@ -396,8 +390,7 @@ export function OrganizerCabinet({
   }
 
   const isClosed = activeEvent?.status === 'closed'
-  const interestSummary = toInterestSummary(interests, members.length)
-  const filteredMembers = filterEventMembers(members, memberSearch)
+  const interestSummary = toInterestSummary(interests, 0)
 
   function handleExportInterestsCsv() {
     if (!activeEvent || interestSummary.topics.length === 0) return
@@ -570,68 +563,8 @@ export function OrganizerCabinet({
             )}
           </div>
 
-          {/* 4. Event members (permitted fields only, no emails or contacts) */}
-          <div className="surface organizer-card bento-card">
-            <h2>{o.membersTitle}</h2>
-            {loadingData ? (
-              <p className="social-card__hint">{messages.account.loadingEvent}</p>
-            ) : members.length === 0 ? (
-              <p className="social-card__hint">{o.noMembers}</p>
-            ) : (
-              <>
-                <div className="contact-row member-search-row">
-                  <input
-                    type="search"
-                    className="app-input"
-                    name="memberSearch"
-                    aria-label={o.memberSearchLabel}
-                    placeholder={o.memberSearchPlaceholder}
-                    value={memberSearch}
-                    onChange={event => setMemberSearch(event.target.value)}
-                  />
-                  {memberSearch.trim() && (
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      onClick={() => setMemberSearch('')}
-                    >{o.clearMemberSearch}</button>
-                  )}
-                </div>
-                {filteredMembers.length === 0 ? (
-                  <p className="social-card__hint">{o.noMemberMatches}</p>
-                ) : (
-                  <div className="table-scroll">
-                  <table className="interest-table members-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">{o.memberNameCol}</th>
-                        <th scope="col">{o.memberRoleCol}</th>
-                        <th scope="col">{o.memberGoalCol}</th>
-                        <th scope="col">{o.memberVisibilityCol}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredMembers.map(member => (
-                        <tr key={member.userId} data-member-id={member.userId}>
-                          <th scope="row">{getMemberDisplayName(member)}</th>
-                          <td>{member.profileRole || (member.role === 'organizer' ? o.roleOrganizer : o.roleParticipant)}</td>
-                          <td>{member.goal ? goalLabels[member.goal] : '—'}</td>
-                          <td>
-                            {member.visible === true
-                              ? o.profileVisible
-                              : member.visible === false
-                                ? o.profileHidden
-                                : o.profileIncomplete}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+          {/* 4. Event members: server-side search, filters and paging; no emails or contacts */}
+          <MembersPanel key={activeEvent.id} api={api} eventId={activeEvent.id} locale={locale} />
 
           {/* 5. Real event interest map (#12 connected to event aggregates, zero demo profiles) */}
           <InterestMap

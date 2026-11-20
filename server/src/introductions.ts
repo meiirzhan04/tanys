@@ -39,6 +39,13 @@ const selection = `SELECT i.id,i.status,i.created_at AS "createdAt",i.updated_at
   WHERE i.event_id=$1 AND $2 IN (i.recipient,i.sender) AND ${allowedPair}`
 
 export async function introductionRoute(req: IncomingMessage,res: ServerResponse,path: string) {
+  if (path === '/me/contact' && req.method === 'GET') {
+    // Owner-only read so the profile can show the saved value after a reload.
+    const user = await viewer(req)
+    const row = await pool.query('SELECT value FROM user_contacts WHERE user_id=$1',[user])
+    json(res,200,{ value: row.rows[0]?.value ?? null })
+    return true
+  }
   if (path === '/me/contact' && req.method === 'PUT') {
     const user = await viewer(req)
     const value = cleanContact((await readBody(req)).value)

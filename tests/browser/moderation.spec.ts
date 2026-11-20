@@ -174,7 +174,11 @@ test('block hides pair & rejects requests; report stays hidden from subject and 
     await signIn(pageOrg, 'org')
 
     // Support channel is visible to participants
-    await expect(pageA.locator('.support-footer')).toContainText('tanys.hrr@gmail.com')
+    // Support contact lives in the footer "Support" dialog instead of a banner under every screen
+    await pageA.locator('[data-footer="support"]').click()
+    await expect(pageA.getByRole('dialog')).toContainText('tanys.hrr@gmail.com')
+    await pageA.keyboard.press('Escape')
+    await expect(pageA.getByRole('dialog')).toHaveCount(0)
 
     // 1. Participant A opens Recommendations, reports Participant B (author stays hidden from B)
     await pageA.locator('.workspace-nav button').nth(1).click()

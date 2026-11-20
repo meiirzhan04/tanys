@@ -38,6 +38,7 @@ import { accountLabels } from './profile/accountLabels'
 import { AccountProfilePanel } from './profile/AccountProfilePanel'
 import { profileCopy } from './profile/profileCopy'
 import { accountDialogCopy } from './profile/accountDialogCopy'
+import { identityCopy } from './profile/identityCopy'
 import { PartnerBooths } from './PartnerBooths'
 
 const OrganizerCabinet = lazy(() =>
@@ -338,6 +339,8 @@ export function EventAccountFlow({
 
   const enterAuthenticated = useCallback(async (invite: InviteTarget | null, preserveDraft = false) => {
     accountCache.current = null
+    // Owner-only contact so the profile and the requests screen show what is saved after a reload.
+    void api.getContact().then(value => setContactValue(value ?? '')).catch(() => {})
     if (invite?.token) {
       setPhase('joining')
       try {
@@ -552,6 +555,7 @@ export function EventAccountFlow({
       setIntroductions([])
       setMeetings([])
       setNotifications([])
+      setContactValue('')
       setSlotsByIntroId({})
       setSocialError('')
       setSocialNotice('')
@@ -713,6 +717,44 @@ export function EventAccountFlow({
       await loadRecommendations(activeEventId, true)
     } catch (error) {
       setEventError(formatApiError(error, locale, 'general'))
+    }
+  }
+
+  async function saveContactFromProfile(value: string): Promise<string> {
+    try {
+      await api.saveContact(value)
+      setContactValue(value)
+      return ''
+    } catch (error) {
+      if (isApiError(error) && error.code === 'invalid_contact') return identityCopy[locale].contactError
+      return formatApiError(error, locale, 'general')
+    }
+  }
+
+  async function saveHandle(value: string): Promise<string> {
+    try {
+      const { handle } = await api.updateHandle(value)
+      setUser(current => (current ? { ...current, handle } : current))
+      return ''
+    } catch (error) {
+      const errors = identityCopy[locale].handleErrors
+      if (isApiError(error) && error.code in errors) return errors[error.code as keyof typeof errors]
+      return formatApiError(error, locale, 'general')
+    }
+  }
+
+  /** Request from the people search; resolves with an error message, or '' once the server stored it. */
+  async function handleRequestFromSearch(userId: string, message: string): Promise<string> {
+    if (!activeEventId) return messages.account.errors.genericRequest
+    setSocialError('')
+    setSocialNotice('')
+    try {
+      await api.createIntroduction(activeEventId, userId, message)
+      await refreshSocialState(activeEventId, false)
+      return ''
+    } catch (error) {
+      if (isBlockedOrRestrictedError(error)) return messages.moderation.interactionBlockedError
+      return formatApiError(error, locale, 'general')
     }
   }
 
@@ -1298,9 +1340,9 @@ export function EventAccountFlow({
             organizesAnyEvent={events.some(item => item.role === 'organizer')}
             hasEvent={Boolean(activeEventId)}
             contactValue={contactValue}
-            savingContact={savingContact}
-            contactSaved={contactSaved}
-            onSaveContact={handleSaveContact}
+            handle={user.handle ?? null}
+            onSaveContact={saveContactFromProfile}
+            onSaveHandle={saveHandle}
             onLogout={handleLogout}
             onLeaveEvent={handleLeaveEvent}
             onDeleteAccount={handleDeleteAccount}
@@ -1315,6 +1357,8 @@ export function EventAccountFlow({
           </section>
         ) : tab === 'introductions' ? (
           <IntroductionsPanel
+            api={api}
+            eventId={activeEventId}
             introductions={introductions}
             locale={locale}
             timeZone={eventTimeZone}
@@ -1323,11 +1367,10 @@ export function EventAccountFlow({
             loadingSlotsIntroId={loadingSlotsIntroId}
             proposingSlotKey={proposingSlotKey}
             contactValue={contactValue}
-            savingContact={savingContact}
-            contactSaved={contactSaved}
             socialError={socialError}
             socialNotice={socialNotice}
-            onSaveContact={handleSaveContact}
+            onRequest={handleRequestFromSearch}
+            onOpenProfile={() => guardNavigation(() => setTab('me'))}
             onUpdateIntro={(introId, status) => void handleUpdateIntro(introId, status)}
             onToggleSlots={introId => void handleToggleSlots(introId)}
             onProposeMeeting={(introId, slotId) => void handleProposeMeeting(introId, slotId)}
@@ -1635,9 +1678,6 @@ export function EventAccountFlow({
             onDiscard={handleDiscardAndContinue}
           />
         )}
-        <footer className="support-footer">
-          <p>{messages.moderation.supportNotice}</p>
-        </footer>
       </main>
     </div>
   )

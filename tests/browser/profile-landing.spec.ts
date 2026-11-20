@@ -143,10 +143,17 @@ test('account profile and three event questionnaires stay independent after relo
     await page.locator('.workspace-nav button').first().click()
     await expect(page.locator('[name=name]')).toHaveValue('New event name')
     await page.locator('.nav-profile-btn').click()
-    await page.locator('input[name="profileContact"]').fill('@aliya_dev')
-    await page.locator('.profile-contact-form button[type="submit"]').click()
-    await expect(page.locator('.profile-contact-form [role="status"]')).toBeVisible()
-    await expect(page.locator('section:has(> #me-contact-title)')).toContainText('@aliya_dev')
+    // Contact is edited in a modal from the read-only card; Cancel keeps the old value
+    await page.locator('[data-edit="contact"]').click()
+    await page.getByRole('dialog').locator('input[name="profileContact"]').fill('@nope')
+    await page.getByRole('dialog').getByRole('button', { name: 'Отмена' }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(page.locator('[data-contact-value]')).not.toContainText('@nope')
+    await page.locator('[data-edit="contact"]').click()
+    await page.getByRole('dialog').locator('input[name="profileContact"]').fill('@aliya_dev')
+    await page.getByRole('dialog').getByRole('button', { name: 'Сохранить' }).click()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
+    await expect(page.locator('[data-contact-value]')).toHaveText('@aliya_dev')
     expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false)
 
     // Cancel keeps the session; confirming signs out to the sign-in screen
