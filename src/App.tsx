@@ -45,6 +45,7 @@ export default function App() {
   const [mode, setMode] = useState<'demo' | 'account'>(() =>
     isAccountRoute(window.location.pathname, window.location.search) ? 'account' : 'demo',
   )
+  const [exitRequestSeq, setExitRequestSeq] = useState(0)
   const [locale, setLocale] = useState<Locale>(() => {
     const initial = resolveInitialLocale()
     if (typeof document !== 'undefined') document.documentElement.lang = initial
@@ -114,8 +115,7 @@ export default function App() {
               className="header-link-btn"
               onClick={() => {
                 if (mode === 'account') {
-                  savePendingInvite(null)
-                  setMode('demo')
+                  setExitRequestSeq(current => current + 1)
                 } else {
                   setMode('account')
                 }
@@ -141,6 +141,7 @@ export default function App() {
         <EventAccountFlow
           locale={locale}
           initialInvite={initialInvite}
+          exitRequestSeq={exitRequestSeq}
           onExitToDemo={() => {
             savePendingInvite(null)
             setMode('demo')

@@ -163,6 +163,13 @@ export interface Messages {
       authUnavailable: string
       genericRequest: string
     }
+    unsaved: {
+      title: string
+      body: string
+      stayButton: string
+      discardButton: string
+      badge: string
+    }
   }
   social: {
     navIntroductions: string
@@ -475,6 +482,13 @@ export const messagesByLocale: Record<Locale, Messages> = {
         authUnavailable: 'Сервер входа временно недоступен. Вы можете вернуться в демо и попробовать войти позже.',
         genericRequest: 'Произошла ошибка. Попробуйте повторить действие.',
       },
+      unsaved: {
+        title: 'Есть несохранённые изменения анкеты',
+        body: 'Если перейти сейчас, изменения в анкете этой вкладки будут отброшены.',
+        stayButton: 'Остаться',
+        discardButton: 'Отбросить изменения',
+        badge: 'Есть несохранённые изменения',
+      },
     },
     social: {
       navIntroductions: 'Знакомства',
@@ -785,6 +799,13 @@ export const messagesByLocale: Record<Locale, Messages> = {
         authUnavailable: 'Кіру сервері уақытша қолжетімсіз. Демоға оралып, кейінірек қайта кіріп көріңіз.',
         genericRequest: 'Қате орын алды. Әрекетті қайталап көріңіз.',
       },
+      unsaved: {
+        title: 'Анкетада сақталмаған өзгерістер бар',
+        body: 'Қазір басқа бөлімге өтсеңіз, осы қойындыдағы өзгерістер сақталмайды.',
+        stayButton: 'Қалу',
+        discardButton: 'Өзгерістерден бас тарту',
+        badge: 'Сақталмаған өзгерістер бар',
+      },
     },
     social: {
       navIntroductions: 'Танысулар',
@@ -1094,6 +1115,13 @@ export const messagesByLocale: Record<Locale, Messages> = {
         genericSave: 'Could not save your profile. Your entered fields are preserved on screen.',
         authUnavailable: 'Sign-in is temporarily unavailable. Return to the demo or try signing in later.',
         genericRequest: 'Something went wrong. Please try again.',
+      },
+      unsaved: {
+        title: 'You have unsaved profile changes',
+        body: 'If you leave now, your edits in this tab will be discarded.',
+        stayButton: 'Stay',
+        discardButton: 'Discard changes',
+        badge: 'Unsaved changes',
       },
     },
     social: {

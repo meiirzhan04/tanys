@@ -35,6 +35,9 @@ test('provides complete, distinct translations for ru, kk, and en', () => {
     assert.ok(messages.account.visibilityNotice.trim())
     assert.ok(messages.account.consentLabel.trim())
     assert.ok(messages.account.expiredTitle.trim())
+    assert.ok(messages.account.unsaved.title.trim())
+    assert.ok(messages.account.unsaved.stayButton.trim())
+    assert.ok(messages.account.unsaved.discardButton.trim())
     for (const [field, errorText] of Object.entries(messages.account.errors)) {
       assert.ok(errorText.trim(), `missing account error ${field} for ${code}`)
     }
