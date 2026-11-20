@@ -53,6 +53,11 @@ test('separates form action goal labels from candidate intent labels in ru/kk/en
 
   const firstGoalBadge = page.locator('section[aria-labelledby="results-title"] .result-card .goal-label').first()
   await expect(firstGoalBadge).toHaveText('Нанимает')
+  // The first phrase is visible on every card without opening the details.
+  const firstCard = page.locator('section[aria-labelledby="results-title"] .result-card').first()
+  await expect(firstCard.locator('.row-toggle')).toHaveAttribute('aria-expanded', 'false')
+  await expect(firstCard.locator('> .icebreaker p')).toBeVisible()
+  await expect(firstCard.locator('> .icebreaker p')).toContainText('?')
 
   await page.locator('.lang-switcher button[lang="kk"]').click()
   await expect(firstGoalBadge).toHaveText('Маман жалдайды')

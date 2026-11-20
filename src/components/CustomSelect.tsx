@@ -34,6 +34,7 @@ export function CustomSelect({
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false)
   const [openUp, setOpenUp] = useState(false)
+  const [alignEnd, setAlignEnd] = useState(false)
   const [highlight, setHighlight] = useState(-1)
   const rootRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -59,6 +60,13 @@ export function CustomSelect({
     const below = window.innerHeight - rect.bottom
     setOpenUp(below < Math.min(MENU_MAX_HEIGHT, options.length * 47) + 12 && rect.top > below)
   }, [open, options.length])
+
+  useLayoutEffect(() => {
+    if (!open || !rootRef.current || !menuRef.current) return
+    const root = rootRef.current.getBoundingClientRect()
+    const width = menuRef.current.getBoundingClientRect().width
+    setAlignEnd(root.left + width > window.innerWidth - 8 && root.right - width >= 8)
+  }, [open, options])
 
   useEffect(() => {
     if (!open || highlight < 0) return
@@ -126,7 +134,7 @@ export function CustomSelect({
   return (
     <div
       ref={rootRef}
-      className={`custom-select ${open ? 'custom-select--open' : ''} ${openUp ? 'custom-select--up' : ''} ${disabled ? 'custom-select--disabled' : ''} ${className}`.trim()}
+      className={`custom-select ${open ? 'custom-select--open' : ''} ${openUp ? 'custom-select--up' : ''} ${alignEnd ? 'custom-select--align-end' : ''} ${disabled ? 'custom-select--disabled' : ''} ${className}`.trim()}
     >
       <div className="custom-select__control">
         <select
