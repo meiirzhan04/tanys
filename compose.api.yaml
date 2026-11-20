@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: tanys
+      POSTGRES_USER: tanys
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-development}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tanys -d tanys"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrate:
+    build: ./server
+    environment: &database
+      PGHOST: db
+      PGUSER: tanys
+      PGPASSWORD: ${POSTGRES_PASSWORD:-local-development}
+      PGDATABASE: tanys
+      DATABASE_URL: postgres://tanys@db/tanys
+    command: ["node", "dist/migrate.js"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    build: ./server
+    environment: *database
+    ports:
+      - "127.0.0.1:${API_PORT:-3000}:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  database:

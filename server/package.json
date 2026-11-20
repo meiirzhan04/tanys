@@ -1,0 +1,18 @@
+{
+  "name": "tanys-api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "migrate": "node dist/migrate.js"
+  },
+  "dependencies": {
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "typescript": "~5.9.3"
+  }
+}

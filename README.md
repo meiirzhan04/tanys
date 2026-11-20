@@ -57,3 +57,7 @@ npm run dev
 | [tests](tests) | Контрольные сценарии и проверка качества выдачи |
 
 Стек текущей версии — React, TypeScript и Vite. Для работы над задачей начните с [архитектуры](docs/architecture.md), [правил веток и проверок](AGENTS.md) и [задач команды](https://github.com/meiirzhan04/tanys/issues).
+
+## Локальный сервер Tanys 1.0
+
+Для разработки API запустите `docker compose -f compose.api.yaml up --build -d`. Compose поднимает PostgreSQL, применяет миграции и запускает сервер на `127.0.0.1:3000`. Проверки — `GET /health` и `GET /ready`. База изначально пуста. Команда `docker compose -f compose.api.yaml down` сохраняет данные в томе. Для другого локального порта задайте API_PORT. Для внешнего размещения передайте отдельные реквизиты БД через секреты окружения. [Контракт публичного API](docs/service-v1.md)
