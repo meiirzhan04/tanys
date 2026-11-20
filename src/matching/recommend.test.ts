@@ -448,3 +448,72 @@ test('matches common skill aliases for skills and lookingFor without mutating la
   )
   assert.deepEqual(noBoost.map(item => item.candidate.id), ['js-and-postgres', 'only-js-duplicated'])
 })
+
+test('treats "<technology> Developer" requests as a required skill in both hiring directions, including typos', () => {
+  const backendPython = candidate('backend-python', 'find_job', { role: 'Backend Developer', skills: ['Python'], lookingFor: [] })
+  const backendGo = candidate('backend-go', 'find_job', { role: 'Backend Developer', skills: ['Go'], lookingFor: [] })
+  const ios = candidate('ios', 'find_job', { role: 'iOS Developer', skills: ['Swift'], interests: ['API'], lookingFor: [] })
+  for (const request of ['Python Developer', 'pyhton developer', 'python dev', 'Python-разработчик', 'Senior Python Engineer', 'pyhton', 'Python']) {
+    const employer = candidate('employer', 'hire', { role: 'Tech Lead', skills: ['Go', 'Kubernetes'], interests: ['API'], lookingFor: [request] })
+    assert.deepEqual(recommend(employer, [ios, backendGo, backendPython]).map(item => item.candidate.id), ['backend-python'], request)
+    const seen = recommend(backendPython, [employer])
+    assert.deepEqual(seen.map(item => item.candidate.id), ['employer'], request)
+    assert.match(seen[0].explanation, /Python/, request)
+    assert.deepEqual(recommend(backendGo, [employer]), [], request)
+    assert.deepEqual(recommend(ios, [employer]), [], request)
+  }
+})
+
+test('a role alone does not satisfy a request that also names a required skill', () => {
+  const employer = candidate('employer', 'hire', { role: 'Tech Lead', skills: ['Go'], lookingFor: ['Python Developer', 'Backend Developer'] })
+  const backendGo = candidate('backend-go', 'find_job', { role: 'Backend Developer', skills: ['Go'], lookingFor: [] })
+  const backendPython = candidate('backend-python', 'find_job', { role: 'Backend Developer', skills: ['Python'], lookingFor: [] })
+  const results = recommend(employer, [backendGo, backendPython], 'en')
+  assert.deepEqual(results.map(item => item.candidate.id), ['backend-python'])
+  assert.match(results[0].explanation, /role matches your request/)
+  assert.deepEqual(recommend(backendGo, [employer]), [])
+})
+
+test('a requested role vetoes applicants from a different known role even when a skill matches', () => {
+  const employer = candidate('employer', 'hire', { role: 'Tech Lead', skills: ['Kubernetes'], lookingFor: ['Backend Developer', 'Go'] })
+  const frontendGo = candidate('frontend-go', 'find_job', { role: 'Frontend Developer', skills: ['Go', 'React'], lookingFor: [] })
+  const backendGo = candidate('backend-go', 'find_job', { role: 'Backend-разработчик', skills: ['Go'], lookingFor: [] })
+  const dataGo = candidate('data-go', 'find_job', { role: 'Инженер данных', skills: ['Go'], lookingFor: [] })
+  assert.deepEqual(recommend(employer, [frontendGo, backendGo, dataGo]).map(item => item.candidate.id).sort(), ['backend-go', 'data-go'])
+  assert.deepEqual(recommend(frontendGo, [employer]), [])
+})
+
+test('recognizes role spellings and seniority prefixes as one role without merging distinct roles', () => {
+  const employer = candidate('employer', 'hire', { role: 'Tech Lead', skills: ['Kubernetes'], lookingFor: ['Backend Developer'] })
+  for (const role of ['backend', 'BACKEND', 'BackEnd developer', 'Backend dev', 'backend dev', 'bacend', 'Junior backend-разработчик', 'Backend-стажёр', 'Senior Backend Engineer']) {
+    const applicant = candidate('applicant', 'find_job', { role, skills: ['Go'], lookingFor: [] })
+    assert.deepEqual(recommend(employer, [applicant]).map(item => item.candidate.id), ['applicant'], role)
+    assert.deepEqual(recommend(applicant, [employer]).map(item => item.candidate.id), ['employer'], role)
+  }
+  for (const role of ['Frontend Developer', 'iOS Developer', 'Android Developer', 'Full Stack Developer']) {
+    const applicant = candidate('applicant', 'find_job', { role, skills: ['Go'], lookingFor: [] })
+    assert.deepEqual(recommend(employer, [applicant]), [], role)
+    assert.deepEqual(recommend(applicant, [employer]), [], role)
+  }
+})
+
+test('corrects one typo in a requested skill only when it is long enough and unambiguous', () => {
+  const employer = (lookingFor: string[]) => candidate('employer', 'hire', { role: 'HR', skills: ['Figma'], lookingFor })
+  const mysql = candidate('mysql', 'find_job', { role: 'DBA', skills: ['MySQL'], lookingFor: [] })
+  const kotlin = candidate('kotlin', 'find_job', { role: 'Android Developer', skills: ['Kotlin'], lookingFor: [] })
+  assert.deepEqual(recommend(employer(['MSSQL']), [mysql]), [])
+  assert.deepEqual(recommend(employer(['Java']), [candidate('js', 'find_job', { role: 'Dev', skills: ['JavaScript'], lookingFor: [] })]), [])
+  assert.deepEqual(recommend(employer(['Kotiln']), [kotlin]).map(item => item.candidate.id), ['kotlin'])
+})
+
+test('matches a "<technology> Developer" request against the dataset like the plain technology', () => {
+  const profiles = JSON.parse(readFileSync(new URL('../data/profiles.json', import.meta.url), 'utf8')) as Candidate[]
+  const employer = (lookingFor: string[]): ProfileInput => ({ role: 'Tech Lead', skills: ['Go'], experienceYears: 7, interests: ['API'], about: 'x', goal: 'hire', lookingFor })
+  const plain = recommend(employer(['Python']), profiles).map(item => item.candidate.id)
+  assert.equal(plain.length, 5)
+  for (const request of ['Python Developer', 'pyhton developer', 'pyhton']) {
+    const results = recommend(employer([request]), profiles)
+    assert.deepEqual(results.map(item => item.candidate.id), plain, request)
+    assert.ok(results.every(item => item.candidate.skills.some(skill => /python/i.test(skill))), request)
+  }
+})

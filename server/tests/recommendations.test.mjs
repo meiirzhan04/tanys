@@ -18,3 +18,23 @@ test('выдача учитывает видимость, взаимность �
   await call(me,'PUT','/feedback/'+c.id,204,{response:'met'})
   assert.deepEqual(await items(),[])
 })
+
+test('«Python Developer» в запросе нанимающего находит Backend Developer с Python в обе стороны и не пропускает Go и iOS', async () => {
+  const {people:[employer,python,goOnly,ios],call} = fixture(4)
+  const outsider = fixture(1)
+  const ids = async (person) => (await call(person,'GET','/recommendations?locale=ru',200)).items.map(item=>item.candidate.id)
+  for (const request of ['Python Developer','pyhton developer']) {
+    await call(employer,'PUT','/profile',200,{...profile,goal:'hire',role:'Tech Lead',skills:['Go','Kubernetes'],lookingFor:[request],visible:true})
+    await call(python,'PUT','/profile',200,{...profile,role:'Backend Developer',skills:['Python'],visible:true})
+    await call(goOnly,'PUT','/profile',200,{...profile,role:'Backend Developer',skills:['Go'],visible:true})
+    await call(ios,'PUT','/profile',200,{...profile,role:'iOS Developer',skills:['Swift'],interests:['API'],visible:true})
+    assert.deepEqual(await ids(employer),[python.id],request)
+    assert.deepEqual(await ids(python),[employer.id],request)
+    assert.deepEqual(await ids(goOnly),[],request)
+    assert.deepEqual(await ids(ios),[],request)
+  }
+  await outsider.call(outsider.people[0],'PUT','/profile',200,{...profile,role:'Backend Developer',skills:['Python'],visible:true})
+  assert.deepEqual(await ids(employer),[python.id])
+  await call(python,'PUT','/profile',200,{...profile,role:'Backend Developer',skills:['Python'],visible:false})
+  assert.deepEqual(await ids(employer),[])
+})

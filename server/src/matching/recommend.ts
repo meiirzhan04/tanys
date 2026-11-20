@@ -214,15 +214,99 @@ export function normalizeSkill(value: string): string {
   return key
 }
 
+// Seniority words do not change the specialization: "Junior backend-разработчик" is still backend.
+const seniorityWords = new Set([
+  'junior', 'middle', 'senior', 'jr', 'sr', 'intern', 'trainee',
+  'джуниор', 'джун', 'мидл', 'сеньор', 'сениор', 'младший', 'старший', 'стажёр', 'стажер',
+])
+// Generic job words: "Python Developer" asks for Python, the trailing word only says it is a job title.
+const jobTitleWords = new Set([
+  'developer', 'dev', 'engineer', 'programmer', 'разработчик', 'программист', 'инженер', 'әзірлеуші', 'инженері', 'бағдарламашы',
+])
+const minTypoSkillLength = 6
+
+function titleWords(value: string): string[] {
+  return normalizeTopic(value).split(/[\s\u2010-\u2015-]+/).filter(word => word && !seniorityWords.has(word))
+}
+
+/** Returns the known role group of a free-text role, ignoring seniority, or undefined. */
+function roleGroupOf(value: string): string | undefined {
+  const words = titleWords(value)
+  if (!words.length) return undefined
+  const key = normalizeSkill(words.join(' '))
+  return Object.hasOwn(roleGroups, key) ? key : undefined
+}
+
+interface ParsedRequest {
+  /** Labels to look for in the counterpart's skills; role labels stay as typed, job titles are reduced to their technology. */
+  targets: string[]
+  /** Technologies the request explicitly requires, e.g. "python" from "Python Developer". */
+  technologies: string[]
+  roles: Set<string>
+}
+
+/** Splits "looking for" entries into roles ("Backend Developer") and required technologies ("Python Developer" -> python). */
+function parseRequest(values: readonly string[] = []): ParsedRequest {
+  const parsed: ParsedRequest = { targets: [], technologies: [], roles: new Set() }
+  for (const raw of values) {
+    const value = raw.trim()
+    if (!value) continue
+    const role = roleGroupOf(value)
+    if (role) {
+      parsed.roles.add(role)
+      parsed.targets.push(value)
+      continue
+    }
+    const words = titleWords(value)
+    const technology = words.length > 1 && jobTitleWords.has(words[words.length - 1])
+      ? words.slice(0, -1).join(' ')
+      : words.join(' ') || value
+    const technologyRole = roleGroupOf(technology)
+    if (technologyRole) parsed.roles.add(technologyRole)
+    else parsed.technologies.push(technology)
+    parsed.targets.push(technology)
+  }
+  return parsed
+}
+
+/**
+ * Hiring compatibility of one applicant with one employer request, applied identically in both directions.
+ * A named technology is required; a named role must match unless a technology already confirms the fit,
+ * and an applicant from a different known role is never matched.
+ */
+function hiringMatchFor(
+  applicantSkills: readonly string[],
+  applicantRole: string,
+  request: ParsedRequest,
+  skillKey: (value: string) => string,
+  broaderSkills?: ReadonlyMap<string, string>,
+) {
+  const needs = matchingTopics(applicantSkills, request.targets, skillKey, broaderSkills, true)
+  const applicantGroup = roleGroupOf(applicantRole)
+  const roleMatch = applicantGroup !== undefined && request.roles.has(applicantGroup)
+  const coversRequestedRole = applicantGroup === 'fullstack' && (request.roles.has('backend') || request.roles.has('frontend'))
+  const roleConflict = request.roles.size > 0 && applicantGroup !== undefined && !roleMatch && !coversRequestedRole
+  let compatible: boolean
+  if (!request.targets.length) compatible = true
+  else if (request.technologies.length) {
+    compatible = !roleConflict && matchingTopics(applicantSkills, request.technologies, skillKey, broaderSkills, true).length > 0
+  } else compatible = roleMatch || (!roleConflict && needs.length > 0)
+  return { needs, roleMatch, compatible }
+}
+
 function makeIcebreaker(goal: Goal, candidate: Candidate, locale: Locale, topic: string): string {
   const templates = templatesByLocale[locale]
   return templates.formatIcebreaker(formatIcebreakerName(candidate.name), topic, templates.icebreakerQuestions[goal])
 }
 
 function matchingRequestedRole(applicantRole: string, requested: readonly string[]): string | undefined {
-  const role = normalizeSkill(applicantRole)
-  if (!Object.hasOwn(roleGroups, role)) return undefined
-  return requested.find(value => normalizeSkill(value) === role)?.trim()
+  const role = roleGroupOf(applicantRole)
+  if (!role) return undefined
+  return requested.find(value => roleGroupOf(value) === role)?.trim()
+}
+
+function isTypoCandidate(key: string): boolean {
+  return key.length >= minTypoSkillLength && /^\p{L}+$/u.test(key)
 }
 
 function matchingTopics(
@@ -230,11 +314,13 @@ function matchingTopics(
   targets: readonly string[],
   normalize: (value: string) => string = normalizeTopic,
   broaderSkills?: ReadonlyMap<string, string>,
+  correctTypos = false,
 ): string[] {
   const pending = new Set(targets.map(normalize).filter(Boolean))
   const matched = new Set<string>()
+  const trimmed = values.map(value => value.trim())
 
-  return values.map(value => value.trim()).filter(value => {
+  const exact = trimmed.filter(value => {
     const key = normalize(value)
     if (matched.has(key)) return false
     const broaderSkill = broaderSkills?.get(key)
@@ -242,6 +328,22 @@ function matchingTopics(
     matched.add(key)
     return true
   })
+  if (!correctTypos) return exact
+
+  // One edit (including a swapped pair) on a long single-word skill, only when exactly one skill is that close.
+  for (const target of pending) {
+    if (!isTypoCandidate(target)) continue
+    const near = new Map<string, string>()
+    for (const value of trimmed) {
+      const key = normalize(value)
+      if (!matched.has(key) && isTypoCandidate(key) && isOneEditAway(key, target)) near.set(key, value)
+    }
+    if (near.size !== 1) continue
+    const [[key, value]] = near
+    matched.add(key)
+    exact.push(value)
+  }
+  return exact
 }
 
 function scoreCandidate(
@@ -252,21 +354,31 @@ function scoreCandidate(
 ) {
   const isCofounder = input.goal === 'find_cofounder'
   const broaderSkills = isCofounder ? broaderCofounderSkills : undefined
-  const candidateNeeds = matchingTopics(input.skills, candidate.lookingFor ?? [], skillKey, broaderSkills)
-  const participantNeeds = matchingTopics(candidate.skills, input.lookingFor ?? [], skillKey, broaderSkills)
+  const candidateRequest = parseRequest(candidate.lookingFor)
+  const inputRequest = parseRequest(input.lookingFor)
+  const isHiring = input.goal === 'hire' || input.goal === 'find_job'
+  let candidateNeeds = matchingTopics(input.skills, candidateRequest.targets, skillKey, broaderSkills, isHiring)
+  let participantNeeds = matchingTopics(candidate.skills, inputRequest.targets, skillKey, broaderSkills, isHiring)
   const sharedSkills = matchingTopics(candidate.skills, input.skills, skillKey)
 
   // Apply the employer's criteria in both directions before ranking job matches.
   let hiringMatch: string[] | undefined
   let roleMatch: string | undefined
-  if (input.goal === 'hire') {
-    hiringMatch = input.lookingFor?.some(skill => skill.trim()) ? participantNeeds : sharedSkills
-    if (matchingRequestedRole(candidate.role, input.lookingFor ?? [])) roleMatch = candidate.role.trim()
-  } else if (input.goal === 'find_job') {
-    hiringMatch = candidate.lookingFor?.some(skill => skill.trim()) ? candidateNeeds : sharedSkills
-    roleMatch = matchingRequestedRole(input.role, candidate.lookingFor ?? [])
+  if (isHiring) {
+    const employerSide = input.goal === 'hire'
+    const request = employerSide ? inputRequest : candidateRequest
+    const verdict = employerSide
+      ? hiringMatchFor(candidate.skills, candidate.role, request, skillKey)
+      : hiringMatchFor(input.skills, input.role, request, skillKey)
+    if (!verdict.compatible) return null
+    if (employerSide) participantNeeds = verdict.needs
+    else candidateNeeds = verdict.needs
+    hiringMatch = request.targets.length ? verdict.needs : sharedSkills
+    if (verdict.roleMatch) {
+      roleMatch = employerSide ? candidate.role.trim() : matchingRequestedRole(input.role, candidate.lookingFor ?? [])
+    }
+    if (!request.targets.length && !hiringMatch.length) return null
   }
-  if (hiringMatch?.length === 0 && !roleMatch) return null
 
   if (roleMatch) {
     const roleKey = normalizeSkill(roleMatch)
