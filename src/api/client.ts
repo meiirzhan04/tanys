@@ -224,6 +224,7 @@ export interface TanysApiClient {
     introductionId: string,
     status: Exclude<IntroductionStatus, 'pending'>,
   ): Promise<IntroductionItem>
+  getAvailability(eventId: string): Promise<{ start: string; end: string }[]>
   saveAvailability(eventId: string, slots: readonly { start: string; end: string }[]): Promise<void>
   listCommonSlots(eventId: string, introductionId: string): Promise<CommonSlot[]>
   listMeetings(eventId: string): Promise<ServerMeeting[]>
@@ -426,6 +427,10 @@ export function createTanysApiClient(
       )
     },
 
+    async getAvailability(eventId) {
+      const result = await request<{ slots: {start:string;end:string}[] }>(`/events/${encodeURIComponent(eventId)}/availability/me`)
+      return result.slots
+    },
     async saveAvailability(eventId, slots) {
       await request<null>(
         `/events/${encodeURIComponent(eventId)}/availability/me`,

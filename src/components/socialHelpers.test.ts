@@ -44,6 +44,6 @@ describe('formatMeetingInterval', () => {
       'Asia/Almaty',
       'ru',
     )
-    assert.equal(formatted, '14:00–14:20')
+    assert.match(formatted, /14:00–14:20 \(Asia\/Almaty\)/)
   })
 })

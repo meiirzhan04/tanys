@@ -1,3 +1,4 @@
+import { AvailabilityEditor } from './AvailabilityEditor'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
@@ -1123,6 +1124,8 @@ export function EventAccountFlow({
             refreshing={socialRefreshing}
           />
         ) : tab === 'meetings' ? (
+          <>
+          {!isClosed && <AvailabilityEditor key={activeEventId} api={api} event={activeEventId} locale={locale} zone={eventTimeZone} />}
           <ServerMeetingsPanel
             meetings={meetings}
             locale={locale}
@@ -1134,6 +1137,7 @@ export function EventAccountFlow({
             onRefresh={() => { if (activeEventId) void refreshSocialState(activeEventId, true) }}
             refreshing={socialRefreshing}
           />
+          </>
         ) : tab === 'results' ? (
           recsLoading && recommendations === null ? (
             <div className="surface status-panel" role="status" aria-live="polite" aria-busy="true">
