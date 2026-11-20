@@ -38,6 +38,9 @@ services:
       APP_ORIGIN: ${APP_ORIGIN:-http://localhost:3000}
       SMTP_URL: ${SMTP_URL:-smtp://mailbox:1025}
       MAIL_FROM: ${MAIL_FROM:-Tanys <login@tanys.test>}
+      TANYS_OLLAMA_URL: ${TANYS_OLLAMA_URL:-}
+      TANYS_EMBEDDING_MODEL: ${TANYS_EMBEDDING_MODEL:-embeddinggemma}
+      TANYS_LLM_MODEL: ${TANYS_LLM_MODEL:-qwen2.5:1.5b}
     ports:
       - "127.0.0.1:${API_PORT:-3000}:3000"
     depends_on:

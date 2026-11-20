@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { recommend } from './recommend.ts'
+import { normalizeSkill } from '../../server/src/matching/recommend.ts'
+import { createAiSkillResolver } from '../../server/src/matching/skill-ai.ts'
 import type { Candidate, Goal, ProfileInput } from './types'
 
 const input: ProfileInput = {
@@ -83,6 +85,72 @@ test('recognizes role aliases in both hiring directions without treating related
 
   for (const alias of ['back-end dev', 'BACK-END   ENGINEER', 'бэкенд-разработчик', 'бекенд әзірлеуші']) {
     assert.deepEqual(recommend({ ...employer, lookingFor: [alias] }, candidates).map(result => result.candidate.id), ['backend'])
+  }
+})
+
+test('corrects a single typo in a known role and preserves distinct technologies', () => {
+  const employer = candidate('employer', 'hire', { lookingFor: ['Backend Developer'] })
+  const backend = candidate('backend', 'find_job', { skills: ['BacEnd'] })
+  const ios = candidate('ios', 'find_job', { skills: ['Swift'] })
+  assert.deepEqual(recommend(employer, [backend, ios]).map(result => result.candidate.id), ['backend'])
+  assert.deepEqual(recommend(backend, [employer]).map(result => result.candidate.id), ['employer'])
+  for (const label of ['BacEnd', 'backeend', 'BakCend', 'backand developer']) {
+    assert.equal(normalizeSkill(label), 'backend')
+  }
+  assert.notEqual(normalizeSkill('Swift'), normalizeSkill('Backend'))
+  assert.notEqual(normalizeSkill('Java'), normalizeSkill('JavaScript'))
+  assert.notEqual(normalizeSkill('C#'), normalizeSkill('C++'))
+})
+
+test('uses embeddings to nominate a role and accepts only LLM-approved nominations', async () => {
+  const paths: string[] = []
+  const resolver = createAiSkillResolver({
+    baseUrl: 'http://ollama.test:11434',
+    fetcher: async (url, init) => {
+      const path = new URL(String(url)).pathname
+      paths.push(path)
+      const body = JSON.parse(String(init?.body))
+      if (path === '/api/embed') {
+        assert.deepEqual(body.input.slice(-3), ['server-side engineer', 'mobile engineer', 'web developer'])
+        const basis = (i: number) => Array.from({ length: 5 }, (_, j) => Number(i === j))
+        return Response.json({
+          embeddings: [basis(0), basis(1), basis(2), basis(3), basis(4), basis(0), basis(3), [1, 1, 0, 0, 0]],
+        })
+      }
+      assert.equal(path, '/api/chat')
+      const nominations = JSON.parse(body.messages[1].content)
+      assert.deepEqual(nominations.map((item: { id: number }) => item.id), [0, 1])
+      return Response.json({ message: { content: JSON.stringify({ approved: [0, 2] }) } })
+    },
+  })
+  const labels = ['server-side engineer', 'mobile engineer', 'web developer', 'Swift', 'BacEnd']
+  const key = await resolver(labels, normalizeSkill)
+  assert.deepEqual(paths, ['/api/embed', '/api/chat'])
+  assert.equal(key('Server-side Engineer'), 'backend')
+  assert.equal(key('mobile engineer'), 'mobile engineer')
+  assert.equal(key('web developer'), 'web developer')
+  assert.equal(key('Swift'), 'swift')
+  assert.equal(key('BacEnd'), 'backend')
+  const recruiter = candidate('employer', 'hire', { lookingFor: ['Backend'] })
+  const backend = candidate('backend', 'find_job', { skills: ['Server-side Engineer'] })
+  const ios = candidate('ios', 'find_job', { skills: ['Swift'] })
+  assert.deepEqual(recommend(recruiter, [ios, backend], 'kk', key).map(item => item.candidate.id), ['backend'])
+  assert.deepEqual(recommend(backend, [recruiter], 'kk', key).map(item => item.candidate.id), ['employer'])
+  await resolver(labels, normalizeSkill)
+  assert.equal(paths.length, 2)
+})
+
+test('falls back to local matching on model failure or when models are disabled', async () => {
+  const disabled = createAiSkillResolver({ fetcher: () => assert.fail('unexpected network call') })
+  const offline = createAiSkillResolver({
+    baseUrl: 'http://ollama.test:11434',
+    fetcher: async () => new Response('', { status: 503 }),
+  })
+  for (const resolve of [disabled, offline]) {
+    const key = await resolve(['server-side engineer', 'BacEnd', 'Swift'], normalizeSkill)
+    assert.equal(key('server-side engineer'), 'server-side engineer')
+    assert.equal(key('BacEnd'), 'backend')
+    assert.equal(key('Swift'), 'swift')
   }
 })
 
