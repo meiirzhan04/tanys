@@ -461,8 +461,7 @@
   position: absolute;
   top: 22px;
   right: 22px;
-  color: var(--muted-soft);
-  font-family: var(--font-mono);
+  color: var(--muted);
   font-size: 12px;
   font-weight: 600;
 }
@@ -739,4 +738,19 @@
 }
 @media (prefers-reduced-motion: reduce) and (max-width: 760px) {
   .circuit__match { transform: none; }
+}
+
+/* Locale-stable sizing: reserve the space of the longest translation so nothing jumps on language switch */
+.hero-cta { min-width: 232px; }
+.hero-ghost { min-width: 262px; }
+.landing-org__cta { min-width: 312px; }
+.landing-step { min-height: 240px; }
+.circuit__match { min-height: 142px; }
+.landing-org__map-head span { min-height: 3em; line-height: 1.5; }
+@media (max-width: 1100px) {
+  .landing-step { min-height: 216px; }
+}
+@media (max-width: 600px) {
+  .hero-cta, .hero-ghost, .landing-org__cta { min-width: 0; width: 100%; }
+  .landing-step { min-height: 214px; }
 }

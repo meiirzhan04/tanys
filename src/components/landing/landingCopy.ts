@@ -53,7 +53,7 @@ export const landingCopy: Record<Locale, LandingCopy> = {
     titleLead: 'Нужные люди на митапе — ',
     titleAccent: 'за одну минуту',
     subtitle:
-      'Tanys подбирает пять взаимно полезных собеседников по цели, стеку и интересам, объясняет, почему вы подходите друг другу, и помогает договориться о 20-минутной встрече.',
+      'Tanys подбирает до пяти взаимно полезных собеседников по цели, стеку и интересам, объясняет, почему вы подходите друг другу, и помогает договориться о 20-минутной встрече.',
     ctaPrimary: 'Заполнить анкету',
     ctaSecondary: 'Войти по приглашению',
     trust: ['Демо без регистрации', 'Казахский, русский, английский', 'Контакты открываются только взаимно'],
@@ -67,7 +67,7 @@ export const landingCopy: Record<Locale, LandingCopy> = {
       people: [...people],
     },
     stats: [
-      { value: '5', label: 'собеседников с объяснением' },
+      { value: 'до 5', label: 'собеседников с объяснением' },
       { value: '< 1 с', label: 'на подбор после анкеты' },
       { value: '20 мин', label: 'слот встречи без пересечений' },
       { value: '3', label: 'языка интерфейса' },
@@ -77,7 +77,7 @@ export const landingCopy: Record<Locale, LandingCopy> = {
     howSubtitle: 'Никаких случайных знакомств: только люди, которым вы тоже нужны.',
     steps: [
       { title: 'Анкета за минуту', text: 'Цель знакомства, роль, опыт, стек и интересы — всё, что нужно для точного подбора.' },
-      { title: 'Пять взаимных совпадений', text: 'Учитываем, что нужно вам и что нужно собеседнику, и объясняем каждое совпадение.' },
+      { title: 'До пяти взаимных совпадений', text: 'Учитываем, что нужно вам и что нужно собеседнику, и объясняем каждое совпадение.' },
       { title: 'Первая фраза и знакомство', text: 'Готовая фраза для начала разговора. Контакт открывается, только когда согласны оба.' },
       { title: 'Встреча на 20 минут', text: 'Выбираете общий свободный слот — расписание само защищает от пересечений.' },
     ],
@@ -113,7 +113,7 @@ export const landingCopy: Record<Locale, LandingCopy> = {
     titleLead: 'Митаптағы керек адамдар — ',
     titleAccent: 'бір минутта',
     subtitle:
-      'Tanys мақсатыңыз, стегіңіз және қызығушылықтарыңыз бойынша өзара пайдалы бес адамды іріктейді, неге сәйкес келетініңізді түсіндіреді және 20 минуттық кездесуді белгілеуге көмектеседі.',
+      'Tanys мақсатыңыз, стегіңіз және қызығушылықтарыңыз бойынша өзара пайдалы бес адамға дейін іріктейді, неге сәйкес келетініңізді түсіндіреді және 20 минуттық кездесуді белгілеуге көмектеседі.',
     ctaPrimary: 'Анкетаны толтыру',
     ctaSecondary: 'Шақыру арқылы кіру',
     trust: ['Демо тіркеусіз', 'Қазақша, орысша, ағылшынша', 'Контакт тек өзара келісіммен ашылады'],
@@ -127,7 +127,7 @@ export const landingCopy: Record<Locale, LandingCopy> = {
       people: [...people],
     },
     stats: [
-      { value: '5', label: 'түсіндірмесі бар адам' },
+      { value: '5-ке дейін', label: 'түсіндірмесі бар адам' },
       { value: '< 1 с', label: 'анкетадан кейінгі іріктеу' },
       { value: '20 мин', label: 'қақтығыссыз кездесу слоты' },
       { value: '3', label: 'интерфейс тілі' },
@@ -137,7 +137,7 @@ export const landingCopy: Record<Locale, LandingCopy> = {
     howSubtitle: 'Кездейсоқ таныстық жоқ: тек сізге де мұқтаж адамдар.',
     steps: [
       { title: 'Бір минуттық анкета', text: 'Танысу мақсаты, рөл, тәжірибе, стек және қызығушылықтар — дәл іріктеуге керегінің бәрі.' },
-      { title: 'Бес өзара сәйкестік', text: 'Сізге не керегін де, әңгімелесушіге не керегін де ескеріп, әр сәйкестікті түсіндіреміз.' },
+      { title: 'Бес өзара сәйкестікке дейін', text: 'Сізге не керегін де, әңгімелесушіге не керегін де ескеріп, әр сәйкестікті түсіндіреміз.' },
       { title: 'Алғашқы сөз және танысу', text: 'Әңгімені бастауға дайын сөйлем. Контакт екі жақ келіскенде ғана ашылады.' },
       { title: '20 минуттық кездесу', text: 'Ортақ бос слотты таңдайсыз — кесте қақтығыстардан өзі қорғайды.' },
     ],
@@ -173,7 +173,7 @@ export const landingCopy: Record<Locale, LandingCopy> = {
     titleLead: 'The right people at the meetup — ',
     titleAccent: 'in one minute',
     subtitle:
-      'Tanys picks five mutually useful people by goal, stack and interests, explains why you fit each other, and helps you book a 20-minute meeting.',
+      'Tanys picks up to five mutually useful people by goal, stack and interests, explains why you fit each other, and helps you book a 20-minute meeting.',
     ctaPrimary: 'Fill in the profile',
     ctaSecondary: 'Sign in with an invite',
     trust: ['Demo without sign-up', 'Kazakh, Russian, English', 'Contacts unlock only mutually'],
@@ -187,7 +187,7 @@ export const landingCopy: Record<Locale, LandingCopy> = {
       people: [...people],
     },
     stats: [
-      { value: '5', label: 'matches with a reason' },
+      { value: 'up to 5', label: 'matches with a reason' },
       { value: '< 1 s', label: 'to match after the profile' },
       { value: '20 min', label: 'conflict-free meeting slot' },
       { value: '3', label: 'interface languages' },
@@ -197,7 +197,7 @@ export const landingCopy: Record<Locale, LandingCopy> = {
     howSubtitle: 'No random intros: only people who need you too.',
     steps: [
       { title: 'One-minute profile', text: 'Goal, role, experience, stack and interests — everything precise matching needs.' },
-      { title: 'Five mutual matches', text: 'We weigh what you need and what the other person needs, and explain every match.' },
+      { title: 'Up to five mutual matches', text: 'We weigh what you need and what the other person needs, and explain every match.' },
       { title: 'First line and intro', text: 'A ready opening line. Contacts unlock only when both sides agree.' },
       { title: 'A 20-minute meeting', text: 'Pick a shared free slot — the schedule prevents conflicts for you.' },
     ],
