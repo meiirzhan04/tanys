@@ -9,6 +9,14 @@ npm run dev
 
 Откройте адрес из терминала. Проверка перед PR — `npm run build`.
 
+## Docker Compose
+
+```sh
+docker compose up --build
+```
+
+Откройте `http://localhost:8080`. Для остановки выполните `docker compose down`.
+
 - [Архитектура и параллельная работа](docs/architecture.md)
 - [Правила для агентов](AGENTS.md)
 - [Задачи команды](https://github.com/meiirzhan04/tanys/issues)
