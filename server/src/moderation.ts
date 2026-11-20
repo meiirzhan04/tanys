@@ -101,11 +101,14 @@ export async function moderationRoute(req: IncomingMessage, res: ServerResponse,
   if (isReportsCollection && req.method === 'GET') {
     if (role !== 'organizer') throw new HttpError(403, 'organizer_required')
     const result = await pool.query(
-      `SELECT id, subject_id AS "subjectId", reason, details, status, action,
-              resolved_by AS "resolvedBy", resolved_at AS "resolvedAt", created_at AS "createdAt"
-       FROM event_reports
-       WHERE event_id = $1
-       ORDER BY (status = 'open') DESC, created_at DESC`,
+      `SELECT r.id, r.subject_id AS "subjectId", COALESCE(p.name, u.username) AS "subjectName",
+              r.reason, r.details, r.status, r.action,
+              r.resolved_by AS "resolvedBy", r.resolved_at AS "resolvedAt", r.created_at AS "createdAt"
+       FROM event_reports r
+       LEFT JOIN users u ON u.id = r.subject_id
+       LEFT JOIN event_profiles p ON p.event_id = r.event_id AND p.user_id = r.subject_id AND p.visible
+       WHERE r.event_id = $1
+       ORDER BY (r.status = 'open') DESC, r.created_at DESC`,
       [eventId],
     )
     json(res, 200, { items: result.rows, nextCursor: null })
@@ -132,11 +135,16 @@ export async function moderationRoute(req: IncomingMessage, res: ServerResponse,
       const row = existing.rows[0] as { id: string; subject_id: string; reason: string }
 
       const resRow = await client.query(
-        `UPDATE event_reports
+        `UPDATE event_reports AS r
          SET status = 'resolved', action = $1, resolved_by = $2, resolved_at = now()
-         WHERE id = $3 AND event_id = $4
-         RETURNING id, subject_id AS "subjectId", reason, details, status, action,
-                   resolved_by AS "resolvedBy", resolved_at AS "resolvedAt", created_at AS "createdAt"`,
+         WHERE r.id = $3 AND r.event_id = $4
+         RETURNING r.id, r.subject_id AS "subjectId",
+                   (SELECT COALESCE(p.name, u.username)
+                    FROM users u
+                    LEFT JOIN event_profiles p ON p.event_id = r.event_id AND p.user_id = r.subject_id AND p.visible
+                    WHERE u.id = r.subject_id) AS "subjectName",
+                   r.reason, r.details, r.status, r.action,
+                   r.resolved_by AS "resolvedBy", r.resolved_at AS "resolvedAt", r.created_at AS "createdAt"`,
         [action, userId, reportId, eventId],
       )
 

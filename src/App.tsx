@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react'
-import { isAccountRoute, parseInviteLocation, savePendingInvite } from './api/inviteRoute'
+import {
+  isAccountRoute,
+  parseInviteLocation,
+  saveAccountModePreference,
+  savePendingInvite,
+  syncAccountLocationUrl,
+} from './api/inviteRoute'
 import { EventAccountFlow } from './components/EventAccountFlow'
 import { InterestMap } from './components/InterestMap'
 import { SchedulePanel } from './components/MeetingSlots'
@@ -61,6 +67,12 @@ export default function App() {
   }, [locale])
 
   useEffect(() => {
+    if (mode !== 'account') return
+    saveAccountModePreference(true)
+    syncAccountLocationUrl(true)
+  }, [mode])
+
+  useEffect(() => {
     if (view === 'results') document.getElementById('results-title')?.focus()
     if (view === 'interests') document.getElementById('interest-map-title')?.focus()
   }, [session?.input, view])
@@ -117,6 +129,8 @@ export default function App() {
                 if (mode === 'account') {
                   setExitRequestSeq(current => current + 1)
                 } else {
+                  saveAccountModePreference(true)
+                  syncAccountLocationUrl(true)
                   setMode('account')
                 }
               }}
@@ -144,6 +158,8 @@ export default function App() {
           exitRequestSeq={exitRequestSeq}
           onExitToDemo={() => {
             savePendingInvite(null)
+            saveAccountModePreference(false)
+            syncAccountLocationUrl(false)
             setMode('demo')
           }}
         />

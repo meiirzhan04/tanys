@@ -34,9 +34,10 @@ async function common(client: pg.PoolClient, event: string, pair: Pair) {
 
 const meetingList = `SELECT m.id,i.id AS "introductionId",m.starts_at AS start,m.ends_at AS end,m.status,
   CASE WHEN m.proposer=$2 THEN 'outgoing' ELSE 'incoming' END AS direction,
-  p.name AS "participantName",p.role AS "participantRole"
+  COALESCE(NULLIF(btrim(p.name),''),u.username) AS "participantName",p.role AS "participantRole"
   FROM meetings m JOIN introductions i ON i.id=m.introduction_id
   LEFT JOIN event_profiles p ON p.event_id=i.event_id AND p.visible AND p.user_id=CASE WHEN i.sender=$2 THEN i.recipient ELSE i.sender END
+  LEFT JOIN users u ON u.id=CASE WHEN i.sender=$2 THEN i.recipient ELSE i.sender END
   WHERE i.event_id=$1 AND $2 IN(i.sender,i.recipient) AND ${allowedPair}`
 
 export async function meetingRoute(req: IncomingMessage, res: ServerResponse, path: string) {

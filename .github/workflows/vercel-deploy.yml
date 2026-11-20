@@ -36,12 +36,27 @@ jobs:
           vercel build --token="$VERCEL_TOKEN"
       - name: Deploy to Vercel
         run: |
+          set +e
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            URL="$(vercel deploy --prebuilt --token="$VERCEL_TOKEN")"
-            echo "### Vercel Preview" >> "$GITHUB_STEP_SUMMARY"
+            vercel deploy --prebuilt --token="$VERCEL_TOKEN" >/tmp/deploy.out 2>/tmp/deploy.err
+            STATUS=$?
+            TITLE="### Vercel Preview"
           else
-            URL="$(vercel deploy --prod --yes --token="$VERCEL_TOKEN")"
-            echo "### Vercel Production" >> "$GITHUB_STEP_SUMMARY"
+            vercel deploy --prod --yes --token="$VERCEL_TOKEN" >/tmp/deploy.out 2>/tmp/deploy.err
+            STATUS=$?
+            TITLE="### Vercel Production"
           fi
+          set -e
+          cat /tmp/deploy.err >&2
+          cat /tmp/deploy.out
+          if [ "$STATUS" -ne 0 ]; then
+            if grep -q 'api-deployments-free-per-day' /tmp/deploy.err /tmp/deploy.out; then
+              echo "$TITLE skipped: Vercel free daily deployment quota reached" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            exit "$STATUS"
+          fi
+          URL="$(tail -n 1 /tmp/deploy.out)"
+          echo "$TITLE" >> "$GITHUB_STEP_SUMMARY"
           echo "Deployed URL: $URL" >> "$GITHUB_STEP_SUMMARY"
           echo "Deployed URL: $URL"

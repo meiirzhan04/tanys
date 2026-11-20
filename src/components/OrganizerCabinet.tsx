@@ -19,7 +19,7 @@ import { getGoalLabels } from './goalLabels'
 import { InterestMap } from './InterestMap'
 import { buildInviteUrl, getInviteState } from './inviteQr'
 import { InviteQrModal } from './InviteQrModal'
-import { filterEventMembers } from './memberSearch'
+import { filterEventMembers, getMemberDisplayName } from './memberSearch'
 
 export interface OrganizerCabinetProps {
   api: TanysApiClient
@@ -545,7 +545,7 @@ export function OrganizerCabinet({
                     <tbody>
                       {filteredMembers.map(member => (
                         <tr key={member.userId} data-member-id={member.userId}>
-                          <th scope="row">{member.name || member.userId}</th>
+                          <th scope="row">{getMemberDisplayName(member)}</th>
                           <td>{member.profileRole || (member.role === 'organizer' ? o.roleOrganizer : o.roleParticipant)}</td>
                           <td>{member.goal ? goalLabels[member.goal] : '—'}</td>
                           <td>

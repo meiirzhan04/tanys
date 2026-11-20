@@ -8,10 +8,11 @@ export const allowedPair = `NOT EXISTS (SELECT 1 FROM event_blocks b WHERE b.eve
   AND NOT EXISTS (SELECT 1 FROM event_restrictions r WHERE r.event_id=i.event_id AND r.user_id IN (i.sender,i.recipient))`
 const selection = `SELECT i.id,i.status,i.created_at AS "createdAt",i.updated_at AS "updatedAt",
   CASE WHEN i.sender=$2 THEN 'outgoing' ELSE 'incoming' END AS direction,
-  p.user_id AS "participantId",p.name AS "participantName",p.role AS "participantRole",
+  p.user_id AS "participantId",COALESCE(NULLIF(btrim(p.name),''),u.username) AS "participantName",p.role AS "participantRole",
   CASE WHEN i.status='accepted' THEN c.value END AS contact
   FROM introductions i JOIN event_profiles p ON p.event_id=i.event_id AND p.visible
     AND p.user_id=CASE WHEN i.sender=$2 THEN i.recipient ELSE i.sender END
+  LEFT JOIN users u ON u.id=p.user_id
   LEFT JOIN user_contacts c ON c.user_id=p.user_id
   WHERE i.event_id=$1 AND $2 IN (i.recipient,i.sender) AND ${allowedPair}`
 

@@ -9,8 +9,10 @@ import {
 } from './client.ts'
 import {
   isAccountRoute,
+  loadAccountModePreference,
   loadPendingInvite,
   parseInviteLocation,
+  saveAccountModePreference,
   savePendingInvite,
 } from './inviteRoute.ts'
 
@@ -47,6 +49,27 @@ describe('parseInviteLocation & pending invite storage', () => {
 
     savePendingInvite(null, storage)
     assert.equal(loadPendingInvite(storage), null)
+  })
+
+  it('persists account mode across page reloads and clears on exit to demo (#117)', () => {
+    const map = new Map<string, string>()
+    const storage = {
+      getItem: (key: string) => map.get(key) ?? null,
+      setItem: (key: string, value: string) => { map.set(key, value) },
+      removeItem: (key: string) => { map.delete(key) },
+    }
+
+    assert.equal(loadAccountModePreference(storage), false)
+    assert.equal(isAccountRoute('/', '', storage), false)
+
+    saveAccountModePreference(true, storage)
+    assert.equal(loadAccountModePreference(storage), true)
+    assert.equal(isAccountRoute('/', '', storage), true)
+    assert.equal(isAccountRoute('/', '', null), false)
+
+    saveAccountModePreference(false, storage)
+    assert.equal(loadAccountModePreference(storage), false)
+    assert.equal(isAccountRoute('/', '', storage), false)
   })
 })
 

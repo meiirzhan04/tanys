@@ -55,6 +55,8 @@ test('provides complete, distinct translations for ru, kk, and en', () => {
     assert.ok(messages.moderation.blockButton.trim())
     assert.ok(messages.moderation.reportedNotice.trim())
     assert.ok(messages.moderation.supportNotice.trim())
+    assert.equal(messages.moderation.supportNotice.includes('tanys.hrr@gmail.com'), true, `expected updated support email in ${code}`)
+    assert.equal(messages.moderation.supportNotice.includes('support@tanys.kz'), false, `old support email remains in ${code}`)
   }
 
   assert.notEqual(messagesByLocale.ru.form.title, messagesByLocale.kk.form.title)
