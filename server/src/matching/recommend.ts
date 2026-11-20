@@ -224,17 +224,21 @@ const jobTitleWords = new Set([
   'developer', 'dev', 'engineer', 'programmer', 'разработчик', 'программист', 'инженер', 'әзірлеуші', 'инженері', 'бағдарламашы',
 ])
 const minTypoSkillLength = 6
+const hiringTitleModifiers = new Set(['lead', 'staff', 'аға', 'ведущий'])
 
 function titleWords(value: string): string[] {
   return normalizeTopic(value).split(/[\s\u2010-\u2015-]+/).filter(word => word && !seniorityWords.has(word))
 }
 
 /** Returns the known role group of a free-text role, ignoring seniority, or undefined. */
-function roleGroupOf(value: string): string | undefined {
+function roleGroupOf(value: string, skillKey?: (value: string) => string): string | undefined {
   const words = titleWords(value)
   if (!words.length) return undefined
-  const key = normalizeSkill(words.join(' '))
-  return Object.hasOwn(roleGroups, key) ? key : undefined
+  const specialization = skillKey ? words.filter(word => !hiringTitleModifiers.has(word)) : words
+  const key = normalizeSkill(specialization.join(' '))
+  if (Object.hasOwn(roleGroups, key)) return key
+  const approved = skillKey?.(value)
+  return approved && Object.hasOwn(roleGroups, approved) ? approved : undefined
 }
 
 interface ParsedRequest {
@@ -246,12 +250,12 @@ interface ParsedRequest {
 }
 
 /** Splits "looking for" entries into roles ("Backend Developer") and required technologies ("Python Developer" -> python). */
-function parseRequest(values: readonly string[] = []): ParsedRequest {
+function parseRequest(values: readonly string[] = [], skillKey?: (value: string) => string): ParsedRequest {
   const parsed: ParsedRequest = { targets: [], technologies: [], roles: new Set() }
   for (const raw of values) {
     const value = raw.trim()
     if (!value) continue
-    const role = roleGroupOf(value)
+    const role = roleGroupOf(value, skillKey)
     if (role) {
       parsed.roles.add(role)
       parsed.targets.push(value)
@@ -282,7 +286,7 @@ function hiringMatchFor(
   broaderSkills?: ReadonlyMap<string, string>,
 ) {
   const needs = matchingTopics(applicantSkills, request.targets, skillKey, broaderSkills, true)
-  const applicantGroup = roleGroupOf(applicantRole)
+  const applicantGroup = roleGroupOf(applicantRole, skillKey)
   const roleMatch = applicantGroup !== undefined && request.roles.has(applicantGroup)
   const coversRequestedRole = applicantGroup === 'fullstack' && (request.roles.has('backend') || request.roles.has('frontend'))
   const roleConflict = request.roles.size > 0 && applicantGroup !== undefined && !roleMatch && !coversRequestedRole
@@ -299,10 +303,10 @@ function makeIcebreaker(goal: Goal, candidate: Candidate, locale: Locale, topic:
   return templates.formatIcebreaker(formatIcebreakerName(candidate.name), topic, templates.icebreakerQuestions[goal])
 }
 
-function matchingRequestedRole(applicantRole: string, requested: readonly string[]): string | undefined {
-  const role = roleGroupOf(applicantRole)
+function matchingRequestedRole(applicantRole: string, requested: readonly string[], skillKey: (value: string) => string): string | undefined {
+  const role = roleGroupOf(applicantRole, skillKey)
   if (!role) return undefined
-  return requested.find(value => roleGroupOf(value) === role)?.trim()
+  return requested.find(value => roleGroupOf(value, skillKey) === role)?.trim()
 }
 
 function isTypoCandidate(key: string): boolean {
@@ -354,9 +358,10 @@ function scoreCandidate(
 ) {
   const isCofounder = input.goal === 'find_cofounder'
   const broaderSkills = isCofounder ? broaderCofounderSkills : undefined
-  const candidateRequest = parseRequest(candidate.lookingFor)
-  const inputRequest = parseRequest(input.lookingFor)
   const isHiring = input.goal === 'hire' || input.goal === 'find_job'
+  const hiringKey = isHiring ? skillKey : undefined
+  const candidateRequest = parseRequest(candidate.lookingFor, hiringKey)
+  const inputRequest = parseRequest(input.lookingFor, hiringKey)
   let candidateNeeds = matchingTopics(input.skills, candidateRequest.targets, skillKey, broaderSkills, isHiring)
   let participantNeeds = matchingTopics(candidate.skills, inputRequest.targets, skillKey, broaderSkills, isHiring)
   const sharedSkills = matchingTopics(candidate.skills, input.skills, skillKey)
@@ -375,7 +380,7 @@ function scoreCandidate(
     else candidateNeeds = verdict.needs
     hiringMatch = request.targets.length ? verdict.needs : sharedSkills
     if (verdict.roleMatch) {
-      roleMatch = employerSide ? candidate.role.trim() : matchingRequestedRole(input.role, candidate.lookingFor ?? [])
+      roleMatch = employerSide ? candidate.role.trim() : matchingRequestedRole(input.role, candidate.lookingFor ?? [], skillKey)
     }
     if (!request.targets.length && !hiringMatch.length) return null
   }
