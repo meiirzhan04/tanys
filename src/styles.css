@@ -1509,14 +1509,3 @@ p { text-wrap: pretty; }
   .admin-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .booths-grid { grid-template-columns: minmax(0, 1fr); }
 }
-
-.account-profile-form fieldset {
-  display: grid;
-  gap: 1rem;
-  min-width: 0;
-  padding: 0;
-  margin: 0;
-  border: 0;
-}
-.account-profile-form label { display: grid; gap: .35rem; }
-.account-profile-form button { justify-self: start; }

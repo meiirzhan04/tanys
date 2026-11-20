@@ -260,3 +260,79 @@
   .profile-page,
   .profile-score__value { animation: none; }
 }
+
+.account-settings {
+  display: grid;
+  gap: clamp(16px, 2vw, 24px);
+  container-type: inline-size;
+}
+.account-settings__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0 12px;
+}
+.account-settings__header h1 { font-size: clamp(30px, 4vw, 44px); line-height: 1.12; }
+.account-settings__header p { margin-top: 8px; color: var(--muted); overflow-wrap: anywhere; }
+.account-settings__header strong { color: var(--ink); }
+.account-initial {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 54px;
+  height: 54px;
+  border: 1px solid var(--accent-border);
+  border-radius: 50%;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: 22px;
+  font-weight: 650;
+}
+.account-settings__grid { display: grid; gap: 20px; align-items: start; }
+.account-settings .profile-card {
+  padding: clamp(20px, 3cqi, 32px);
+  min-width: 0;
+  gap: 12px;
+}
+.account-settings .profile-card h2 { font-size: 21px; line-height: 1.25; }
+.account-settings .profile-card > p { font-size: 14px; line-height: 1.6; max-width: 62ch; overflow-wrap: anywhere; }
+.account-profile-form fieldset {
+  display: grid;
+  gap: 20px 16px;
+  min-width: 0;
+  margin: 8px 0 0;
+  border: 0;
+  padding: 0;
+}
+.account-profile-form textarea { resize: vertical; min-height: 110px; }
+.account-save {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+.account-save span { color: var(--success-text); font-size: 14px; }
+.account-settings .profile-contact-form { gap: 12px; }
+.account-settings .profile-contact-form button { justify-self: start; }
+.account-import__controls, .account-settings .profile-danger__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.account-settings .event-toolbar { margin: 0; padding: 0; border: 0; background: none; box-shadow: none; min-width: 0; max-width: 100%; }
+.account-settings .event-picker, .account-settings .event-picker select { min-width: 0; max-width: 100%; }
+.account-settings .profile-danger { border-color: var(--line); }
+.account-settings .profile-danger__actions button { width: auto; }
+@container (min-width: 740px) {
+  .account-settings__grid { grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr); }
+  .account-profile-form fieldset { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (max-width: 480px) {
+  .account-settings .profile-danger__actions { display: grid; }
+  .account-settings .profile-danger__actions button { width: 100%; }
+}
