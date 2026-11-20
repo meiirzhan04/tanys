@@ -5,7 +5,6 @@ import { RecommendationResults } from './components/RecommendationResults'
 import profiles from './data/profiles.json'
 import { resolveAppCandidates } from './data/loadCandidates'
 import { previewProfiles, sampleProfile } from './data/previewProfiles'
-import { recommend } from './matching/recommend'
 import { recordRecommendationFeedback, startRecommendationSession } from './matching/session'
 import type { Feedback, RecommendationSession } from './matching/session'
 import type { Candidate, ProfileInput } from './matching/types'
@@ -14,7 +13,7 @@ import type { MeetingBooking } from './scheduling/slots'
 import './styles.css'
 
 const candidates: readonly Candidate[] = resolveAppCandidates(profiles, previewProfiles)
-const sample = recommend(sampleProfile, candidates)[0]
+type View = 'profile' | 'results' | 'schedule'
 
 function getResultsMessage(session: RecommendationSession): string {
   const count = session.recommendations.length
@@ -28,17 +27,17 @@ function getResultsMessage(session: RecommendationSession): string {
 }
 
 export default function App() {
-  const [profile, setProfile] = useState<ProfileInput>()
+  const [view, setView] = useState<View>('profile')
   const [session, setSession] = useState<RecommendationSession>()
   const [bookings, setBookings] = useState<MeetingBooking[]>(() => loadBookings())
 
   useEffect(() => {
-    if (session) document.getElementById('results-title')?.focus()
-  }, [session])
+    if (view === 'results') document.getElementById('results-title')?.focus()
+  }, [session, view])
 
-  function submit(nextProfile: ProfileInput) {
-    setProfile(nextProfile)
-    setSession(startRecommendationSession(nextProfile, candidates))
+  function submit(profile: ProfileInput) {
+    setSession(startRecommendationSession(profile, candidates))
+    setView('results')
   }
 
   function handleFeedback(id: string, response: Feedback) {
@@ -66,48 +65,42 @@ export default function App() {
     <>
       <header className="site-header">
         <div className="site-width header-inner">
-          <span className="brand"><span className="brand-mark" aria-hidden="true" />Tanys</span>
-          <span className="demo-status"><span aria-hidden="true" />Демо · вымышленные анкеты</span>
+          <span className="brand"><span className="brand-mark" aria-hidden="true">T</span>Tanys</span>
+          <span className="header-context">Нетворкинг на митапе</span>
+          <span className="demo-status">Вымышленные анкеты</span>
         </div>
       </header>
 
-      <main className="site-width main-content">
-        {session ? <RecommendationResults
-          recommendations={session.recommendations}
-          onEdit={() => setSession(undefined)}
-          onFeedback={handleFeedback}
-          message={getResultsMessage(session)}
-          bookings={bookings}
-          onBookSlot={handleBookSlot}
-          onCancelSlot={handleCancelSlot}
-        /> : <>
-          <div className="intro">
-            <h1>С кем познакомиться<br className="intro-break" /> на митапе?</h1>
-            <p>Заполните анкету, чтобы получить до пяти рекомендаций для знакомства.</p>
+      <div className="site-width workspace">
+        <nav className="workspace-nav" aria-label="Разделы Tanys">
+          <button type="button" aria-current={view === 'profile' ? 'page' : undefined} onClick={() => setView('profile')}>Анкета</button>
+          <button type="button" disabled={!session} aria-current={view === 'results' ? 'page' : undefined} onClick={() => setView('results')}>
+            Рекомендации {session && <span className="nav-count">{session.recommendations.length}</span>}
+          </button>
+          <button type="button" aria-current={view === 'schedule' ? 'page' : undefined} onClick={() => setView('schedule')}>
+            Встречи <span className="nav-count">{bookings.length}</span>
+          </button>
+        </nav>
+
+        <main className="main-content">
+          <div hidden={view !== 'profile'}>
+            <ProfileForm onSubmit={submit} example={sampleProfile} />
           </div>
-          <div className="workspace">
-            <ProfileForm initialProfile={profile} onSubmit={submit} example={sampleProfile} />
-            {sample && <aside className="sample-panel" aria-labelledby="sample-title">
-              <div className="sample-kicker">Пример рекомендации</div>
-              <h2 id="sample-title">Первая встреча<br /> на митапе</h2>
-              <div className="connection" aria-hidden="true">
-                <span className="connection-node">Вы</span>
-                <span className="connection-line" />
-                <span className="connection-node connection-match">{sample.candidate.name[0]}</span>
-              </div>
-              <div className="sample-detail">
-                <div className="sample-name">{sample.candidate.name}</div>
-                <div className="sample-role">{sample.candidate.role}</div>
-                <ul className="skill-list" aria-label="Навыки для вакансии">
-                  {sample.candidate.lookingFor?.map(skill => <li key={skill}>{skill}</li>)}
-                </ul>
-                <p>{sample.explanation}</p>
-              </div>
-            </aside>}
-          </div>
-          {bookings.length > 0 && <SchedulePanel bookings={bookings} onCancel={handleCancelSlot} />}
-        </>}
-      </main>
+          {view === 'results' && session && <RecommendationResults
+            recommendations={session.recommendations}
+            onEdit={() => setView('profile')}
+            onFeedback={handleFeedback}
+            message={getResultsMessage(session)}
+            bookings={bookings}
+            onBookSlot={handleBookSlot}
+            onCancelSlot={handleCancelSlot}
+          />}
+          {view === 'schedule' && <>
+            <div className="page-heading"><h1>Встречи</h1></div>
+            <SchedulePanel bookings={bookings} onCancel={handleCancelSlot} />
+          </>}
+        </main>
+      </div>
     </>
   )
 }
