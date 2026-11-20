@@ -14,6 +14,7 @@ const token = (req: IncomingMessage) =>
   req.headers.cookie?.split(';').map(part => part.trim()).find(part => part.startsWith('tanys_session='))?.slice(14)
 
 export async function viewer(req: IncomingMessage): Promise<string> {
+  if (!token(req)) throw new HttpError(401, 'session_required')
   const result = await pool.query('SELECT user_id FROM sessions WHERE digest=$1 AND expires_at>now()', [sha(token(req) || '')])
   if (!result.rowCount) throw new HttpError(401, 'session_required')
   return result.rows[0].user_id

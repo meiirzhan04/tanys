@@ -160,6 +160,7 @@ export interface Messages {
       rateLimited: string
       invalidCode: string
       genericSave: string
+      authUnavailable: string
       genericRequest: string
     }
   }
@@ -464,6 +465,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
         rateLimited: 'Слишком много запросов. Подождите немного и повторите попытку.',
         invalidCode: 'Неверный или истёкший код. Проверьте код или запросите новый.',
         genericSave: 'Не удалось сохранить анкету. Введённые данные сохранены на экране.',
+        authUnavailable: 'Сервер входа временно недоступен. Вы можете вернуться в демо и попробовать войти позже.',
         genericRequest: 'Произошла ошибка. Попробуйте повторить действие.',
       },
     },
@@ -766,6 +768,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
         rateLimited: 'Сұраулар тым көп. Сәл күтіп, қайта көріңіз.',
         invalidCode: 'Код қате немесе мерзімі өткен. Кодты тексеріңіз немесе жаңасын сұраңыз.',
         genericSave: 'Анкетаны сақтау мүмкін болмады. Енгізілген деректер экранда сақталды.',
+        authUnavailable: 'Кіру сервері уақытша қолжетімсіз. Демоға оралып, кейінірек қайта кіріп көріңіз.',
         genericRequest: 'Қате орын алды. Әрекетті қайталап көріңіз.',
       },
     },
@@ -1068,6 +1071,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
         rateLimited: 'Too many requests. Please wait a moment and try again.',
         invalidCode: 'Invalid or expired code. Check the code or request a new one.',
         genericSave: 'Could not save your profile. Your entered fields are preserved on screen.',
+        authUnavailable: 'Sign-in is temporarily unavailable. Return to the demo or try signing in later.',
         genericRequest: 'Something went wrong. Please try again.',
       },
     },

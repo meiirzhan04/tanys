@@ -113,12 +113,13 @@ function validateDraft(draft: EventProfileDraft, locale: Locale): ProfileErrors 
   return errors
 }
 
-function formatApiError(error: unknown, locale: Locale, context: 'auth' | 'save' | 'general'): string {
+function formatApiError(error: unknown, locale: Locale, context: 'authService' | 'auth' | 'save' | 'general'): string {
   const err = getMessages(locale).account.errors
   if (isNetworkError(error)) {
     return context === 'save' ? err.networkSavePreserved : err.networkGeneral
   }
   if (isApiError(error)) {
+    if (context === 'authService' && [404, 503].includes(error.status)) return err.authUnavailable
     if (error.status === 401) {
       return context === 'auth' ? err.invalidCode : err.sessionExpired
     }
@@ -248,7 +249,7 @@ export function EventAccountFlow({
       if (isApiError(error) && error.status === 401) {
         setUser(null)
         setPhase('auth')
-        setAuthError(formatApiError(error, locale, 'general'))
+        setAuthError(formatApiError(error, locale, 'authService'))
         return
       }
       // Keep existing state intact if background refresh fails (e.g., backend #52/#53 not yet mounted).
@@ -295,7 +296,7 @@ export function EventAccountFlow({
       if (isApiError(error) && error.status === 401) {
         setUser(null)
         setPhase('auth')
-        setAuthError(formatApiError(error, locale, 'general'))
+        setAuthError(formatApiError(error, locale, 'authService'))
         return
       }
       setEventError(formatApiError(error, locale, 'general'))
@@ -315,7 +316,7 @@ export function EventAccountFlow({
         if (isApiError(error) && error.status === 401) {
           setUser(null)
           setPhase('auth')
-          setAuthError(formatApiError(error, locale, 'general'))
+          setAuthError(formatApiError(error, locale, 'authService'))
           return
         }
         if (isInviteExpiredError(error)) {
@@ -353,7 +354,7 @@ export function EventAccountFlow({
       if (isApiError(error) && error.status === 401) {
         setUser(null)
         setPhase('auth')
-        setAuthError(formatApiError(error, locale, 'general'))
+        setAuthError(formatApiError(error, locale, 'authService'))
         return
       }
       setEventError(formatApiError(error, locale, 'general'))
@@ -378,7 +379,7 @@ export function EventAccountFlow({
         if (cancelled) return
         setUser(null)
         setPhase('auth')
-        setAuthError(formatApiError(error, locale, 'general'))
+        setAuthError(formatApiError(error, locale, 'authService'))
       }
     }
     void bootstrap()
@@ -441,7 +442,7 @@ export function EventAccountFlow({
       setChallengeId(result.challengeId)
       setCode('')
     } catch (error) {
-      setAuthError(formatApiError(error, locale, 'auth'))
+      setAuthError(formatApiError(error, locale, 'authService'))
     } finally {
       setAuthBusy(false)
     }
@@ -544,7 +545,7 @@ export function EventAccountFlow({
       if (isApiError(error) && error.status === 401) {
         setUser(null)
         setPhase('auth')
-        setAuthError(formatApiError(error, locale, 'general'))
+        setAuthError(formatApiError(error, locale, 'authService'))
         return
       }
       setEventError(formatApiError(error, locale, 'general'))
