@@ -11,6 +11,7 @@ import type {
   ModerationAction,
   TanysApiClient,
 } from '../api/client'
+import { buildInterestCsvFilename, serializeInterestMapCsv } from '../data/interestCsv'
 import type { InterestSummary } from '../data/interestSummary'
 import { getMessages } from '../i18n/messages'
 import type { Locale } from '../matching/types'
@@ -336,6 +337,24 @@ export function OrganizerCabinet({
   }
 
   const isClosed = activeEvent?.status === 'closed'
+  const interestSummary = toInterestSummary(interests, members.length)
+
+  function handleExportInterestsCsv() {
+    if (!activeEvent || interestSummary.topics.length === 0) return
+    const csv = serializeInterestMapCsv(interestSummary.topics, {
+      topic: messages.interestMap.topic,
+      participants: messages.interestMap.participants,
+    })
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = buildInterestCsvFilename(activeEvent.name || activeEvent.id, activeEvent.id)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <section className="organizer-section" aria-labelledby="organizer-title">
@@ -519,7 +538,11 @@ export function OrganizerCabinet({
           </div>
 
           {/* 5. Real event interest map (#12 connected to event aggregates, zero demo profiles) */}
-          <InterestMap summary={toInterestSummary(interests, members.length)} locale={locale} />
+          <InterestMap
+            summary={interestSummary}
+            locale={locale}
+            onExportCsv={handleExportInterestsCsv}
+          />
 
           {/* 6. Managed partner booths (#14 connected to event booths, zero demo booths) */}
           <div className="surface organizer-card">
