@@ -31,9 +31,9 @@ import { recommendBooths } from '../data/booths'
 import type { PartnerBooth } from '../data/booths'
 import { getMessages } from '../i18n/messages'
 import type { Feedback } from '../matching/session'
-import type { Goal, Locale, Recommendation } from '../matching/types'
+import type { Locale, Recommendation } from '../matching/types'
 import { CustomSelect } from './CustomSelect'
-import { getGoalLabels } from './goalLabels'
+import { EventQuestionnaireFields, validateDraft, usesLookingFor } from './profile/EventQuestionnaireFields'
 import { ConfirmDialog } from './profile/ConfirmDialog'
 import { accountLabels } from './profile/accountLabels'
 import { AccountProfilePanel } from './profile/AccountProfilePanel'
@@ -57,8 +57,6 @@ import type { SocialNotification } from './socialHelpers'
 import { IntroductionsPanel, NotificationBanner, ServerMeetingsPanel } from './SocialPanels'
 import { UnsavedChangesDialog } from './UnsavedChangesDialog'
 
-type ProfileErrorField = 'name' | 'goal' | 'role' | 'experience' | 'skills' | 'interests' | 'about' | 'consent'
-type ProfileErrors = Partial<Record<ProfileErrorField, string>>
 const RECOMMENDATIONS_REFRESH_MS = 15_000
 type EventTab = 'profile' | 'results' | 'introductions' | 'meetings' | 'organizer' | 'me'
 
@@ -96,25 +94,6 @@ function profileToDraft(profile: ServerProfile | null): EventProfileDraft {
 
 function parseTopics(value: string): string[] {
   return parseProfileTopics(value)
-}
-
-function validateDraft(draft: EventProfileDraft, locale: Locale): ProfileErrors {
-  const formErrors = getMessages(locale).form.errors
-  const accountErrors = getMessages(locale).account.errors
-  const errors: ProfileErrors = {}
-  const experience = Number(draft.experience)
-
-  if (!draft.name.trim()) errors.name = accountErrors.nameRequired
-  if (!draft.goal) errors.goal = formErrors.goal
-  if (!draft.role.trim()) errors.role = formErrors.role
-  if (!draft.experience || !Number.isInteger(experience) || experience < 0 || experience > 60) {
-    errors.experience = formErrors.experience
-  }
-  if (!parseTopics(draft.skills).length) errors.skills = formErrors.skills
-  if (!parseTopics(draft.interests).length) errors.interests = formErrors.interests
-  if (!draft.about.trim()) errors.about = formErrors.about
-  if (!draft.consentAccepted) errors.consent = accountErrors.consentRequired
-  return errors
 }
 
 function formatApiError(error: unknown, locale: Locale, context: 'authService' | 'auth' | 'save' | 'general'): string {
@@ -159,8 +138,6 @@ export function EventAccountFlow({
     (window.location.pathname.startsWith('/invite/') && !initialInvite?.token)
   const messages = getMessages(locale)
   const t = messages.account
-  const formText = messages.form
-  const goalLabels = getGoalLabels(locale)
 
   const [pendingInvite, setPendingInvite] = useState<InviteTarget | null>(() => {
     const resolved = initialInvite ?? loadPendingInvite()
@@ -213,6 +190,18 @@ export function EventAccountFlow({
   const [loadingSlotsIntroId, setLoadingSlotsIntroId] = useState('')
   const [proposingSlotKey, setProposingSlotKey] = useState('')
   const [contactValue, setContactValue] = useState('')
+  const [contactState, setContactState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const contactRevision = useRef(0)
+  const loadContact = useCallback(async () => {
+    const revision = ++contactRevision.current
+    setContactState('loading')
+    try {
+      const value = await api.getContact()
+      if (revision !== contactRevision.current) return
+      setContactValue(value ?? '')
+      setContactState('ready')
+    } catch { if (revision === contactRevision.current) setContactState('error') }
+  }, [api])
   const endingSession = useRef(false)
   const redirectToLogin = useCallback(() => {
     endingSession.current = true
@@ -355,7 +344,8 @@ export function EventAccountFlow({
   const enterAuthenticated = useCallback(async (invite: InviteTarget | null, preserveDraft = false) => {
     accountCache.current = null
     // Owner-only contact so the profile and the requests screen show what is saved after a reload.
-    void api.getContact().then(value => setContactValue(value ?? '')).catch(() => {})
+    setContactValue('')
+    void loadContact()
     if (invite?.token) {
       setEventError('')
       setPhase('joining')
@@ -410,7 +400,7 @@ export function EventAccountFlow({
       setEventError(formatApiError(error, locale, 'general'))
       setPhase(invite ? 'inviteError' : 'ready')
     }
-  }, [api, loadEventWorkspace, locale, redirectToLogin])
+  }, [api, loadContact, loadEventWorkspace, locale, redirectToLogin])
 
   useEffect(() => {
     let cancelled = false
@@ -648,33 +638,33 @@ export function EventAccountFlow({
     }
   }
 
+  async function persistQuestionnaire(draft: EventProfileDraft) {
+    if (!activeEventId || !draft.goal) throw new Error(t.errors.genericSave)
+    const saved = await api.saveEventProfile(activeEventId, {
+      name: draft.name.trim(),
+      goal: draft.goal,
+      role: draft.role.trim(),
+      experienceYears: Number(draft.experience),
+      skills: parseTopics(draft.skills),
+      interests: parseTopics(draft.interests),
+      about: draft.about.trim(),
+      ...(usesLookingFor(draft.goal) && draft.lookingFor.trim() ? { lookingFor: parseTopics(draft.lookingFor) } : {}),
+      visible: draft.visible,
+      consentVersion: 'v1',
+    })
+    const next = profileToDraft(saved)
+    setHasSavedProfile(true)
+    setSavedBaseline(next)
+    setDraft(next)
+  }
+
   async function saveProfileAndFetch() {
     if (!activeEventId || !draft.goal) return
     setSaving(true)
     setSaveError('')
     setSaveSuccess(false)
-    const showLookingFor =
-      draft.goal === 'find_job' ||
-      draft.goal === 'hire' ||
-      draft.goal === 'find_cofounder' ||
-      draft.goal === 'find_mentor'
     try {
-      const saved = await api.saveEventProfile(activeEventId, {
-        name: draft.name.trim(),
-        goal: draft.goal,
-        role: draft.role.trim(),
-        experienceYears: Number(draft.experience),
-        skills: parseTopics(draft.skills),
-        interests: parseTopics(draft.interests),
-        about: draft.about.trim(),
-        ...(showLookingFor && draft.lookingFor.trim() ? { lookingFor: parseTopics(draft.lookingFor) } : {}),
-        visible: draft.visible,
-        consentVersion: 'v1',
-      })
-      const nextSaved = profileToDraft(saved)
-      setHasSavedProfile(true)
-      setSavedBaseline(nextSaved)
-      setDraft(nextSaved)
+      await persistQuestionnaire(draft)
       setSaveSuccess(true)
       await loadRecommendations(activeEventId)
     } catch (error) {
@@ -718,7 +708,9 @@ export function EventAccountFlow({
   async function saveContact(value: string): Promise<string> {
     try {
       await api.saveContact(value)
+      contactRevision.current++
       setContactValue(value)
+      setContactState('ready')
       return ''
     } catch (error) {
       if (isApiError(error) && error.code === 'invalid_contact') return identityCopy[locale].contactError
@@ -942,11 +934,6 @@ export function EventAccountFlow({
   }, [draft.interests, draft.lookingFor, draft.skills, eventBooths, locale])
 
   const errors = showErrors ? validateDraft(draft, locale) : {}
-  const showLookingFor =
-    draft.goal === 'find_job' ||
-    draft.goal === 'hire' ||
-    draft.goal === 'find_cofounder' ||
-    draft.goal === 'find_mentor'
   const isClosed = activeEvent?.status === 'closed'
   const hasUnsavedChanges = useMemo(
     () => phase === 'ready' && tab === 'profile' && hasUnsavedProfileChanges(savedBaseline, draft),
@@ -1205,13 +1192,15 @@ export function EventAccountFlow({
         <button
           type="button"
           aria-current={tab === 'profile' ? 'page' : undefined}
-          onClick={event => guardNavigation(() => setTab('profile'), event.currentTarget)}
+          disabled={!activeEventId}
+          onClick={() => setTab('profile')}
         >{accountLabels[locale].event}</button>
         <button
           type="button"
           aria-current={tab === 'results' ? 'page' : undefined}
+          disabled={!activeEventId || !hasSavedProfile}
           onClick={event => guardNavigation(() => {
-            if (activeEventId && hasSavedProfile) {
+            if (activeEventId) {
               void loadRecommendations(activeEventId)
             } else {
               setTab('results')
@@ -1223,6 +1212,7 @@ export function EventAccountFlow({
         <button
           type="button"
           aria-current={tab === 'introductions' ? 'page' : undefined}
+          disabled={!activeEventId}
           onClick={event => guardNavigation(() => {
             setTab('introductions')
             if (activeEventId) void refreshSocialState(activeEventId, true)
@@ -1234,6 +1224,7 @@ export function EventAccountFlow({
         <button
           type="button"
           aria-current={tab === 'meetings' ? 'page' : undefined}
+          disabled={!activeEventId}
           onClick={event => guardNavigation(() => {
             setTab('meetings')
             if (activeEventId) void refreshSocialState(activeEventId, true)
@@ -1315,6 +1306,12 @@ export function EventAccountFlow({
             }}
             source={eventLoading || !hasSavedProfile ? null : savedBaseline}
             eventName={activeEvent?.name}
+            eventDraft={eventLoading || !activeEventId || isClosed ? null : draft}
+            saveEvent={persistQuestionnaire}
+            contact={contactValue}
+            contactState={contactState}
+            retryContact={loadContact}
+            onSaveContact={saveContact}
             username={user.username}
             isOrganizer={activeEventSummary?.role === 'organizer'}
             organizesAnyEvent={events.some(item => item.role === 'organizer')}
@@ -1333,14 +1330,6 @@ export function EventAccountFlow({
             <h1>{t.noEventsTitle}</h1>
             <p>{t.noEventsBody}</p>
             <InviteEntry locale={locale} />
-          </section>
-        ) : tab === 'results' && !hasSavedProfile ? (
-          <section className="surface empty-state">
-            <h1>{accountLabels[locale].needProfileTitle}</h1>
-            <p>{accountLabels[locale].needProfileBody}</p>
-            <button type="button" className="primary-button" onClick={() => setTab('profile')}>
-              {accountLabels[locale].openQuestionnaire}
-            </button>
           </section>
         ) : tab === 'introductions' ? (
           <IntroductionsPanel
@@ -1461,189 +1450,7 @@ export function EventAccountFlow({
             {saveSuccess && <div className="info-banner" role="status">{t.savedNotice}</div>}
 
             <div className="form-panel surface">
-              <div className="form-fields">
-                <div className="field">
-                  <label htmlFor={`${id}-name`}>{t.nameLabel}</label>
-                  <input
-                    id={`${id}-name`}
-                    name="name"
-                    required
-                    maxLength={80}
-                    disabled={saving || isClosed}
-                    placeholder={t.namePlaceholder}
-                    aria-invalid={errors.name ? true : undefined}
-                    aria-describedby={errors.name ? `${id}-name-error` : undefined}
-                    value={draft.name}
-                    onChange={event => updateField('name', event.target.value)}
-                  />
-                  {errors.name && <span id={`${id}-name-error`} className="field-error">{errors.name}</span>}
-                </div>
-
-                <div className="field">
-                  <label htmlFor={`${id}-goal`}>{formText.goalLabel}</label>
-                  <CustomSelect
-                    id={`${id}-goal`}
-                    name="goal"
-                    required
-                    disabled={saving || isClosed}
-                    aria-invalid={errors.goal ? true : undefined}
-                    aria-describedby={errors.goal ? `${id}-goal-error` : undefined}
-                    value={draft.goal}
-                    placeholder={formText.goalPlaceholder}
-                    options={Object.entries(goalLabels).map(([goal, label]) => ({ value: goal, label }))}
-                    onChange={val => updateField('goal', val as Goal | '')}
-                  />
-                  {errors.goal && <span id={`${id}-goal-error`} className="field-error">{errors.goal}</span>}
-                </div>
-
-                <div className="field">
-                  <label htmlFor={`${id}-role`}>{formText.roleLabel}</label>
-                  <input
-                    id={`${id}-role`}
-                    name="role"
-                    required
-                    maxLength={80}
-                    disabled={saving || isClosed}
-                    placeholder={formText.rolePlaceholder}
-                    aria-invalid={errors.role ? true : undefined}
-                    aria-describedby={errors.role ? `${id}-role-error` : undefined}
-                    value={draft.role}
-                    onChange={event => updateField('role', event.target.value)}
-                  />
-                  {errors.role && <span id={`${id}-role-error`} className="field-error">{errors.role}</span>}
-                </div>
-
-                <div className="field">
-                  <label htmlFor={`${id}-experience`}>{formText.experienceLabel}</label>
-                  <input
-                    id={`${id}-experience`}
-                    name="experience"
-                    type="number"
-                    min={0}
-                    max={60}
-                    required
-                    disabled={saving || isClosed}
-                    placeholder="0"
-                    aria-invalid={errors.experience ? true : undefined}
-                    aria-describedby={errors.experience ? `${id}-experience-error` : undefined}
-                    value={draft.experience}
-                    onChange={event => updateField('experience', event.target.value)}
-                  />
-                  {errors.experience && <span id={`${id}-experience-error`} className="field-error">{errors.experience}</span>}
-                </div>
-
-                <div className="field">
-                  <label htmlFor={`${id}-skills`}>{formText.skillsLabel}</label>
-                  <input
-                    id={`${id}-skills`}
-                    name="skills"
-                    required
-                    maxLength={160}
-                    disabled={saving || isClosed}
-                    placeholder={formText.skillsPlaceholder}
-                    aria-invalid={errors.skills ? true : undefined}
-                    aria-describedby={errors.skills ? `${id}-skills-error` : undefined}
-                    value={draft.skills}
-                    onChange={event => updateField('skills', event.target.value)}
-                  />
-                  {errors.skills && <span id={`${id}-skills-error`} className="field-error">{errors.skills}</span>}
-                </div>
-
-                <div className="field">
-                  <label htmlFor={`${id}-interests`}>{formText.interestsLabel}</label>
-                  <input
-                    id={`${id}-interests`}
-                    name="interests"
-                    required
-                    maxLength={160}
-                    disabled={saving || isClosed}
-                    placeholder={formText.interestsPlaceholder}
-                    aria-invalid={errors.interests ? true : undefined}
-                    aria-describedby={errors.interests ? `${id}-interests-error` : undefined}
-                    value={draft.interests}
-                    onChange={event => updateField('interests', event.target.value)}
-                  />
-                  {errors.interests && <span id={`${id}-interests-error`} className="field-error">{errors.interests}</span>}
-                </div>
-
-                {showLookingFor && (
-                  <label className="field field-full">
-                    <span>
-                      {draft.goal === 'find_job' ? formText.findJobLookingForLabel : formText.lookingForLabel}{' '}
-                      <small>{formText.optional}</small>
-                    </span>
-                    <input
-                      name="lookingFor"
-                      maxLength={160}
-                      disabled={saving || isClosed}
-                      placeholder={
-                        draft.goal === 'find_job'
-                          ? formText.findJobLookingForPlaceholder
-                          : formText.lookingForPlaceholder
-                      }
-                      value={draft.lookingFor}
-                      onChange={event => updateField('lookingFor', event.target.value)}
-                    />
-                    {draft.goal === 'hire' && !draft.lookingFor.trim() && (
-                      <span className="field-hint">{formText.hireLookingForHint}</span>
-                    )}
-                  </label>
-                )}
-
-                <div className="field field-full">
-                  <label htmlFor={`${id}-about`}>{formText.aboutLabel}</label>
-                  <textarea
-                    id={`${id}-about`}
-                    name="about"
-                    rows={2}
-                    maxLength={400}
-                    required
-                    disabled={saving || isClosed}
-                    placeholder={formText.aboutPlaceholder}
-                    aria-invalid={errors.about ? true : undefined}
-                    aria-describedby={errors.about ? `${id}-about-error` : undefined}
-                    value={draft.about}
-                    onChange={event => updateField('about', event.target.value)}
-                  />
-                  {errors.about && <span id={`${id}-about-error`} className="field-error">{errors.about}</span>}
-                </div>
-
-                <div className="field field-full privacy-box">
-                  <span className="privacy-box__heading">{t.visibilityHeading}</span>
-                  <label className="checkbox-row">
-                    <input
-                      type="checkbox"
-                      name="visible"
-                      disabled={saving || isClosed}
-                      checked={draft.visible}
-                      onChange={event => updateField('visible', event.target.checked)}
-                    />
-                    <span>{t.visibilityToggleLabel}</span>
-                  </label>
-                  <p className="privacy-box__note">{t.visibilityNotice}</p>
-                  {!draft.visible && (
-                    <p className="field-hint privacy-box__warning">{t.hiddenProfileWarning}</p>
-                  )}
-                </div>
-
-                <div className="field field-full">
-                  <label className="checkbox-row">
-                    <input
-                      id={`${id}-consent`}
-                      type="checkbox"
-                      name="consent"
-                      required
-                      disabled={saving || isClosed}
-                      aria-invalid={errors.consent ? true : undefined}
-                      aria-describedby={errors.consent ? `${id}-consent-error` : undefined}
-                      checked={draft.consentAccepted}
-                      onChange={event => updateField('consentAccepted', event.target.checked)}
-                    />
-                    <span className="consent-text">{t.consentLabel}</span>
-                  </label>
-                  {errors.consent && <span id={`${id}-consent-error`} className="field-error">{errors.consent}</span>}
-                </div>
-              </div>
+              <EventQuestionnaireFields locale={locale} draft={draft} errors={errors} disabled={saving || isClosed} updateField={updateField} />
 
               <div className="form-footer">
                 <button type="submit" className="primary-button" disabled={saving || isClosed}>
