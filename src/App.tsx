@@ -11,6 +11,7 @@ import { DEMO_PARTNER_BOOTHS, recommendBooths } from './data/booths'
 import { summarizeInterests } from './data/interestSummary'
 import { parseCandidates, resolveAppCandidates } from './data/loadCandidates'
 import { previewProfiles, sampleProfile } from './data/previewProfiles'
+import { resolveInitialLocale, saveLocalePreference } from './i18n/localeStorage'
 import { getMessages, SUPPORTED_LOCALES } from './i18n/messages'
 import {
   localizeRecommendationSession,
@@ -44,7 +45,11 @@ export default function App() {
   const [mode, setMode] = useState<'demo' | 'account'>(() =>
     isAccountRoute(window.location.pathname, window.location.search) ? 'account' : 'demo',
   )
-  const [locale, setLocale] = useState<Locale>('ru')
+  const [locale, setLocale] = useState<Locale>(() => {
+    const initial = resolveInitialLocale()
+    if (typeof document !== 'undefined') document.documentElement.lang = initial
+    return initial
+  })
   const [view, setView] = useState<View>('profile')
   const [session, setSession] = useState<RecommendationSession>()
   const [bookings, setBookings] = useState<MeetingBooking[]>(() => loadBookings())
@@ -61,6 +66,7 @@ export default function App() {
 
   function handleLocaleChange(nextLocale: Locale) {
     setLocale(nextLocale)
+    saveLocalePreference(nextLocale)
     setSession(current => current && localizeRecommendationSession(current, nextLocale))
   }
 
