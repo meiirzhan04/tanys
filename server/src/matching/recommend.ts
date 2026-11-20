@@ -113,6 +113,22 @@ const skillAliases = new Map([
   ['reactjs', 'react'],
   ['vue.js', 'vue'],
   ['vuejs', 'vue'],
+  ['golang', 'go'],
+  ['fast api', 'fastapi'],
+  ['питон', 'python'],
+  ['компьютерное зрение', 'computer vision'],
+  ['a/b-тесты', 'a/b testing'],
+  ['a/b-тестирование', 'a/b testing'],
+  ['продажи', 'sales'],
+  ['b2b-продажи', 'b2b sales'],
+  ['маркетинг', 'marketing'],
+  ['управление продуктом', 'product management'],
+  ['продуктовая стратегия', 'product strategy'],
+])
+
+const broaderCofounderSkills = new Map([
+  ['b2b sales', 'sales'],
+  ['product strategy', 'product management'],
 ])
 
 const roleAliases = new Map<string, string>()
@@ -137,7 +153,12 @@ for (const [role, aliases] of Object.entries(roleGroups)) {
 }
 
 function normalizeTopic(value: string): string {
-  return value.trim().toLowerCase()
+  return value.normalize('NFKC').trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+function normalizeInterest(value: string): string {
+  const key = normalizeTopic(value)
+  return skillAliases.get(key) ?? key
 }
 
 function isOneEditAway(a: string, b: string): boolean {
@@ -157,7 +178,7 @@ function isOneEditAway(a: string, b: string): boolean {
 }
 
 export function normalizeSkill(value: string): string {
-  const key = normalizeTopic(value.normalize('NFKC')).replace(/\s+/g, ' ')
+  const key = normalizeTopic(value)
   const compactRole = key.replace(/[\s_\u2010-\u2015-]+/g, '')
   const exact = skillAliases.get(key) ?? roleAliases.get(compactRole)
   if (exact) return exact
@@ -185,10 +206,19 @@ function matchingTopics(
   values: readonly string[],
   targets: readonly string[],
   normalize: (value: string) => string = normalizeTopic,
+  broaderSkills?: ReadonlyMap<string, string>,
 ): string[] {
   const pending = new Set(targets.map(normalize).filter(Boolean))
+  const matched = new Set<string>()
 
-  return values.map(value => value.trim()).filter(value => pending.delete(normalize(value)))
+  return values.map(value => value.trim()).filter(value => {
+    const key = normalize(value)
+    if (matched.has(key)) return false
+    const broaderSkill = broaderSkills?.get(key)
+    if (!pending.delete(key) && !(broaderSkill !== undefined && pending.delete(broaderSkill))) return false
+    matched.add(key)
+    return true
+  })
 }
 
 function scoreCandidate(
@@ -197,8 +227,10 @@ function scoreCandidate(
   templates: RecommendationTemplates,
   skillKey: (value: string) => string,
 ) {
-  const candidateNeeds = matchingTopics(input.skills, candidate.lookingFor ?? [], skillKey)
-  const participantNeeds = matchingTopics(candidate.skills, input.lookingFor ?? [], skillKey)
+  const isCofounder = input.goal === 'find_cofounder'
+  const broaderSkills = isCofounder ? broaderCofounderSkills : undefined
+  const candidateNeeds = matchingTopics(input.skills, candidate.lookingFor ?? [], skillKey, broaderSkills)
+  const participantNeeds = matchingTopics(candidate.skills, input.lookingFor ?? [], skillKey, broaderSkills)
   const sharedSkills = matchingTopics(candidate.skills, input.skills, skillKey)
 
   // Apply the employer's skill criteria in both directions before ranking job matches.
@@ -210,7 +242,7 @@ function scoreCandidate(
   }
   if (hiringMatch?.length === 0) return null
 
-  const sharedInterests = matchingTopics(candidate.interests, input.interests)
+  const sharedInterests = matchingTopics(candidate.interests, input.interests, normalizeInterest)
   const isMoreExperienced = input.goal === 'find_mentor' && candidate.experienceYears > input.experienceYears
   const isLessExperienced = input.goal === 'be_mentor' && candidate.experienceYears < input.experienceYears
 
@@ -223,13 +255,16 @@ function scoreCandidate(
   const reasons: string[] = []
   if (candidateNeeds.length) reasons.push(templates.candidateNeeds(candidateNeeds.slice(0, 2).join(', ')))
   if (participantNeeds.length) reasons.push(templates.participantNeeds(participantNeeds.slice(0, 2).join(', ')))
+  if (isCofounder) reasons.reverse()
   if (sharedSkills.length) reasons.push(templates.sharedSkills(sharedSkills.slice(0, 2).join(', ')))
   if (isMoreExperienced) reasons.push(templates.moreExperienced)
   if (isLessExperienced) reasons.push(templates.lessExperienced)
   if (sharedInterests.length) reasons.push(templates.sharedInterests(sharedInterests.slice(0, 2).join(', ')))
 
-  const topic = hiringMatch?.[0] ?? candidateNeeds[0] ?? participantNeeds[0] ?? sharedSkills[0] ?? sharedInterests[0]
-  return { candidate, score, reasons, topic }
+  const cofounderNeeds = isCofounder ? participantNeeds.length : 0
+  const topic = (isCofounder ? participantNeeds[0] : hiringMatch?.[0]) ??
+    candidateNeeds[0] ?? participantNeeds[0] ?? sharedSkills[0] ?? sharedInterests[0]
+  return { candidate, score, cofounderNeeds, reasons, topic }
 }
 
 export function recommend(
@@ -251,7 +286,8 @@ export function recommend(
   }
 
   return ranked
-    .sort((a, b) => b.score - a.score || (a.candidate.id < b.candidate.id ? -1 : Number(a.candidate.id > b.candidate.id)))
+    .sort((a, b) => b.cofounderNeeds - a.cofounderNeeds || b.score - a.score ||
+      (a.candidate.id < b.candidate.id ? -1 : Number(a.candidate.id > b.candidate.id)))
     .slice(0, 5)
     .map(({ candidate, reasons, topic }) => {
       const details = reasons.slice(0, 2).join(', ')
