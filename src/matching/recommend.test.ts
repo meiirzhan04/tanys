@@ -35,14 +35,36 @@ for (const [goal, reciprocal] of pairs) {
   })
 }
 
-test('ranks a recruiter looking for the participant’s skills ahead of another recruiter', () => {
+test('shows the job seeker only employers looking for a skill they have', () => {
   const results = recommend(input, [
-    candidate('design', 'hire', { skills: [], lookingFor: ['Figma'], interests: [] }),
+    candidate('design', 'hire', { skills: ['Python'], lookingFor: ['Figma'], interests: ['API'] }),
     candidate('python', 'hire', { skills: [], lookingFor: [' python ', 'PYTHON', 'FastAPI'], interests: [] }),
   ])
-  assert.deepEqual(results.map(result => result.candidate.id), ['python', 'design'])
+  assert.deepEqual(results.map(result => result.candidate.id), ['python'])
   assert.match(results[0].explanation, /Python, FastAPI/)
-  assert.doesNotMatch(results[1].explanation, /Figma|Python/)
+})
+
+test('shows only the two matching backend applicants in a mixed pool, with a relevant introduction', () => {
+  const employer = { ...input, goal: 'hire' as const, skills: ['Swift'], lookingFor: ['Python', 'Postgres'] }
+  const backendPython = candidate('backend-python', 'find_job', { skills: ['Python', 'FastAPI'] })
+  const backendPostgres = candidate('backend-postgres', 'find_job', { skills: ['PostgreSQL'] })
+  const frontend = candidate('frontend', 'find_job', { skills: ['React', 'TypeScript'] })
+  const ios = candidate('ios', 'find_job', { skills: ['Swift'] })
+
+  const results = recommend(employer, [ios, frontend, backendPython, backendPostgres], 'kk')
+  assert.deepEqual(results.map(result => result.candidate.id), ['backend-postgres', 'backend-python'])
+  assert.match(results[0].icebreaker ?? '', /«PostgreSQL»/)
+  assert.match(results[1].icebreaker ?? '', /«Python»/)
+  assert.deepEqual(recommend(employer, [ios, frontend]), [])
+  assert.deepEqual(recommend(ios, [candidate('employer', 'hire', employer)]), [])
+})
+
+test('uses shared skills for older hiring profiles without requested skills', () => {
+  const employer = { ...input, goal: 'hire' as const }
+  const backend = candidate('backend', 'find_job', { skills: ['Python'] })
+  const ios = candidate('ios', 'find_job', { skills: ['Swift'] })
+  assert.deepEqual(recommend(employer, [backend, ios]).map(result => result.candidate.id), ['backend'])
+  assert.deepEqual(recommend(ios, [candidate('employer', 'hire', employer)]), [])
 })
 
 test('prefers complementary skills when seeking a cofounder', () => {
@@ -79,16 +101,18 @@ test('returns up to five unique results with deterministic ties', () => {
 })
 
 test('uses a searched-for skill in the icebreaker and falls back to a fact from the profile', () => {
-  const results = recommend(input, [
+  const [result] = recommend(input, [
     candidate('a', 'hire', { name: 'Данияр', role: 'Рекрутер', skills: [], lookingFor: ['FastAPI'], interests: [] }),
-    candidate('b', 'hire', { name: 'Алия', role: 'Продакт-менеджер', skills: [], interests: [] }),
+  ])
+  const [fallback] = recommend({ ...input, goal: 'exchange_experience' }, [
+    candidate('b', 'exchange_experience', { name: 'Алия', role: 'Продакт-менеджер', skills: [], interests: [] }),
   ])
 
-  assert.match(results[0].icebreaker ?? '', /Данияр.*FastAPI.*задачи/)
-  assert.match(results[1].icebreaker ?? '', /Алия.*Продакт-менеджер.*задачи/)
+  assert.match(result.icebreaker ?? '', /Данияр.*FastAPI.*задачи/)
+  assert.match(fallback.icebreaker ?? '', /Алия.*Продакт-менеджер.*\?$/)
 })
 
-test('preserves top-5 candidate IDs and raw profile facts across ru, kk, and en locales', () => {
+test('preserves eligible candidate IDs and raw profile facts across ru, kk, and en locales', () => {
   const pool = [
     candidate('c1', 'hire', { name: 'Данияр', role: 'Tech Lead', skills: ['Go'], lookingFor: ['Python', 'FastAPI'], interests: ['API'] }),
     candidate('c2', 'hire', { name: 'Алия', role: 'Engineering Manager', skills: ['Python'], lookingFor: ['FastAPI'], interests: ['API'] }),
@@ -102,9 +126,9 @@ test('preserves top-5 candidate IDs and raw profile facts across ru, kk, and en 
   const kk = recommend(input, pool, 'kk')
   const en = recommend(input, pool, 'en')
 
-  assert.deepEqual(ru.map(item => item.candidate.id), ['c1', 'c2', 'c3', 'c4', 'c5'])
-  assert.deepEqual(kk.map(item => item.candidate.id), ['c1', 'c2', 'c3', 'c4', 'c5'])
-  assert.deepEqual(en.map(item => item.candidate.id), ['c1', 'c2', 'c3', 'c4', 'c5'])
+  assert.deepEqual(ru.map(item => item.candidate.id), ['c1', 'c2', 'c3'])
+  assert.deepEqual(kk.map(item => item.candidate.id), ['c1', 'c2', 'c3'])
+  assert.deepEqual(en.map(item => item.candidate.id), ['c1', 'c2', 'c3'])
 
   assert.match(kk[0].explanation, /Сіз жұмыс іздеп жүрсіз.*Python, FastAPI/)
   assert.match(kk[0].icebreaker ?? '', /^Сәлем, Данияр!.*«Python».*\?$/)
@@ -142,15 +166,14 @@ test('matches common skill aliases for skills and lookingFor without mutating la
   assert.equal(shortForm[0].candidate.id, 'web-stack')
   assert.match(shortForm[0].explanation, /JS, TS/)
   assert.deepEqual(shortForm[0].candidate.skills, ['JavaScript', 'TypeScript', 'PostgreSQL', 'Node.js'])
-  assert.doesNotMatch(shortForm[2].explanation, /Java|JS/)
+  assert.deepEqual(shortForm.map(item => item.candidate.id), ['web-stack', 'partial'])
 
   // JS and Java stay distinct.
   const jsVsJava = recommend({ ...input, skills: ['JS'], interests: [] }, [
     candidate('java', 'hire', { skills: ['Java'], lookingFor: ['Java'], interests: [] }),
     candidate('js', 'hire', { skills: ['JavaScript'], lookingFor: ['JavaScript'], interests: [] }),
   ])
-  assert.deepEqual(jsVsJava.map(item => item.candidate.id), ['js', 'java'])
-  assert.doesNotMatch(jsVsJava[1].explanation, /JS|Java/)
+  assert.deepEqual(jsVsJava.map(item => item.candidate.id), ['js'])
 
   // Repeating both aliases in one profile must not double-count score.
   const deduped = recommend(
