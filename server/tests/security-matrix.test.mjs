@@ -61,6 +61,10 @@ function createMemoryDatabase() {
       }
       return { rowCount: 0, rows: [] }
     }
+    if (sql.startsWith('DELETE FROM password_attempts WHERE bucket_key=$1')) {
+      passwordAttempts.delete(params[0])
+      return { rowCount: 1, rows: [] }
+    }
     if (sql.startsWith('INSERT INTO password_attempts AS bucket')) {
       const [key, limit] = params
       const now = Date.now()
@@ -566,7 +570,7 @@ test('security and event isolation matrix across guest, participants, and cross-
     assert.equal((await api('tanys_session=forged_token_value', 'GET', '/me')).status, 401)
     assert.equal((await api(null, 'GET', '/events')).status, 401)
     assert.equal((await api(null, 'POST', '/auth/register', { username: 'bad!', password: 'TanysStrong_123456!' })).status, 400)
-    assert.equal((await api(null, 'POST', '/auth/register', { username: `short_${runTag}`, password: 'too-short' })).status, 400)
+    assert.equal((await api(null, 'POST', '/auth/register', { username: `short_${runTag}`, password: '12345' })).status, 400)
     assert.equal(
       (await api(null, 'POST', '/auth/register', { username: `csrf_${runTag}`, password: 'TanysStrong_123456!' }, 'https://evil.example')).status,
       403,

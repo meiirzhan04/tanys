@@ -305,6 +305,10 @@ export function createTanysApiClient(
       throw new ApiError(response.status, code, message, payload?.error?.requestId)
     }
 
+    if (response.status !== 204 && payload === null && response.headers.get('content-type')?.toLowerCase().includes('text/html')) {
+      throw new ApiError(503, 'api_unavailable', 'API unavailable')
+    }
+
     return payload as T
   }
 
