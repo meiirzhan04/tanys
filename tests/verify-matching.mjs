@@ -216,12 +216,12 @@ async function main() {
   }
 
   let hasFailures = false
-  const requireFullFiveCheck = candidates.length >= 100
+  const requireTarget = candidates.length >= 100
   for (const scenario of allScenarios) {
     const report = runScenario(recommend, candidates, scenario)
     const target = scenario.expected?.minRelevantInTopFive ?? 3
-    const minExpected = requireFullFiveCheck ? target : Math.min(target, report.total)
-    const validCount = requireFullFiveCheck ? report.total === 5 : report.total <= 5
+    const minExpected = requireTarget ? target : Math.min(target, report.total)
+    const validCount = report.total <= 5
     const passed = report.withinSla && report.relevantCount >= minExpected && validCount
     if (!passed) hasFailures = true
     console.log(

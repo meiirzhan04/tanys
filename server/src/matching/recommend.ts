@@ -204,10 +204,9 @@ export function normalizeSkill(value: string): string {
   return key
 }
 
-function makeIcebreaker(goal: Goal, candidate: Candidate, locale: Locale, topic?: string): string {
+function makeIcebreaker(goal: Goal, candidate: Candidate, locale: Locale, topic: string): string {
   const templates = templatesByLocale[locale]
-  const profileDetail = topic ?? candidate.skills.find(skill => skill.trim()) ?? candidate.role
-  return templates.formatIcebreaker(candidate.name, profileDetail.trim(), templates.icebreakerQuestions[goal])
+  return templates.formatIcebreaker(candidate.name, topic, templates.icebreakerQuestions[goal])
 }
 
 function matchingRequestedRole(applicantRole: string, requested: readonly string[]): string | undefined {
@@ -265,6 +264,10 @@ function scoreCandidate(
   }
 
   const sharedInterests = matchingTopics(candidate.interests, input.interests, normalizeInterest)
+  const topic = (isCofounder ? participantNeeds[0] : hiringMatch?.[0] ?? roleMatch) ??
+    candidateNeeds[0] ?? participantNeeds[0] ?? sharedSkills[0] ?? sharedInterests[0]
+  if (!topic) return null
+
   const isMoreExperienced = input.goal === 'find_mentor' && candidate.experienceYears > input.experienceYears
   const isLessExperienced = input.goal === 'be_mentor' && candidate.experienceYears < input.experienceYears
 
@@ -285,8 +288,6 @@ function scoreCandidate(
   if (sharedInterests.length) reasons.push(templates.sharedInterests(sharedInterests.slice(0, 2).join(', ')))
 
   const cofounderNeeds = isCofounder ? participantNeeds.length : 0
-  const topic = (isCofounder ? participantNeeds[0] : hiringMatch?.[0] ?? roleMatch) ??
-    candidateNeeds[0] ?? participantNeeds[0] ?? sharedSkills[0] ?? sharedInterests[0]
   return { candidate, score, cofounderNeeds, reasons, topic }
 }
 

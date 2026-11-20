@@ -260,16 +260,39 @@ test('returns up to five unique results with deterministic ties', () => {
   assert.deepEqual(ids([]), [])
 })
 
-test('uses a searched-for skill in the icebreaker and falls back to a fact from the profile', () => {
+test('uses a confirmed searched-for skill in the icebreaker', () => {
   const [result] = recommend(input, [
     candidate('a', 'hire', { name: 'Данияр', role: 'Рекрутер', skills: [], lookingFor: ['FastAPI'], interests: [] }),
   ])
-  const [fallback] = recommend({ ...input, goal: 'exchange_experience' }, [
-    candidate('b', 'exchange_experience', { name: 'Алия', role: 'Продакт-менеджер', skills: [], interests: [] }),
-  ])
-
   assert.match(result.icebreaker ?? '', /Данияр.*FastAPI.*задачи/)
-  assert.match(fallback.icebreaker ?? '', /Алия.*Продакт-менеджер.*\?$/)
+})
+
+test('excludes unrelated pairs for mentoring, cofounders and experience exchange', () => {
+  const ios: ProfileInput = {
+    ...input, role: 'iOS Developer', skills: ['Swift'], lookingFor: ['SwiftUI', 'Combine'],
+    interests: ['iOS'],
+  }
+  for (const [goal, reciprocal] of pairs.slice(2)) {
+    const unrelated = [
+      candidate('go', reciprocal, { role: 'Go Developer', skills: ['Go'], experienceYears: 9, interests: [] }),
+      candidate('ux', reciprocal, { role: 'UX Designer', skills: ['Figma'], experienceYears: 0, interests: ['UX'] }),
+    ]
+    assert.deepEqual(recommend({ ...ios, goal }, unrelated), [], goal)
+  }
+})
+
+test('returns only confirmed unique matches below five and caps larger pools at five', () => {
+  const request: ProfileInput = { ...input, goal: 'exchange_experience', skills: [], interests: ['A/B-тесты'] }
+  const unrelated = candidate('unrelated', 'exchange_experience', { interests: [] })
+  const matches = ['a', 'b', 'c', 'd', 'e', 'f'].map(id =>
+    candidate(id, 'exchange_experience', { interests: ['A/B-тестирование'] }))
+
+  for (let count = 0; count <= matches.length; count++) {
+    const available = matches.slice(0, count)
+    const result = recommend(request, [unrelated, ...available, ...available])
+    assert.deepEqual(result.map(item => item.candidate.id), available.slice(0, 5).map(item => item.id))
+    assert.ok(result.every(item => item.icebreaker?.includes('A/B-тестирование')))
+  }
 })
 
 test('preserves eligible candidate IDs and raw profile facts across ru, kk, and en locales', () => {
