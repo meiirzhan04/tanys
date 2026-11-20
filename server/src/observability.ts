@@ -1,3 +1,7 @@
+import { randomUUID } from 'node:crypto'
+import type { IncomingMessage, ServerResponse } from 'node:http'
+import { performance } from 'node:perf_hooks'
+
 const REDACTED_KEYS = new Set([
   'email',
   'contact',
@@ -189,4 +193,159 @@ export function evaluateAlertThresholds(
     }
   }
   return alerts
+}
+
+export type RouteHandler = (
+  request: IncomingMessage,
+  response: ServerResponse,
+  path: string,
+) => Promise<boolean>
+
+export interface ObservedServerOptions {
+  appOrigin: string
+  routes: readonly RouteHandler[]
+  checkReady: () => Promise<boolean>
+  metrics?: ReturnType<typeof createMetricsTracker>
+  thresholds?: AlertThresholds
+  log?: (line: string) => void
+}
+
+interface HttpErrorLike {
+  status: number
+  code: string
+}
+
+function isHttpErrorLike(error: unknown): error is HttpErrorLike {
+  return Boolean(
+    error &&
+      typeof error === 'object' &&
+      typeof (error as { status?: unknown }).status === 'number' &&
+      typeof (error as { code?: unknown }).code === 'string',
+  )
+}
+
+function writeJson(response: ServerResponse, status: number, payload: unknown) {
+  response.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
+  response.end(JSON.stringify(payload))
+}
+
+/** Create an HTTP request handler with PII-safe logging, metrics tracking, and 5xx support IDs. */
+export function createObservedRequestHandler(options: ObservedServerOptions) {
+  const metrics = options.metrics ?? createMetricsTracker()
+  const thresholds = options.thresholds ?? DEFAULT_ALERT_THRESHOLDS
+  const log = options.log ?? ((line: string) => console.log(line))
+  const activeAlerts = new Set<AlertEvent['code']>()
+
+  const emitNewAlerts = () => {
+    const current = evaluateAlertThresholds(metrics.snapshot(), thresholds)
+    const currentCodes = new Set(current.map(item => item.code))
+    const newlyTriggered = current.filter(item => !activeAlerts.has(item.code))
+    for (const code of [...activeAlerts]) {
+      if (!currentCodes.has(code)) activeAlerts.delete(code)
+    }
+    if (newlyTriggered.length) {
+      for (const item of newlyTriggered) activeAlerts.add(item.code)
+      log(
+        formatSafeLog('warn', 'alert_threshold_triggered', {
+          alerts: newlyTriggered.map(({ code, severity, message }) => ({
+            alertCode: code,
+            severity,
+            message,
+          })),
+        }),
+      )
+    }
+  }
+
+  return async (request: IncomingMessage, response: ServerResponse) => {
+    const requestId = randomUUID()
+    const startMs = performance.now()
+    const rawPath = (request.url || '/').split('?')[0]
+    const method = request.method || 'GET'
+
+    if (request.url?.startsWith('/api/v1/')) {
+      const path = rawPath.slice('/api/v1'.length)
+      const isAuthRoute = path.startsWith('/auth/')
+      let errorCode: string | undefined
+
+      try {
+        if (method !== 'GET' && request.headers.origin && request.headers.origin !== options.appOrigin) {
+          errorCode = 'invalid_origin'
+          writeJson(response, 403, { error: { code: errorCode } })
+        } else {
+          let handled = false
+          for (const route of options.routes) {
+            if (await route(request, response, path)) {
+              handled = true
+              break
+            }
+          }
+          if (!handled) {
+            errorCode = 'not_found'
+            writeJson(response, 404, { error: { code: errorCode } })
+          }
+        }
+      } catch (error) {
+        const known = isHttpErrorLike(error)
+        const status = known ? error.status : 500
+        errorCode = known ? error.code : 'internal_error'
+        if (!response.headersSent) {
+          writeJson(response, status, {
+            error: status >= 500 ? { code: errorCode, requestId } : { code: errorCode },
+          })
+        }
+      }
+
+      const durationMs = Number((performance.now() - startMs).toFixed(2))
+      const status = response.statusCode || 500
+      metrics.recordHttp(status, isAuthRoute)
+      if (method === 'POST' && path === '/auth/challenges') {
+        if (status === 202) metrics.recordEmailDelivery(true)
+        else if (errorCode === 'mail_unavailable' || status === 503) metrics.recordEmailDelivery(false)
+      }
+      if (method === 'GET' && /^\/events\/[^/]+\/recommendations$/.test(path) && status < 400) {
+        metrics.recordMatchingLatency(durationMs)
+      }
+
+      const level = status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info'
+      log(
+        formatSafeLog(level, 'http_request', {
+          requestId,
+          method,
+          path: rawPath,
+          status,
+          durationMs,
+          ...(errorCode ? { errorCode } : {}),
+        }),
+      )
+      emitNewAlerts()
+      return
+    }
+
+    let status = 404
+    let message = 'not_found'
+    if (method === 'GET' && request.url === '/health') {
+      status = 200
+      message = 'alive'
+    }
+    if (method === 'GET' && request.url === '/ready') {
+      try {
+        if (!(await options.checkReady())) throw new Error('Pending migrations')
+        status = 200
+        message = 'ready'
+        metrics.setReady(true)
+      } catch {
+        status = 503
+        message = 'unavailable'
+        metrics.setReady(false)
+      }
+    }
+
+    writeJson(response, status, { status: message })
+    if (status >= 500) {
+      const durationMs = Number((performance.now() - startMs).toFixed(2))
+      log(formatSafeLog('error', 'probe_failed', { requestId, method, path: rawPath, status, durationMs }))
+      emitNewAlerts()
+    }
+  }
 }
