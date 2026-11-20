@@ -50,12 +50,14 @@ h1, h2, p { margin: 0; }
 .surface { background: var(--paper); border: 1px solid var(--line); border-radius: 9px; }
 .form-panel { padding: clamp(16px, 2.6vw, 27px); }
 .form-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 17px 18px; }
-.field { min-width: 0; display: grid; gap: 6px; }
+.field { min-width: 0; display: grid; align-content: start; gap: 6px; }
 .field-full { grid-column: 1 / -1; }
-.field > span { font-size: 13px; font-weight: 660; }
+.field > label, .field > span:not(.field-error) { font-size: 13px; font-weight: 660; }
 .field small { color: var(--muted); margin-left: 4px; font-weight: 400; }
 .field input, .field select, .field textarea { display: block; width: 100%; min-width: 0; min-height: 41px; padding: 9px 10px; border-radius: 5px; border: 1px solid #cbd6e6; background: var(--paper); color: var(--ink); font-size: 14px; }
 .field input::placeholder, .field textarea::placeholder, .field select:invalid { color: #5e6d83; opacity: 1; }
+.field [aria-invalid='true'] { border-color: #aa3a37; }
+.field-error { color: #9d322f; font-size: 12px; line-height: 1.4; }
 .field textarea { resize: vertical; min-height: 68px; }
 .form-footer { display: flex; flex-direction: row-reverse; align-items: center; justify-content: space-between; gap: 12px; margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--line); }
 .form-footer > span { color: var(--muted); font-size: 12px; }
