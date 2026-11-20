@@ -19,3 +19,7 @@ export function deduplicateExplanationSkills(
     return labels
   })
 }
+
+export function formatIcebreakerName(name: string): string {
+  return /[.!?…]$/u.test(name) ? name : `${name}!`
+}
