@@ -226,6 +226,8 @@ export default function App() {
   })
   const [langOpen, setLangOpen] = useState(false)
   const langRef = useRef<HTMLDivElement>(null)
+  const langTriggerRef = useRef<HTMLButtonElement>(null)
+  const langMenuRef = useRef<HTMLDivElement>(null)
   const [exitRequestSeq, setExitRequestSeq] = useState(0)
   const [locale, setLocale] = useState<Locale>(() => {
     const initial = resolveInitialLocale()
@@ -271,18 +273,21 @@ export default function App() {
 
   useEffect(() => {
     if (!langOpen) return
-    function onDocMouseDown(event: MouseEvent) {
+    function onDocPointerDown(event: PointerEvent) {
       if (langRef.current && !langRef.current.contains(event.target as Node)) {
         setLangOpen(false)
       }
     }
     function onDocKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setLangOpen(false)
+      if (event.key === 'Escape') {
+        setLangOpen(false)
+        langTriggerRef.current?.focus({ preventScroll: true })
+      }
     }
-    document.addEventListener('mousedown', onDocMouseDown)
+    document.addEventListener('pointerdown', onDocPointerDown)
     document.addEventListener('keydown', onDocKeyDown)
     return () => {
-      document.removeEventListener('mousedown', onDocMouseDown)
+      document.removeEventListener('pointerdown', onDocPointerDown)
       document.removeEventListener('keydown', onDocKeyDown)
     }
   }, [langOpen])
@@ -307,12 +312,30 @@ export default function App() {
     }
   }, [session?.input, view])
 
-  function handleLocaleChange(nextLocale: Locale, buttonEl?: HTMLButtonElement | null) {
+  function focusLangOption(indexOrActive: number | 'active') {
+    requestAnimationFrame(() => {
+      const items = langMenuRef.current?.querySelectorAll<HTMLButtonElement>('button[lang]')
+      if (!items?.length) return
+      if (indexOrActive === 'active') {
+        const active = Array.from(items).find(item => item.getAttribute('aria-pressed') === 'true')
+        ;(active ?? items[0]).focus({ preventScroll: true })
+        return
+      }
+      const wrapped = ((indexOrActive % items.length) + items.length) % items.length
+      items[wrapped].focus({ preventScroll: true })
+    })
+  }
+
+  function handleLocaleChange(nextLocale: Locale, buttonEl?: HTMLButtonElement | null, viaKeyboard = false) {
     setLocale(nextLocale)
     saveLocalePreference(nextLocale)
     setSession(current => current && localizeRecommendationSession(current, nextLocale))
     setLangOpen(false)
-    buttonEl?.blur()
+    if (viaKeyboard) {
+      langTriggerRef.current?.focus({ preventScroll: true })
+    } else {
+      buttonEl?.blur()
+    }
   }
 
   function handleEditProfile() {
@@ -411,20 +434,64 @@ export default function App() {
               className={`lang-switcher ${langOpen ? 'lang-switcher--open' : ''}`}
               role="group"
               aria-label={messages.languageSwitcherLabel}
+              onBlur={event => {
+                if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+                  setLangOpen(false)
+                }
+              }}
             >
-              <span
+              <button
+                ref={langTriggerRef}
+                type="button"
                 className="lang-switcher__trigger"
-                aria-hidden="true"
-                onClick={() => setLangOpen(current => !current)}
+                aria-label={`${messages.languageSwitcherLabel}: ${activeLocaleMeta.name}`}
+                aria-expanded={langOpen}
+                aria-haspopup="true"
+                aria-controls="lang-switcher-menu"
+                onClick={event => {
+                  const nextOpen = !langOpen
+                  setLangOpen(nextOpen)
+                  if (nextOpen && event.detail === 0) {
+                    focusLangOption('active')
+                  }
+                }}
+                onKeyDown={event => {
+                  if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                    event.preventDefault()
+                    setLangOpen(true)
+                    focusLangOption(event.key === 'ArrowUp' ? -1 : 0)
+                  }
+                }}
               >
                 <FlagSvg locale={locale} />
                 <span className="lang-switcher__code">{activeLocaleMeta.code}</span>
-                <svg className="lang-switcher__caret" width="12" height="12" viewBox="0 0 12 12" fill="none">
+                <svg className="lang-switcher__caret" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
                   <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-              </span>
+              </button>
 
-              <div className="lang-switcher__menu">
+              <div
+                ref={langMenuRef}
+                id="lang-switcher-menu"
+                className="lang-switcher__menu"
+                onKeyDown={event => {
+                  const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button[lang]'))
+                  const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement)
+                  if (event.key === 'ArrowDown') {
+                    event.preventDefault()
+                    focusLangOption(currentIndex + 1)
+                  } else if (event.key === 'ArrowUp') {
+                    event.preventDefault()
+                    focusLangOption(currentIndex - 1)
+                  } else if (event.key === 'Home') {
+                    event.preventDefault()
+                    focusLangOption(0)
+                  } else if (event.key === 'End') {
+                    event.preventDefault()
+                    focusLangOption(items.length - 1)
+                  }
+                }}
+              >
                 {SUPPORTED_LOCALES.map(item => {
                   const meta = LOCALE_META[item.code]
                   return (
@@ -432,9 +499,10 @@ export default function App() {
                       key={item.code}
                       type="button"
                       lang={item.code}
+                      tabIndex={langOpen ? 0 : -1}
                       aria-label={item.label}
                       aria-pressed={locale === item.code}
-                      onClick={event => handleLocaleChange(item.code, event.currentTarget)}
+                      onClick={event => handleLocaleChange(item.code, event.currentTarget, event.detail === 0)}
                     >
                       <FlagSvg locale={item.code} />
                       <span className="lang-option__code">{meta.code}</span>
