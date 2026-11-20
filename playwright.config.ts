@@ -6,7 +6,7 @@ const baseURL = externalBaseURL || 'http://127.0.0.1:5187'
 export default defineConfig({
   testDir: './tests/browser',
   timeout: 30_000,
-  use: { baseURL },
+  use: { baseURL, locale: 'ru-RU' },
   projects: [
     {
       name: 'desktop-chrome',
