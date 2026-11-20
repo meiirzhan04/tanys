@@ -1,0 +1,52 @@
+[
+  {
+    "id": "team-001",
+    "label": "Junior Python без коммерческого опыта ищет работу",
+    "input": {
+      "role": "Junior Backend-разработчик",
+      "skills": ["Python", "FastAPI", "PostgreSQL"],
+      "experienceYears": 0,
+      "interests": ["API", "Backend", "DevOps"],
+      "about": "Делаю учебные проекты на FastAPI и Docker, ищу первую работу или стажировку.",
+      "goal": "find_job"
+    },
+    "expected": {
+      "compatibleGoals": ["hire"],
+      "anySkillsOrLookingFor": ["Python", "FastAPI"]
+    }
+  },
+  {
+    "id": "team-002",
+    "label": "Frontend-разработчик ищет ментора по архитектуре React",
+    "input": {
+      "role": "Frontend-разработчик",
+      "skills": ["React", "TypeScript", "CSS"],
+      "experienceYears": 1,
+      "interests": ["UI", "Web Performance", "Design Systems"],
+      "about": "Хочу вырасти до middle, нужен наставник по архитектуре фронтенда и тестам.",
+      "goal": "find_mentor",
+      "lookingFor": ["React", "TypeScript"]
+    },
+    "expected": {
+      "compatibleGoals": ["be_mentor"],
+      "anySkillsOrLookingFor": ["React", "TypeScript"]
+    }
+  },
+  {
+    "id": "team-003",
+    "label": "Продакт с опытом в ML ищет технического кофаундера",
+    "input": {
+      "role": "Product Manager",
+      "skills": ["Product Discovery", "Analytics", "SQL"],
+      "experienceYears": 4,
+      "interests": ["AI", "EdTech", "B2B SaaS"],
+      "about": "Запускаю B2B AI-продукт в EdTech, ищу сильного инженера в кофаундеры.",
+      "goal": "find_cofounder",
+      "lookingFor": ["Python", "ML", "Backend"]
+    },
+    "expected": {
+      "compatibleGoals": ["find_cofounder"],
+      "anySkillsOrLookingFor": ["Python", "ML", "Backend", "AI"]
+    }
+  }
+]
