@@ -133,10 +133,22 @@ h1, h2, p { margin: 0; }
 .checkbox-row input[type='checkbox'] { width: 18px; height: 18px; min-height: 18px; margin-top: 2px; flex: 0 0 18px; accent-color: var(--accent); }
 .consent-text { font-size: 12px; color: var(--muted); font-weight: 450; }
 
+.interest-map { max-width: 840px; }
+.interest-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.interest-table th, .interest-table td { padding: 10px 16px; text-align: left; }
+.interest-table thead th { color: var(--muted); font-size: 12px; }
+.interest-table tbody tr { border-top: 1px solid var(--line); }
+.interest-table tbody th { width: 100%; font-weight: 600; overflow-wrap: anywhere; }
+.interest-table td, .interest-table th:last-child { text-align: right; }
+.interest-table td { font-variant-numeric: tabular-nums; font-weight: 650; }
+.interest-topic { display: grid; grid-template-columns: minmax(0, 1fr) 32%; align-items: center; gap: 14px; }
+.interest-track { display: block; height: 7px; border-radius: 4px; background: var(--accent-soft); }
+.interest-track > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+
 @media (max-width: 860px) {
   .site-width { width: calc(100% - 32px); }
   .workspace { grid-template-columns: minmax(0, 1fr); align-content: start; }
-  .workspace-nav { display: grid; grid-template-columns: minmax(0, .82fr) minmax(0, 1.15fr) minmax(0, 1.03fr); gap: 5px; padding: 10px 0 7px; border: 0; border-bottom: 1px solid var(--line); }
+  .workspace-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; padding: 10px 0 7px; border: 0; border-bottom: 1px solid var(--line); }
   .workspace-nav button { min-width: 0; padding-inline: 6px; font-size: 12px; }
   .main-content { padding: 22px 0 32px; }
 }
@@ -144,6 +156,7 @@ h1, h2, p { margin: 0; }
 @media (max-width: 600px) {
   .header-context, .demo-status { display: none; }
   .header-inner { min-height: 54px; gap: 10px; }
+  .workspace-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .page-heading { align-items: start; flex-wrap: wrap; }
   .form-fields { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .field input, .field select, .field textarea { font-size: 16px; }
@@ -154,4 +167,6 @@ h1, h2, p { margin: 0; }
   .explanation { grid-column: 1 / -1; grid-row: 2; }
   .row-toggle { grid-column: 2; grid-row: 1; }
   .result-details { padding: 0 13px 13px; }
+  .interest-table th, .interest-table td { padding-inline: 10px; }
+  .interest-topic { grid-template-columns: minmax(0, 1fr); gap: 5px; }
 }

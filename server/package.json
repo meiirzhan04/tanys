@@ -8,10 +8,12 @@
     "migrate": "node dist/migrate.js"
   },
   "dependencies": {
+    "nodemailer": "^10.6.1",
     "pg": "^8.23.1"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
+    "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
     "typescript": "~5.9.3"
   }

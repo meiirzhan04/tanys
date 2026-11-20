@@ -598,9 +598,9 @@ export function EventAccountFlow({
                 <input
                   id={`${id}-code`}
                   name="code"
-                  inputMode="numeric"
+                  type="text"
                   autoComplete="one-time-code"
-                  maxLength={12}
+                  maxLength={128}
                   required
                   placeholder={t.codePlaceholder}
                   value={code}
