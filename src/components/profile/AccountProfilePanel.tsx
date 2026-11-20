@@ -1,29 +1,23 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { getMessages } from '../../i18n/messages'
 import type { Locale } from '../../matching/types'
-import { parseProfileTopics } from '../profileDirty'
+import type { AccountProfile } from '../../api/client'
+import { accountLabels } from './accountLabels'
 import type { EventProfileDraft } from '../profileDirty'
 import { profileCopy } from './profileCopy'
-import { ProfileOverview } from './ProfileOverview'
-import type { ProfileSnapshot } from './profileCompleteness'
-
 interface AccountProfilePanelProps {
   locale: Locale
-  savedProfile: EventProfileDraft | null
+  readAccount: () => Promise<AccountProfile>
+  saveAccount: (profile: AccountProfile) => Promise<AccountProfile>
+  source: EventProfileDraft | null
   username?: string
   eventName?: string
-  isOrganizer: boolean
   hasEvent: boolean
-  recommendationsCount: number
-  introductionsCount: number
-  meetingsCount: number
   contactValue: string
   savingContact: boolean
   contactSaved: boolean
   onSaveContact: (value: string) => Promise<boolean>
-  onEdit: () => void
-  onShowMatches?: () => void
   onLogout: () => void
   onLeaveEvent: () => void
   onDeleteAccount: () => void
@@ -32,35 +26,18 @@ interface AccountProfilePanelProps {
   deletingAccount: boolean
 }
 
-function toSnapshot(draft: EventProfileDraft): ProfileSnapshot {
-  const years = Number(draft.experience)
-  return {
-    goal: draft.goal,
-    role: draft.role,
-    experienceYears: draft.experience.trim() !== '' && Number.isInteger(years) ? years : null,
-    skills: parseProfileTopics(draft.skills),
-    interests: parseProfileTopics(draft.interests),
-    about: draft.about,
-    lookingFor: parseProfileTopics(draft.lookingFor),
-  }
-}
-
 export function AccountProfilePanel({
   locale,
-  savedProfile,
+  readAccount,
+  saveAccount,
+  source,
   username,
   eventName,
-  isOrganizer,
   hasEvent,
-  recommendationsCount,
-  introductionsCount,
-  meetingsCount,
   contactValue,
   savingContact,
   contactSaved,
   onSaveContact,
-  onEdit,
-  onShowMatches,
   onLogout,
   onLeaveEvent,
   onDeleteAccount,
@@ -80,8 +57,50 @@ export function AccountProfilePanel({
     if (await onSaveContact(value)) setContactInput('')
   }
 
-  const aside = (
+  const labels = accountLabels[locale]
+  const [draft, setDraft] = useState<AccountProfile | null>(null)
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    let active = true
+    readAccount().then(profile => { if (active) setDraft(profile) })
+      .catch(() => { if (active) setStatus('error') })
+    return () => { active = false }
+  }, [readAccount, attempt])
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    if (!draft || status === 'saving') return
+    setStatus('saving')
+    try {
+      setDraft(await saveAccount(draft))
+      setStatus('saved')
+    } catch { setStatus('error') }
+  }
+
+  return (
     <>
+      <h1 id="me-title">{t.navLabel}</h1>
+      <form className="surface profile-card account-profile-form" onSubmit={submit}>
+        {draft && <fieldset disabled={status === 'saving'}>
+          <label>{labels.name}<input name="accountName" required maxLength={80} value={draft.name}
+            onChange={e => { setDraft({ ...draft, name: e.target.value }); setStatus('idle') }} /></label>
+          <label>{labels.profession}<input name="accountProfession" maxLength={80} value={draft.profession}
+            onChange={e => { setDraft({ ...draft, profession: e.target.value }); setStatus('idle') }} /></label>
+          <label>{t.about}<textarea name="accountAbout" maxLength={400} value={draft.about}
+            onChange={e => { setDraft({ ...draft, about: e.target.value }); setStatus('idle') }} /></label>
+          {source && <button type="button" className="secondary-button" onClick={() => {
+            setDraft({ name: source.name, profession: source.role, about: source.about })
+            setStatus('idle')
+          }}>{labels.copy} · {eventName}</button>}
+          <button type="submit" className="primary-button">{labels.save}</button>
+        </fieldset>}
+        {status === 'saved' && <p role="status">{labels.saved}</p>}
+        {status === 'error' && <p role="alert">{labels.error} {!draft && <button type="button" onClick={() => {
+          setStatus('idle')
+          setAttempt(value => value + 1)
+        }}>{labels.retry}</button>}</p>}
+      </form>
       <section className="surface profile-card" aria-labelledby="me-account-title">
         <h2 id="me-account-title">{t.accountTitle}</h2>
         {username && (
@@ -90,10 +109,6 @@ export function AccountProfilePanel({
             <strong>{username}</strong>
           </div>
         )}
-        <div className="profile-account-row">
-          <span>{t.eventLabel}</span>
-          <strong>{hasEvent ? `${eventName || '—'} · ${isOrganizer ? t.roleOrganizer : t.roleParticipant}` : t.noEvent}</strong>
-        </div>
       </section>
 
       <section className="surface profile-card" aria-labelledby="me-contact-title">
@@ -138,20 +153,4 @@ export function AccountProfilePanel({
     </>
   )
 
-  return (
-    <ProfileOverview
-      locale={locale}
-      profile={savedProfile ? toSnapshot(savedProfile) : null}
-      displayName={savedProfile?.name}
-      visible={savedProfile ? savedProfile.visible : undefined}
-      stats={[
-        { value: recommendationsCount, label: t.statRecommendations },
-        { value: introductionsCount, label: t.statIntroductions },
-        { value: meetingsCount, label: t.statMeetings },
-      ]}
-      onEdit={onEdit}
-      onShowMatches={onShowMatches}
-      aside={aside}
-    />
-  )
 }

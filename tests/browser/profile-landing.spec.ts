@@ -2,7 +2,13 @@ import { expect, test } from '@playwright/test'
 import type { BrowserContext } from '@playwright/test'
 
 async function mockAccountApi(context: BrowserContext, profile: Record<string, unknown> | null) {
-  const state = { loggedIn: true, contact: '' }
+  const events = profile ? ['A', 'B', 'C', 'D'].map(id => ({
+    id, name: 'Meetup ' + id, role: 'participant', status: 'active', timeZone: 'Asia/Almaty',
+  })) : []
+  const profiles = new Map(events.slice(0, 3).map(e => [e.id, {
+    ...profile, name: 'Name ' + e.id, role: 'Role ' + e.id, about: 'About ' + e.id,
+  }]))
+  const state = { loggedIn: true, contact: '', account: { name: '', profession: '', about: '' } }
   await context.route('**/api/v1/**', async route => {
     const req = route.request()
     const path = new URL(req.url()).pathname.replace(/^\/api\/v1/, '')
@@ -13,6 +19,10 @@ async function mockAccountApi(context: BrowserContext, profile: Record<string, u
     if (method === 'GET' && path === '/me') {
       return state.loggedIn ? respond(200, { id: 'user-1', username: 'aliya' }) : respond(401, { error: { code: 'unauthorized' } })
     }
+    if (path === '/me/profile') {
+      if (method === 'PUT') state.account = req.postDataJSON()
+      return respond(200, state.account)
+    }
     if (method === 'DELETE' && path === '/auth/session') {
       state.loggedIn = false
       return respond(204)
@@ -22,16 +32,13 @@ async function mockAccountApi(context: BrowserContext, profile: Record<string, u
       return respond(204)
     }
     if (method === 'GET' && path === '/events') {
-      return respond(200, {
-        items: [{ id: 'evt-1', name: 'Almaty Meetup', role: 'participant', status: 'active', timeZone: 'Asia/Almaty' }],
-        nextCursor: null,
-      })
+      return respond(200, { items: events })
     }
-    if (method === 'GET' && path === '/events/evt-1') {
-      return respond(200, { id: 'evt-1', name: 'Almaty Meetup', status: 'active', timeZone: 'Asia/Almaty' })
-    }
-    if (method === 'GET' && path === '/events/evt-1/profile') {
-      return profile ? respond(200, profile) : respond(404, { error: { code: 'not_found' } })
+    const [, , eventId, action] = path.split('/')
+    if (path.startsWith('/events/') && !action) return respond(200, events.find(e => e.id === eventId))
+    if (action === 'profile') {
+      if (method === 'PUT') profiles.set(eventId, req.postDataJSON())
+      return profiles.has(eventId) ? respond(200, profiles.get(eventId)) : respond(404)
     }
     if (method === 'GET' && /\/(recommendations|introductions|meetings|booths)$/.test(path)) {
       return respond(200, { items: [], nextCursor: null })
@@ -77,7 +84,7 @@ test('demo profile screen shows an empty state, then the submitted card with com
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false)
 })
 
-test('account profile tab: hidden warning, contact save and logout back to sign-in (#redesign)', async ({ browser }, testInfo) => {
+test('account profile and three event questionnaires stay independent after reload', async ({ browser }, testInfo) => {
   const viewport = testInfo.project.use.viewport ?? { width: 1280, height: 860 }
   const context = await browser.newContext({ viewport, locale: 'ru-RU' })
   await mockAccountApi(context, {
@@ -88,7 +95,7 @@ test('account profile tab: hidden warning, contact save and logout back to sign-
     interests: ['API', 'DevOps'],
     about: 'Пишу backend на Python и ищу команду с сильной инженерной культурой и ревью кода.',
     goal: 'exchange_experience',
-    visible: false,
+    visible: true,
     consentVersion: 'v1',
   })
   try {
@@ -98,15 +105,48 @@ test('account profile tab: hidden warning, contact save and logout back to sign-
 
     await page.locator('.nav-profile-btn').click()
     await expect(page.locator('#me-title')).toBeVisible()
-    await expect(page.locator('.profile-hero h2')).toHaveText('Алия Нурланова')
-    await expect(page.locator('.profile-hero__warning')).toBeVisible()
-    await expect(page.locator('.profile-score__ring strong')).toHaveText('100%')
-    await expect(page.locator('.profile-card').first()).toContainText('aliya')
-
+    const name = page.locator('[name=accountName]')
+    const profession = page.locator('[name=accountProfession]')
+    const picker = page.locator('.event-picker select')
+    await picker.selectOption('B')
+    await page.getByRole('button', { name: /Meetup B/ }).click()
+    await expect(name).toHaveValue('Name B')
+    await page.reload()
+    await page.locator('.nav-profile-btn').click()
+    await expect(name).toHaveValue('')
+    await name.fill('Парасат')
+    await profession.fill('Software Engineer')
+    await page.locator('[name=accountAbout]').fill('My account bio')
+    await page.locator('form:has([name=accountName]) button[type=submit]').click()
+    await expect(page.locator('form:has([name=accountName]) [role=status]')).toBeVisible()
+    await page.reload()
+    for (const id of ['A', 'B', 'C', 'D']) {
+      await picker.selectOption(id)
+      await page.locator('.workspace-nav button').first().click()
+      await expect(page.locator('[name=name]')).toHaveValue(id === 'D' ? 'Парасат' : 'Name ' + id)
+      await expect(page.locator('[name=role]')).toHaveValue(id === 'D' ? 'Software Engineer' : 'Role ' + id)
+      if (id === 'D') {
+        await expect(page.locator('[name=about]')).toHaveValue('My account bio')
+        await expect(page.locator('[name=visible]')).not.toBeChecked()
+      }
+      if (id === 'A') {
+        await page.locator('[name=name]').fill('New event name')
+        await page.locator('form.profile-form button[type=submit]').click()
+        await expect(page.locator('form.profile-form')).toHaveCount(0)
+      }
+      await page.locator('.nav-profile-btn').click()
+      await expect(name).toHaveValue('Парасат')
+      await expect(profession).toHaveValue('Software Engineer')
+    }
+    await picker.selectOption('A')
+    await expect(page.getByRole('button', { name: /Meetup A/ })).toBeVisible()
+    await page.locator('.workspace-nav button').first().click()
+    await expect(page.locator('[name=name]')).toHaveValue('New event name')
+    await page.locator('.nav-profile-btn').click()
     await page.locator('input[name="profileContact"]').fill('@aliya_dev')
     await page.locator('.profile-contact-form button[type="submit"]').click()
     await expect(page.locator('.profile-contact-form [role="status"]')).toBeVisible()
-    await expect(page.locator('.profile-card').nth(1)).toContainText('@aliya_dev')
+    await expect(page.locator('section:has(> #me-contact-title)')).toContainText('@aliya_dev')
     expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false)
 
     await page.locator('.profile-danger .secondary-button').click()
@@ -123,12 +163,13 @@ test('account profile tab shows the empty state before any profile is saved (#re
   try {
     const page = await context.newPage()
     await page.goto('/?mode=account')
-    await expect(page.locator('#event-profile-title')).toBeVisible()
     await page.locator('.nav-profile-btn').click()
-    await expect(page.locator('.profile-empty')).toBeVisible()
-    await expect(page.locator('.profile-danger')).toBeVisible()
-    await page.locator('.profile-empty .primary-button').click()
-    await expect(page.locator('#event-profile-title')).toBeVisible()
+    await page.locator('[name=accountName]').fill('No events')
+    await page.locator('form:has([name=accountName]) button[type=submit]').click()
+    await expect(page.locator('form:has([name=accountName]) [role=status]')).toBeVisible()
+    await page.reload()
+    await page.locator('.nav-profile-btn').click()
+    await expect(page.locator('[name=accountName]')).toHaveValue('No events')
   } finally {
     await context.close()
   }

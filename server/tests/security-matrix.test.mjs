@@ -13,6 +13,7 @@ function createMemoryDatabase() {
   const memberships = new Map()
   const invites = new Map()
   const booths = new Map()
+  const accountProfiles = new Map()
   const profiles = new Map()
   const feedback = new Map()
   const contacts = new Map()
@@ -42,6 +43,17 @@ function createMemoryDatabase() {
     if (sql.includes('FROM schema_migrations')) {
       const names = params[0] || []
       return { rowCount: names.length, rows: names.map((name) => ({ name })) }
+    }
+
+    if (sql.startsWith('SELECT name, profession, about FROM account_profiles WHERE user_id=$1')) {
+      const profile = accountProfiles.get(params[0])
+      return { rowCount: profile ? 1 : 0, rows: profile ? [profile] : [] }
+    }
+    if (sql.startsWith('INSERT INTO account_profiles(user_id,name,profession,about)')) {
+      const [id, name, profession, about] = params
+      const profile = { name, profession, about }
+      accountProfiles.set(id, profile)
+      return { rowCount: 1, rows: [profile] }
     }
 
     // Sessions & auth
@@ -670,6 +682,15 @@ test('security and event isolation matrix across guest, participants, and cross-
     const partA3 = await registerAccount('pa3')
     const partB1 = await registerAccount('pb1')
     const tempUser = await registerAccount('tmp')
+
+    const privateProfile = { name: 'Parasat', profession: 'Software Engineer', about: 'Account biography' }
+    assert.equal((await api(null, 'GET', '/me/profile')).status, 401)
+    assert.equal((await api(null, 'PUT', '/me/profile', privateProfile)).status, 401)
+    assert.deepEqual((await api(partA1.cookie, 'PUT', '/me/profile', privateProfile)).body, privateProfile)
+    const other = { ...privateProfile, name: 'Other participant' }
+    assert.deepEqual((await api(partA2.cookie, 'PUT', '/me/profile', { ...other, user_id: partA1.id })).body, other)
+    assert.deepEqual((await api(partA2.cookie, 'GET', '/me/profile?user_id=' + partA1.id)).body, other)
+    assert.deepEqual((await api(partA1.cookie, 'GET', '/me/profile')).body, privateProfile)
 
     // /me exposes ONLY { id, username } and never leaks email/password_hash
     const meA = await api(orgA.cookie, 'GET', '/me')

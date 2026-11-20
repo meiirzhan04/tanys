@@ -10,6 +10,7 @@ import {
   isSlotConflictError,
 } from '../api/client'
 import type {
+  AccountProfile,
   AuthUser,
   CommonSlot,
   EventBooth,
@@ -33,6 +34,7 @@ import type { Goal, Locale, Recommendation } from '../matching/types'
 import { CustomSelect } from './CustomSelect'
 import { getGoalLabels } from './goalLabels'
 import { TanysMark } from './brand/TanysLogo'
+import { accountLabels } from './profile/accountLabels'
 import { AccountProfilePanel } from './profile/AccountProfilePanel'
 import { profileCopy } from './profile/profileCopy'
 import { PartnerBooths } from './PartnerBooths'
@@ -263,6 +265,18 @@ export function EventAccountFlow({
     }
   }, [api, locale])
 
+  const accountCache = useRef<Promise<AccountProfile> | null>(null)
+  const readAccount = useCallback(() => {
+    if (!accountCache.current) {
+      const pending = api.getAccountProfile().catch(error => {
+        if (accountCache.current === pending) accountCache.current = null
+        throw error
+      })
+      accountCache.current = pending
+    }
+    return accountCache.current
+  }, [api])
+
   const loadEventWorkspace = useCallback(async (eventId: string, preserveDraft = false) => {
     setEventLoading(true)
     setEventError('')
@@ -286,13 +300,22 @@ export function EventAccountFlow({
       const loadedDraft = profile ? profileToDraft(profile) : null
       setSavedBaseline(loadedDraft)
       if (!preserveDraft) {
-        setDraft(loadedDraft ?? emptyDraft())
+        const next = loadedDraft ?? emptyDraft()
+        if (!loadedDraft) {
+          try {
+            const account = await readAccount()
+            Object.assign(next, { name: account.name, role: account.profession, about: account.about })
+          } catch (error) {
+            setEventError(formatApiError(error, locale, 'general'))
+          }
+        }
+        setDraft(next)
         setShowErrors(false)
       }
       setRecommendations(null)
       setEventBooths([])
       setRecsMessage('')
-      setTab('profile')
+      setTab(current => current === 'me' ? current : 'profile')
       await refreshSocialState(eventId, false)
       try {
         setEventBooths(await api.listEventBooths(eventId))
@@ -310,9 +333,10 @@ export function EventAccountFlow({
     } finally {
       setEventLoading(false)
     }
-  }, [api, locale, refreshSocialState])
+  }, [api, locale, readAccount, refreshSocialState])
 
   const enterAuthenticated = useCallback(async (invite: InviteTarget | null, preserveDraft = false) => {
+    accountCache.current = null
     if (invite?.token) {
       setPhase('joining')
       try {
@@ -1120,7 +1144,7 @@ export function EventAccountFlow({
           aria-current={tab === 'profile' ? 'page' : undefined}
           disabled={!activeEventId}
           onClick={() => setTab('profile')}
-        >{messages.nav.profile}</button>
+        >{accountLabels[locale].event}</button>
         <button
           type="button"
           aria-current={tab === 'results' ? 'page' : undefined}
@@ -1211,7 +1235,7 @@ export function EventAccountFlow({
 
         {eventError && <div className="error-banner" role="alert">{eventError}</div>}
 
-        {eventLoading ? (
+        {eventLoading && tab !== 'me' ? (
           <div className="surface status-panel" role="status" aria-live="polite" aria-busy="true">
             <p>{t.loadingEvent}</p>
           </div>
@@ -1241,23 +1265,22 @@ export function EventAccountFlow({
         ) : tab === 'me' ? (
           <AccountProfilePanel
             locale={locale}
-            savedProfile={hasSavedProfile ? savedBaseline : null}
+            key={user.id}
+            readAccount={readAccount}
+            saveAccount={async profile => {
+              const previous = accountCache.current
+              const saved = await api.saveAccountProfile(profile)
+              if (accountCache.current === previous) accountCache.current = Promise.resolve(saved)
+              return saved
+            }}
+            source={eventLoading || !hasSavedProfile ? null : savedBaseline}
+            eventName={activeEvent?.name}
             username={user.username}
-            eventName={activeEvent?.name || activeEventSummary?.name}
-            isOrganizer={isOrganizerOfActive}
             hasEvent={Boolean(activeEventId)}
-            recommendationsCount={recommendations?.length ?? 0}
-            introductionsCount={introductions.length}
-            meetingsCount={meetings.length}
             contactValue={contactValue}
             savingContact={savingContact}
             contactSaved={contactSaved}
             onSaveContact={handleSaveContact}
-            onEdit={() => {
-              setTab('profile')
-              requestAnimationFrame(() => document.getElementById('event-profile-title')?.focus({ preventScroll: true }))
-            }}
-            onShowMatches={activeEventId && hasSavedProfile ? () => void loadRecommendations(activeEventId) : undefined}
             onLogout={() => void handleLogout()}
             onLeaveEvent={() => void handleLeaveEvent()}
             onDeleteAccount={() => void handleDeleteAccount()}
@@ -1360,7 +1383,7 @@ export function EventAccountFlow({
             <div className="page-heading">
               <div>
                 <h1 id="event-profile-title" tabIndex={-1}>
-                  {hasSavedProfile ? t.profileEditTitle : t.profileTitle}
+                  {accountLabels[locale].event}
                 </h1>
                 <p>{activeEvent?.name ? `${activeEvent.name} · ` : ''}{t.profileSubtitle}</p>
               </div>
