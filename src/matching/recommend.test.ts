@@ -185,10 +185,22 @@ test('prefers complementary skills when seeking a cofounder', () => {
   assert.match(results[1].icebreaker ?? '', /B2B-продажи/)
 })
 
-test('uses exact bilingual aliases and keeps specialized cofounder requests directional', () => {
-  assert.equal(normalizeSkill('Маркетинг'), normalizeSkill('Marketing'))
-  assert.equal(normalizeSkill('Управление продуктом'), normalizeSkill('Product management'))
-  assert.equal(normalizeSkill('Computer Vision'), normalizeSkill('Компьютерное зрение'))
+test('uses multilingual aliases and keeps specialized cofounder requests directional', () => {
+  const aliases = [
+    ['Sales', 'Продажи', 'Сату'],
+    ['Marketing', 'Маркетинг'],
+    ['Product management', 'Product', 'Продукт', 'Управление продуктом', 'Өнімді басқару'],
+    ['Computer Vision', 'Компьютерное зрение'],
+    ['A/B testing', 'A/B', 'A/B-тест', 'A/B-тесты', 'A/B-тестирование'],
+    ['Go', 'Golang'],
+    ['Kubernetes', 'k8s'],
+    ['Node.js', 'Node', 'NodeJS'],
+  ]
+  for (const [canonical, ...variants] of aliases) {
+    for (const variant of variants) {
+      assert.equal(normalizeSkill(variant), normalizeSkill(canonical), variant)
+    }
+  }
   assert.notEqual(normalizeSkill('B2B-продажи'), normalizeSkill('Продажи'))
 
   const [match] = recommend(
