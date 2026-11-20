@@ -32,6 +32,9 @@ import type { Feedback } from '../matching/session'
 import type { Goal, Locale, Recommendation } from '../matching/types'
 import { CustomSelect } from './CustomSelect'
 import { getGoalLabels } from './goalLabels'
+import { TanysMark } from './brand/TanysLogo'
+import { AccountProfilePanel } from './profile/AccountProfilePanel'
+import { profileCopy } from './profile/profileCopy'
 import { PartnerBooths } from './PartnerBooths'
 
 const OrganizerCabinet = lazy(() =>
@@ -51,7 +54,7 @@ import { UnsavedChangesDialog } from './UnsavedChangesDialog'
 
 type ProfileErrorField = 'name' | 'goal' | 'role' | 'experience' | 'skills' | 'interests' | 'about' | 'consent'
 type ProfileErrors = Partial<Record<ProfileErrorField, string>>
-type EventTab = 'profile' | 'results' | 'introductions' | 'meetings' | 'organizer'
+type EventTab = 'profile' | 'results' | 'introductions' | 'meetings' | 'organizer' | 'me'
 
 function emptyDraft(): EventProfileDraft {
   return {
@@ -1071,20 +1074,20 @@ export function EventAccountFlow({
 
           <aside className="surface auth-showcase" aria-hidden="true">
             <div className="auth-showcase__top">
-              <span className="gcore-pill">✦ {authShowcase.tag}</span>
+              <span className="showcase-pill">{authShowcase.tag}</span>
               <strong className="auth-showcase__headline">{authShowcase.headline}</strong>
               <p className="auth-showcase__caption">{authShowcase.caption}</p>
             </div>
             <div className="auth-circuit-box">
-              <div className="gcore-chip">
-                <span className="gcore-chip__core">QR · 1:1</span>
-                <span className="gcore-chip__sub">TANYS</span>
+              <div className="showcase-chip">
+                <TanysMark size={40} />
+                <span className="showcase-chip__sub">QR · 1:1</span>
               </div>
               <div className="auth-Showcase-grid">
                 {authShowcase.badges.map((badge, idx) => (
-                  <div key={badge} className="gcore-node">
-                    <span className="gcore-node__code">{idx === 0 ? 'KZ' : idx === 1 ? '1:1' : 'QR'}</span>
-                    <span className="gcore-node__label">{badge}</span>
+                  <div key={badge} className="showcase-node">
+                    <span className="showcase-node__code">{idx === 0 ? 'KZ' : idx === 1 ? '1:1' : 'QR'}</span>
+                    <span className="showcase-node__label">{badge}</span>
                   </div>
                 ))}
               </div>
@@ -1150,9 +1153,15 @@ export function EventAccountFlow({
         </button>
         <button
           type="button"
-          disabled={loggingOut}
-          onClick={event => guardNavigation(() => void handleLogout(), event.currentTarget)}
-        >{loggingOut ? t.loggingOut : t.logout}</button>
+          className="nav-profile-btn"
+          aria-current={tab === 'me' ? 'page' : undefined}
+          onClick={event => guardNavigation(() => {
+            setTab('me')
+            if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+              window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+            }
+          }, event.currentTarget)}
+        >{profileCopy[locale].navLabel}</button>
       </nav>
 
       <main className="main-content">
@@ -1184,22 +1193,6 @@ export function EventAccountFlow({
             <span className="event-picker-empty">{t.noEventsTitle}</span>
           )}
 
-          <div className="event-toolbar-actions">
-            {activeEventId && (
-              <button
-                type="button"
-                className="text-button"
-                disabled={leavingEvent || saving || deletingAccount}
-                onClick={event => guardNavigation(() => void handleLeaveEvent(), event.currentTarget)}
-              >{leavingEvent ? t.leavingEvent : t.leaveEvent}</button>
-            )}
-            <button
-              type="button"
-              className="text-button danger-button"
-              disabled={deletingAccount || leavingEvent || loggingOut || saving}
-              onClick={() => void handleDeleteAccount()}
-            >{deletingAccount ? t.deletingAccount : t.deleteAccount}</button>
-          </div>
         </div>
 
         {eventError && <div className="error-banner" role="alert">{eventError}</div>}
@@ -1231,6 +1224,33 @@ export function EventAccountFlow({
               onBoothsChanged={nextBooths => setEventBooths(nextBooths)}
             />
           </Suspense>
+        ) : tab === 'me' ? (
+          <AccountProfilePanel
+            locale={locale}
+            savedProfile={hasSavedProfile ? savedBaseline : null}
+            username={user.username}
+            eventName={activeEvent?.name || activeEventSummary?.name}
+            isOrganizer={isOrganizerOfActive}
+            hasEvent={Boolean(activeEventId)}
+            recommendationsCount={recommendations?.length ?? 0}
+            introductionsCount={introductions.length}
+            meetingsCount={meetings.length}
+            contactValue={contactValue}
+            savingContact={savingContact}
+            contactSaved={contactSaved}
+            onSaveContact={handleSaveContact}
+            onEdit={() => {
+              setTab('profile')
+              requestAnimationFrame(() => document.getElementById('event-profile-title')?.focus({ preventScroll: true }))
+            }}
+            onShowMatches={activeEventId && hasSavedProfile ? () => void loadRecommendations(activeEventId) : undefined}
+            onLogout={() => void handleLogout()}
+            onLeaveEvent={() => void handleLeaveEvent()}
+            onDeleteAccount={() => void handleDeleteAccount()}
+            loggingOut={loggingOut}
+            leavingEvent={leavingEvent}
+            deletingAccount={deletingAccount}
+          />
         ) : !activeEventId ? (
           <section className="surface empty-state">
             <h1>{t.noEventsTitle}</h1>

@@ -1,4 +1,4 @@
-import { useId, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import type { FormEvent } from 'react'
 import { getMessages } from '../i18n/messages'
 import type { Goal, Locale, ProfileInput } from '../matching/types'
@@ -45,7 +45,8 @@ export function ProfileForm({
   initialProfile,
   onSubmit,
   locale = 'ru',
-}: ProfileFormProps & { example?: ProfileInput; locale?: Locale }) {
+  goalRequest = null,
+}: ProfileFormProps & { example?: ProfileInput; locale?: Locale; goalRequest?: { goal: Goal; seq: number } | null }) {
   const id = useId()
   const [fields, setFields] = useState(() => toFields(initialProfile))
   const [showErrors, setShowErrors] = useState(false)
@@ -59,6 +60,11 @@ export function ProfileForm({
     fields.goal === 'find_mentor'
 
   const change = (field: keyof Fields, value: string) => setFields(current => ({ ...current, [field]: value }))
+
+  // A goal picked on the landing page pre-fills the form; `seq` lets the same goal be picked twice.
+  useEffect(() => {
+    if (goalRequest) setFields(current => ({ ...current, goal: goalRequest.goal }))
+  }, [goalRequest])
 
   function control(name: RequiredField) {
     return {
@@ -127,13 +133,15 @@ export function ProfileForm({
             />
             <div className="goal-pills" aria-hidden="true">
               {goalOptions.map(opt => (
-                <span
+                <button
                   key={opt.value}
+                  type="button"
+                  tabIndex={-1}
                   className={`goal-pill ${fields.goal === opt.value ? 'goal-pill--active' : ''}`}
                   onClick={() => change('goal', opt.value)}
                 >
                   {opt.label}
-                </span>
+                </button>
               ))}
             </div>
             {fieldError('goal')}
