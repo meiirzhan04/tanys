@@ -127,7 +127,7 @@ test('account profile and three event questionnaires stay independent after relo
       await expect(page.locator('[name=role]')).toHaveValue(id === 'D' ? 'Software Engineer' : 'Role ' + id)
       if (id === 'D') {
         await expect(page.locator('[name=about]')).toHaveValue('My account bio')
-        await expect(page.locator('[name=visible]')).not.toBeChecked()
+        await expect(page.locator('[name=visible]')).toBeChecked()
       }
       if (id === 'A') {
         await page.locator('[name=name]').fill('New event name')

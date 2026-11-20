@@ -1639,10 +1639,16 @@ input[type='search']::-webkit-search-cancel-button { cursor: pointer; }
 @media (max-width: 600px) {
   .event-picker { flex-wrap: wrap; }
   .event-picker .custom-select { max-width: none; flex-basis: 100%; }
-  .confirm-dialog__actions { flex-direction: column-reverse; }
+  .confirm-dialog__actions { flex-direction: column-reverse; align-items: stretch; }
+  .qr-modal .confirm-dialog__actions > * { flex: 0 0 auto; width: 100%; }
+  .confirm-dialog__actions .text-button { text-align: center; }
 }
 
 .custom-select__control select { padding-right: 42px; text-overflow: ellipsis; cursor: pointer; }
 .custom-select__control select:disabled { opacity: 0.6; cursor: default; }
 .custom-select__control select:-moz-focusring { color: transparent; text-shadow: 0 0 0 var(--ink); }
 .availability-form .form-fields { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+
+/* Text selection follows the brand accent instead of the system blue */
+::selection { background: rgba(255, 106, 36, 0.32); color: inherit; }
+[data-theme='light'] ::selection { background: rgba(224, 78, 14, 0.2); }

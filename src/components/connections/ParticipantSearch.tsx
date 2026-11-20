@@ -20,6 +20,9 @@ interface ParticipantSearchProps {
   /** Server-confirmed introductions; the single source of truth for statuses after any action. */
   introductions: readonly IntroductionItem[]
   busyIntroId: string
+  /** The viewer's own questionnaire state in this event: requests need a saved, visible one. */
+  ownProfile: 'visible' | 'hidden' | 'missing'
+  onOpenQuestionnaire: () => void
   /** Resolves with an error message, or an empty string once the server stored the request. */
   onRequest: (userId: string, message: string) => Promise<string>
   onUpdateIntro: (introId: string, status: 'accepted' | 'declined' | 'withdrawn') => void
@@ -32,6 +35,8 @@ export function ParticipantSearch({
   locale,
   introductions,
   busyIntroId,
+  ownProfile,
+  onOpenQuestionnaire,
   onRequest,
   onUpdateIntro,
   onShowIntroduction,
@@ -156,6 +161,7 @@ export function ParticipantSearch({
 
       <div ref={rootRef} className="people-search__box">
         <label className="visually-hidden" htmlFor={`${id}-input`}>{c.searchLabel}</label>
+        <div className="people-search__field">
         <span className="people-search__icon" aria-hidden="true">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="6.5" stroke="currentColor" strokeWidth="1.8" /><path d="m16 16 4 4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" /></svg>
         </span>
@@ -182,6 +188,7 @@ export function ParticipantSearch({
           onKeyDown={handleKeyDown}
         />
         {state === 'loading' && <span className="people-search__spinner" aria-hidden="true" />}
+        </div>
 
         {showList && (
           <ul id={listboxId} role="listbox" className="people-search__list" aria-label={c.searchLabel}>
@@ -213,12 +220,25 @@ export function ParticipantSearch({
       <div className="people-search__status" role="status" aria-live="polite">
         {state === 'short' && <p>{c.searchMin(minLength)}</p>}
         {state === 'loading' && <p className="visually-hidden">{c.searchLoading}</p>}
-        {state === 'done' && !results.length && <p>{c.searchEmpty(query.trim())}</p>}
       </div>
+      {state === 'done' && !results.length && (
+        <div className="people-search__empty">
+          <p>{c.searchEmpty(query.trim())}</p>
+          <p className="people-search__why">{c.whyTitle}</p>
+          <ul>{c.whyItems.map(item => <li key={item}>{item}</li>)}</ul>
+        </div>
+      )}
       {state === 'error' && (
         <div className="error-banner error-banner--actions" role="alert">
           <span>{c.searchError}</span>
           <button type="button" className="secondary-button" onClick={() => setAttempt(value => value + 1)}>{c.retry}</button>
+        </div>
+      )}
+
+      {ownProfile !== 'visible' && (
+        <div className="own-profile-warning" role="note">
+          <p>{ownProfile === 'hidden' ? c.ownHidden : c.ownMissing}</p>
+          <button type="button" className="secondary-button" onClick={onOpenQuestionnaire}>{c.openQuestionnaire}</button>
         </div>
       )}
 
@@ -285,7 +305,7 @@ export function ParticipantSearch({
                   onChange={event => setMessage(event.target.value)}
                 />
               </label>
-              <button type="button" className="primary-button" data-action="connect" disabled={sending} onClick={() => void send()}>
+              <button type="button" className="primary-button" data-action="connect" disabled={sending || ownProfile !== 'visible'} onClick={() => void send()}>
                 {sending ? c.sending : c.connect}
               </button>
               {sendError && <p className="error-banner" role="alert">{sendError}</p>}

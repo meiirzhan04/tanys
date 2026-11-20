@@ -8,7 +8,7 @@ import { shellCopy } from '../connections/connectionsCopy'
 const SUPPORT_EMAIL = 'tanys.hrr@gmail.com'
 
 /** Compact product footer: brand, year, and real "About" and "Support" content in dialogs. */
-export function SiteFooter({ locale, demo }: { locale: Locale; demo: boolean }) {
+export function SiteFooter({ locale }: { locale: Locale }) {
   const t = shellCopy[locale]
   const [open, setOpen] = useState<'about' | 'support' | null>(null)
 
@@ -24,7 +24,7 @@ export function SiteFooter({ locale, demo }: { locale: Locale; demo: boolean }) 
           <button type="button" className="footer-link" data-footer="support" onClick={() => setOpen('support')}>{t.support}</button>
         </nav>
         <p className="site-footer__meta">
-          © {new Date().getFullYear()} Tanys{demo ? ` · ${t.demoNote}` : ''}
+          © {new Date().getFullYear()} Tanys
         </p>
       </div>
       {open === 'about' && (

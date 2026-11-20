@@ -72,12 +72,11 @@ export interface IntroductionsPanelProps {
   slotsByIntroId: Readonly<Record<string, readonly CommonSlot[]>>
   loadingSlotsIntroId: string
   proposingSlotKey: string
-  /** The viewer's own contact (owner-only), shown as a status line; editing lives in the profile. */
-  contactValue: string
+  ownProfile: 'visible' | 'hidden' | 'missing'
   socialError: string
   socialNotice: string
   onRequest: (userId: string, message: string) => Promise<string>
-  onOpenProfile: () => void
+  onOpenQuestionnaire: () => void
   onUpdateIntro: (introId: string, status: Exclude<IntroductionStatus, 'pending'>) => void
   onToggleSlots: (introId: string) => void
   onProposeMeeting: (introId: string, slotId: string) => void
@@ -97,11 +96,11 @@ export function IntroductionsPanel({
   slotsByIntroId,
   loadingSlotsIntroId,
   proposingSlotKey,
-  contactValue,
+  ownProfile,
   socialError,
   socialNotice,
   onRequest,
-  onOpenProfile,
+  onOpenQuestionnaire,
   onUpdateIntro,
   onToggleSlots,
   onProposeMeeting,
@@ -248,6 +247,8 @@ export function IntroductionsPanel({
           locale={locale}
           introductions={introductions}
           busyIntroId={busyIntroId}
+          ownProfile={ownProfile}
+          onOpenQuestionnaire={onOpenQuestionnaire}
           onRequest={onRequest}
           onUpdateIntro={onUpdateIntro}
           onShowIntroduction={showIntroduction}
@@ -285,13 +286,6 @@ export function IntroductionsPanel({
             ) : (
               <div className="requests__empty"><p>{tab === 'incoming' ? s.noIncoming : s.noOutgoing}</p></div>
             )}
-          </div>
-          <div className="own-contact">
-            <p>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" /><path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="currentColor" strokeWidth="1.8" /></svg>
-              {contactValue ? c.ownContactSet(contactValue) : c.ownContactMissing}
-            </p>
-            <button type="button" className="text-button" onClick={onOpenProfile}>{c.openProfile}</button>
           </div>
         </section>
       </div>

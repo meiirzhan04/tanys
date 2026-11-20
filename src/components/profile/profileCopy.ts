@@ -45,7 +45,6 @@ export interface ProfileCopy {
   dangerTitle: string
   dangerHint: string
   demoNote: string
-  footer: string
 }
 
 export const profileCopy: Record<Locale, ProfileCopy> = {
@@ -100,7 +99,6 @@ export const profileCopy: Record<Locale, ProfileCopy> = {
     dangerTitle: 'Управление аккаунтом',
     dangerHint: 'Выход из события скрывает вашу анкету. Удаление аккаунта необратимо.',
     demoNote: 'Демо-режим: анкета и встречи хранятся только в этой вкладке браузера.',
-    footer: 'Нетворкинг 1:1 для IT-событий · кейс Qazaq IT Community «AI for Smart Campus». Все анкеты в демо вымышленные.',
   },
   kk: {
     navLabel: 'Менің профилім',
@@ -153,7 +151,6 @@ export const profileCopy: Record<Locale, ProfileCopy> = {
     dangerTitle: 'Аккаунтты басқару',
     dangerHint: 'Іс-шарадан шығу анкетаңызды жасырады. Аккаунтты жою қайтарылмайды.',
     demoNote: 'Демо режим: анкета мен кездесулер тек осы браузер қойындысында сақталады.',
-    footer: 'IT-іс-шараларға арналған 1:1 нетворкинг · Qazaq IT Community «AI for Smart Campus» кейсі. Демодағы барлық анкета ойдан құрастырылған.',
   },
   en: {
     navLabel: 'My profile',
@@ -206,7 +203,6 @@ export const profileCopy: Record<Locale, ProfileCopy> = {
     dangerTitle: 'Account management',
     dangerHint: 'Leaving the event hides your profile. Deleting the account cannot be undone.',
     demoNote: 'Demo mode: your profile and meetings stay only in this browser tab.',
-    footer: '1:1 networking for tech events · Qazaq IT Community “AI for Smart Campus” case. All demo profiles are fictional.',
   },
 }
 

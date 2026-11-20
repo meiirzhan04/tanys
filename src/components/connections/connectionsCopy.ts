@@ -12,6 +12,11 @@ export interface ConnectionsCopy {
   searchLoading: string
   searchEmpty: (query: string) => string
   searchError: string
+  whyTitle: string
+  whyItems: readonly [string, string, string]
+  ownHidden: string
+  ownMissing: string
+  openQuestionnaire: string
   retry: string
   manualNote: string
   contactHidden: string
@@ -28,9 +33,6 @@ export interface ConnectionsCopy {
   sendError: string
   close: string
   requestsTitle: string
-  ownContactMissing: string
-  ownContactSet: (value: string) => string
-  openProfile: string
   messageFrom: string
   copy: string
   copied: string
@@ -52,6 +54,11 @@ export const connectionsCopy: Record<Locale, ConnectionsCopy> = {
     searchLoading: 'Ищем…',
     searchEmpty: query => `Никого не нашли по «${query}». Проверьте написание или поищите по имени.`,
     searchError: 'Не удалось выполнить поиск. Проверьте соединение.',
+    whyTitle: 'Человека можно найти, если он:',
+    whyItems: ['присоединился к этому мероприятию по приглашению', 'сохранил анкету мероприятия', 'включил «Показывать мою анкету»'],
+    ownHidden: 'Ваша анкета скрыта: другие участники не найдут вас и не смогут ответить на запрос.',
+    ownMissing: 'Сначала заполните анкету мероприятия — без неё нельзя отправлять запросы.',
+    openQuestionnaire: 'Открыть анкету',
     retry: 'Повторить',
     manualNote: 'Найден вручную — это не рекомендация подбора',
     contactHidden: 'Контакт скрыт до взаимного согласия',
@@ -68,9 +75,6 @@ export const connectionsCopy: Record<Locale, ConnectionsCopy> = {
     sendError: 'Запрос не отправлен. Попробуйте ещё раз.',
     close: 'Закрыть',
     requestsTitle: 'Запросы',
-    ownContactMissing: 'Добавьте контакт в профиле — его увидят только после взаимного согласия.',
-    ownContactSet: value => `Ваш контакт для знакомств: ${value}`,
-    openProfile: 'Открыть профиль',
     messageFrom: 'Сообщение',
     copy: 'Скопировать',
     copied: 'Скопировано',
@@ -90,6 +94,11 @@ export const connectionsCopy: Record<Locale, ConnectionsCopy> = {
     searchLoading: 'Іздеп жатырмыз…',
     searchEmpty: query => `«${query}» бойынша ешкім табылмады. Жазылуын тексеріңіз немесе атымен іздеңіз.`,
     searchError: 'Іздеу орындалмады. Байланысты тексеріңіз.',
+    whyTitle: 'Адамды табуға болады, егер ол:',
+    whyItems: ['осы іс-шараға шақыру арқылы қосылса', 'іс-шара сауалнамасын сақтаса', '«Сауалнамамды көрсету» дегенді қосса'],
+    ownHidden: 'Сауалнамаңыз жасырын: басқа қатысушылар сізді таба алмайды және сұрауға жауап бере алмайды.',
+    ownMissing: 'Алдымен іс-шара сауалнамасын толтырыңыз — онсыз сұрау жіберуге болмайды.',
+    openQuestionnaire: 'Сауалнаманы ашу',
     retry: 'Қайталау',
     manualNote: 'Қолмен табылды — бұл іріктеу ұсынысы емес',
     contactHidden: 'Байланыс өзара келісімге дейін жасырын',
@@ -106,9 +115,6 @@ export const connectionsCopy: Record<Locale, ConnectionsCopy> = {
     sendError: 'Сұрау жіберілмеді. Қайталап көріңіз.',
     close: 'Жабу',
     requestsTitle: 'Сұраулар',
-    ownContactMissing: 'Профильде байланыс қосыңыз — оны тек өзара келісімнен кейін көреді.',
-    ownContactSet: value => `Танысуға арналған байланысыңыз: ${value}`,
-    openProfile: 'Профильді ашу',
     messageFrom: 'Хабарлама',
     copy: 'Көшіру',
     copied: 'Көшірілді',
@@ -128,6 +134,11 @@ export const connectionsCopy: Record<Locale, ConnectionsCopy> = {
     searchLoading: 'Searching…',
     searchEmpty: query => `Nobody found for “${query}”. Check the spelling or search by name.`,
     searchError: 'Search failed. Check your connection.',
+    whyTitle: 'You can find a person if they:',
+    whyItems: ['joined this event with an invite', 'saved their event questionnaire', 'turned on “Show my questionnaire”'],
+    ownHidden: 'Your questionnaire is hidden: other participants cannot find you or reply to a request.',
+    ownMissing: 'Fill in the event questionnaire first — you need it to send requests.',
+    openQuestionnaire: 'Open questionnaire',
     retry: 'Retry',
     manualNote: 'Found manually — not a matching recommendation',
     contactHidden: 'Contact stays hidden until you both agree',
@@ -144,9 +155,6 @@ export const connectionsCopy: Record<Locale, ConnectionsCopy> = {
     sendError: 'The request was not sent. Please try again.',
     close: 'Close',
     requestsTitle: 'Requests',
-    ownContactMissing: 'Add a contact in your profile — it is shown only after you both agree.',
-    ownContactSet: value => `Your contact for introductions: ${value}`,
-    openProfile: 'Open profile',
     messageFrom: 'Message',
     copy: 'Copy',
     copied: 'Copied',
@@ -160,9 +168,6 @@ export interface ShellCopy {
   backToTop: string
   about: string
   support: string
-  demoBadge: string
-  demoNote: string
-  demoShort: string
   footerTagline: string
   aboutTitle: string
   aboutBody: readonly string[]
@@ -178,15 +183,11 @@ export const shellCopy: Record<Locale, ShellCopy> = {
     backToTop: 'Наверх',
     about: 'О проекте',
     support: 'Поддержка',
-    demoBadge: 'Демо',
-    demoNote: 'Все анкеты в демо вымышленные',
-    demoShort: 'анкеты вымышленные',
     footerTagline: 'Полезные знакомства на IT-событиях',
     aboutTitle: 'О проекте Tanys',
     aboutBody: [
       'Tanys помогает участникам IT-мероприятий находить нужных людей: подбирает собеседников по цели и стеку, открывает контакты только после взаимного согласия и помогает договориться о встрече.',
       'Прототип создан для кейса Qazaq IT Community «AI for Smart Campus».',
-      'В демо-режиме все анкеты вымышленные.',
     ],
     supportTitle: 'Поддержка',
     supportEvent: 'По вопросам мероприятия обратитесь к его организатору.',
@@ -198,15 +199,11 @@ export const shellCopy: Record<Locale, ShellCopy> = {
     backToTop: 'Жоғарыға',
     about: 'Жоба туралы',
     support: 'Қолдау',
-    demoBadge: 'Демо',
-    demoNote: 'Демодағы барлық анкета ойдан құрастырылған',
-    demoShort: 'анкеталар ойдан құрастырылған',
     footerTagline: 'IT-іс-шаралардағы пайдалы таныстықтар',
     aboutTitle: 'Tanys жобасы туралы',
     aboutBody: [
       'Tanys IT-іс-шара қатысушыларына керек адамдарды табуға көмектеседі: мақсат пен стек бойынша әңгімелесушілерді іріктейді, байланысты тек өзара келісімнен кейін ашады және кездесуді келісуге көмектеседі.',
       'Прототип Qazaq IT Community «AI for Smart Campus» кейсі үшін жасалған.',
-      'Демо режимде барлық анкета ойдан құрастырылған.',
     ],
     supportTitle: 'Қолдау',
     supportEvent: 'Іс-шара бойынша сұрақтарды оның ұйымдастырушысына қойыңыз.',
@@ -218,15 +215,11 @@ export const shellCopy: Record<Locale, ShellCopy> = {
     backToTop: 'Back to top',
     about: 'About',
     support: 'Support',
-    demoBadge: 'Demo',
-    demoNote: 'All demo profiles are fictional',
-    demoShort: 'fictional profiles',
     footerTagline: 'Useful connections at tech events',
     aboutTitle: 'About Tanys',
     aboutBody: [
       'Tanys helps people at tech events find the right people: it matches by goal and stack, unlocks contacts only after both agree, and helps you agree on a meeting.',
       'The prototype was built for the Qazaq IT Community “AI for Smart Campus” case.',
-      'In demo mode all profiles are fictional.',
     ],
     supportTitle: 'Support',
     supportEvent: 'For questions about an event, contact its organizer.',
