@@ -3,6 +3,7 @@ import { SchedulePanel } from './components/MeetingSlots'
 import { ProfileForm } from './components/ProfileForm'
 import { RecommendationResults } from './components/RecommendationResults'
 import profiles from './data/profiles.json'
+import { resolveAppCandidates } from './data/loadCandidates'
 import { previewProfiles, sampleProfile } from './data/previewProfiles'
 import { recordRecommendationFeedback, startRecommendationSession } from './matching/session'
 import type { Feedback, RecommendationSession } from './matching/session'
@@ -11,8 +12,19 @@ import { bookSlot, cancelSlotBooking, loadBookings, saveBookings } from './sched
 import type { MeetingBooking } from './scheduling/slots'
 import './styles.css'
 
-const candidates: readonly Candidate[] = [...profiles as Candidate[], ...previewProfiles]
+const candidates: readonly Candidate[] = resolveAppCandidates(profiles, previewProfiles)
 type View = 'profile' | 'results' | 'schedule'
+
+function getResultsMessage(session: RecommendationSession): string {
+  const count = session.recommendations.length
+  if (session.feedback.size) {
+    return `Отметка сохранена. Рекомендаций · ${count}`
+  }
+  if (count > 0 && count < 5) {
+    return `Показаны все доступные совпадения · ${count} из 5`
+  }
+  return ''
+}
 
 export default function App() {
   const [view, setView] = useState<View>('profile')
@@ -78,7 +90,7 @@ export default function App() {
             recommendations={session.recommendations}
             onEdit={() => setView('profile')}
             onFeedback={handleFeedback}
-            message={session.feedback.size ? `Отметка сохранена. Рекомендаций · ${session.recommendations.length}` : ''}
+            message={getResultsMessage(session)}
             bookings={bookings}
             onBookSlot={handleBookSlot}
             onCancelSlot={handleCancelSlot}
