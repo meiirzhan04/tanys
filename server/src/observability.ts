@@ -7,6 +7,7 @@ const REDACTED_KEYS = new Set([
   'contact',
   'value',
   'about',
+  'details',
   'name',
   'code',
   'token',
@@ -16,10 +17,12 @@ const REDACTED_KEYS = new Set([
   'cookie',
   'authorization',
   'smtp_url',
+  'database_url',
   'pgpassword',
   'session_secret',
 ])
 
+const CREDENTIAL_URL_PATTERN = /\b(postgres(?:ql)?|smtps?):\/\/[^:\s/]+:[^@\s]+@/gi
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi
 
 export interface MetricsSnapshot {
@@ -56,10 +59,12 @@ export const DEFAULT_ALERT_THRESHOLDS: AlertThresholds = {
   minEmailsForRateAlert: 5,
 }
 
-/** Recursively strip PII fields and mask inline emails before logging or alerting. */
+/** Recursively strip PII fields and mask inline credentials/emails before logging or alerting. */
 export function redactPii(input: unknown): unknown {
   if (typeof input === 'string') {
-    return input.replace(EMAIL_PATTERN, '[redacted-email]')
+    return input
+      .replace(CREDENTIAL_URL_PATTERN, '$1://[redacted]@')
+      .replace(EMAIL_PATTERN, '[redacted-email]')
   }
   if (Array.isArray(input)) {
     return input.map(item => redactPii(item))

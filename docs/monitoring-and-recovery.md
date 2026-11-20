@@ -13,7 +13,7 @@
 | Доставка писем (SMTP) | `server/src/observability.ts` | Ошибок `> 5%` при `>= 5` письмах | Critical | Проверка квот SMTP, SPF/DKIM и очереди |
 
 - **Получатель оповещений:** дежурный инженер (ответственный за релиз) и капитан проекта через `ALERT_WEBHOOK_URL` (Telegram/Slack webhook, задаётся в `deploy/.env.<env>`).
-- **Удаление ПДн из логов:** все структурные логи проходят через `redactPii()` / `formatSafeLog()` в [`server/src/observability.ts`](../server/src/observability.ts) — ключи `email`, `contact`, `value`, `about`, `name`, `code`, `token`, `password`, `cookie`, `authorization`, `smtp_url` заменяются на `[redacted]`, email-адреса в строках маскируются.
+- **Удаление ПДн из логов:** все структурные логи проходят через `redactPii()` / `formatSafeLog()` в [`server/src/observability.ts`](../server/src/observability.ts) — ключи `email`, `contact`, `value`, `about`, `details`, `name`, `code`, `token`, `password`, `cookie`, `authorization`, `smtp_url`, `database_url` заменяются на `[redacted]`, email-адреса и учётные данные в URL (`postgres://`, `smtps://`) маскируются.
 - **Срок хранения логов:** до **30 дней** (автоматическая ротация, без ПДн).
 
 ## 2. Целевые показатели резервного копирования (RPO / RTO)
@@ -40,10 +40,16 @@ APP_ENV=staging ALERT_WEBHOOK_URL="https://..." node deploy/health-alert.mjs --s
 
 ```sh
 # 1. Снять резервную копию (с контрольной суммой SHA-256 и ротацией 30 дней):
+# Вариант А — VPS (Docker Compose):
 ./deploy/backup-db.sh production /var/backups/tanys
+# Вариант Б — управляемый PostgreSQL (например, Vercel + Neon/Supabase из #97):
+DATABASE_URL="postgres://..." ./deploy/backup-db.sh production /var/backups/tanys
 
 # 2. Восстановить копию в изолированную БД (не затрагивая рабочую!) и замерить RPO/RTO:
+# Вариант А — VPS (Docker Compose):
 ./deploy/restore-db.sh production /var/backups/tanys/production/tanys_production_<STAMP>.dump tanys_restore_verify
+# Вариант Б — управляемый PostgreSQL (отдельная проверочная БД VERIFY_DATABASE_URL):
+VERIFY_DATABASE_URL="postgres://..." ./deploy/restore-db.sh production /var/backups/tanys/production/tanys_production_<STAMP>.dump
 ```
 
 Скрипт `restore-db.sh` проверяет контрольную сумму `.sha256`, разворачивает дамп в временную базу `tanys_restore_verify`, проверяет таблицы `schema_migrations`, `users`, `events`, удаляет временную БД и выводит JSON с `backupAgeMinutes` (свежесть/RPO) и `rtoSeconds` (время восстановления/RTO).

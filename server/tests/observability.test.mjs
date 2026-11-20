@@ -10,13 +10,18 @@ import {
 } from '../dist/observability.js'
 import { checkServiceHealth, dispatchAlert } from '../../deploy/health-alert.mjs'
 
-test('redactPii and formatSafeLog strip personal data and mask inline emails', () => {
+test('redactPii and formatSafeLog strip personal data and mask inline emails and URL credentials', () => {
   const input = {
     email: 'participant@example.kz',
     contact: '@participant',
     about: 'Личный текст о себе',
+    details: 'Текст жалобы с личными деталями',
+    database_url: 'postgres://tanys:supersecret@db.example.kz/tanys',
     code: '123456',
-    nested: { cookie: 'tanys_session=secret', note: 'contact user@tanys.kz for help' },
+    nested: {
+      cookie: 'tanys_session=secret',
+      note: 'contact user@tanys.kz or check postgres://u:dbpass123@host/db and smtps://m:smtppass456@smtp.kz:465',
+    },
     status: 500,
     route: '/api/v1/auth/sessions',
   }
@@ -25,13 +30,21 @@ test('redactPii and formatSafeLog strip personal data and mask inline emails', (
   assert.equal(sanitized.email, '[redacted]')
   assert.equal(sanitized.contact, '[redacted]')
   assert.equal(sanitized.about, '[redacted]')
+  assert.equal(sanitized.details, '[redacted]')
+  assert.equal(sanitized.database_url, '[redacted]')
   assert.equal(sanitized.code, '[redacted]')
   assert.equal(sanitized.nested.cookie, '[redacted]')
-  assert.equal(sanitized.nested.note, 'contact [redacted-email] for help')
+  assert.equal(
+    sanitized.nested.note,
+    'contact [redacted-email] or check postgres://[redacted]@host/db and smtps://[redacted]@smtp.kz:465',
+  )
   assert.equal(sanitized.status, 500)
 
   const line = formatSafeLog('error', 'auth_failed', input)
-  assert.doesNotMatch(line, /participant@example\.kz|user@tanys\.kz|123456|tanys_session|Личный текст/)
+  assert.doesNotMatch(
+    line,
+    /participant@example\.kz|user@tanys\.kz|123456|tanys_session|Личный текст|Текст жалобы|supersecret|dbpass123|smtppass456/,
+  )
   assert.equal(JSON.parse(line).event, 'auth_failed')
 })
 
