@@ -152,6 +152,7 @@ const roleAliases = new Map<string, string>()
 const roleGroups = {
   backend: [
     'backend', 'backdev', 'backenddev', 'backenddeveloper', 'backendengineer',
+    'backendразработчик', 'backendәзірлеуші',
     'бэкендразработчик', 'бекендразработчик', 'бэкендәзірлеуші', 'бекендәзірлеуші',
   ],
   frontend: [

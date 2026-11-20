@@ -107,6 +107,18 @@ test('matches the requested hiring role against the applicant role in both direc
   assert.deepEqual(recommend({ ...employer, lookingFor: ['Go'] }, [{ ...ios, role: 'Go' }]), [])
 })
 
+test('matches Backend-разработчик with a Backend hiring request using the saved form fields', () => {
+  const skills = ['Python', 'FastAPI', 'PostgreSQL']
+  const employer = candidate('employer', 'hire', { role: 'HR', skills, lookingFor: ['backend'] })
+  const backend = candidate('backend', 'find_job', { role: 'Backend-разработчик', skills, lookingFor: ['backend'] })
+  const ios = candidate('ios', 'find_job', { role: 'iOS-разработчик', skills: ['Swift'], lookingFor: ['backend'] })
+  const frontend = candidate('frontend', 'find_job', { role: 'Frontend-разработчик', skills: ['React'] })
+
+  assert.deepEqual(recommend(employer, [backend, ios, frontend]).map(result => result.candidate.id), ['backend'])
+  assert.deepEqual(recommend(backend, [employer]).map(result => result.candidate.id), ['employer'])
+  assert.deepEqual(recommend(ios, [employer]), [])
+})
+
 test('corrects a single typo in a known role and preserves distinct technologies', () => {
   const employer = candidate('employer', 'hire', { lookingFor: ['Backend Developer'] })
   const backend = candidate('backend', 'find_job', { skills: ['BacEnd'] })
@@ -152,7 +164,7 @@ test('uses embeddings to nominate a role and accepts only LLM-approved nominatio
   assert.equal(key('BacEnd'), 'backend')
   const recruiter = candidate('employer', 'hire', { lookingFor: ['Backend'] })
   const backend = candidate('backend', 'find_job', { skills: ['Server-side Engineer'] })
-  const ios = candidate('ios', 'find_job', { skills: ['Swift'] })
+  const ios = candidate('ios', 'find_job', { role: 'iOS Developer', skills: ['Swift'] })
   assert.deepEqual(recommend(recruiter, [ios, backend], 'kk', key).map(item => item.candidate.id), ['backend'])
   assert.deepEqual(recommend(backend, [recruiter], 'kk', key).map(item => item.candidate.id), ['employer'])
   await resolver(labels, normalizeSkill)
