@@ -1,0 +1,363 @@
+[
+  {
+    "id": "python-internship",
+    "scenario": "Первая стажировка в Python-бэкенде",
+    "input": {
+      "role": "Студент и начинающий backend-разработчик",
+      "skills": [
+        "Python",
+        "FastAPI",
+        "PostgreSQL"
+      ],
+      "experienceYears": 0,
+      "interests": [
+        "API",
+        "Стажировки"
+      ],
+      "about": "Сделал API для расписания на учебном проекте. Хочу получить первый опыт в команде с ревью и поддержкой.",
+      "goal": "find_job"
+    },
+    "expected": {
+      "goal": "hire",
+      "skillsAll": [
+        "Python"
+      ],
+      "lookingForAll": [
+        "Python",
+        "FastAPI"
+      ],
+      "aboutIncludesAny": [
+        "стажёр",
+        "стажер",
+        "стажиров",
+        "начинающ",
+        "junior"
+      ],
+      "minRelevantInTopFive": 3,
+      "description": "Участник нанимает на Python и FastAPI и прямо указывает, что готов работать со стажёром или начинающим разработчиком."
+    }
+  },
+  {
+    "id": "product-analytics-job",
+    "scenario": "Работа в продуктовой аналитике",
+    "input": {
+      "role": "Продуктовый аналитик",
+      "skills": [
+        "SQL",
+        "Python",
+        "A/B-тестирование",
+        "pandas"
+      ],
+      "experienceYears": 3,
+      "interests": [
+        "Продуктовая аналитика",
+        "A/B-тесты"
+      ],
+      "about": "Считаю конверсию по когортам. Хочу перейти в команду, где по результатам экспериментов меняют продукт.",
+      "goal": "find_job"
+    },
+    "expected": {
+      "goal": "hire",
+      "skillsAll": [
+        "SQL"
+      ],
+      "lookingForAll": [
+        "SQL",
+        "A/B-тестирование"
+      ],
+      "interestsAny": [
+        "Продуктовая аналитика"
+      ],
+      "minRelevantInTopFive": 3,
+      "description": "Нанимающая команда занимается продуктовой аналитикой и ищет опыт работы с SQL и экспериментами."
+    }
+  },
+  {
+    "id": "hire-accessible-frontend",
+    "scenario": "Найм в команду доступного интерфейса",
+    "input": {
+      "role": "Тимлид команды личного кабинета",
+      "skills": [
+        "React",
+        "TypeScript",
+        "Storybook"
+      ],
+      "experienceYears": 8,
+      "interests": [
+        "Веб-доступность",
+        "Дизайн-системы"
+      ],
+      "about": "Пересобираем форму регистрации. Нужен разработчик, который проверяет навигацию с клавиатуры и умеет объяснять решения дизайнерам.",
+      "goal": "hire",
+      "lookingFor": [
+        "React",
+        "TypeScript"
+      ]
+    },
+    "expected": {
+      "goal": "find_job",
+      "skillsAll": [
+        "React",
+        "TypeScript"
+      ],
+      "interestsAny": [
+        "Веб-доступность"
+      ],
+      "minRelevantInTopFive": 3,
+      "description": "Разработчик ищет работу, владеет React и TypeScript и интересуется доступностью веб-интерфейсов."
+    }
+  },
+  {
+    "id": "hire-data-engineer",
+    "scenario": "Найм инженера для оркестрации данных",
+    "input": {
+      "role": "Руководитель платформы данных",
+      "skills": [
+        "Python",
+        "SQL",
+        "Airflow",
+        "dbt"
+      ],
+      "experienceYears": 9,
+      "interests": [
+        "Оркестрация данных",
+        "Качество данных"
+      ],
+      "about": "Нужен инженер, который возьмёт на себя расписание загрузок и повторный запуск упавших задач.",
+      "goal": "hire",
+      "lookingFor": [
+        "SQL",
+        "Airflow",
+        "dbt"
+      ]
+    },
+    "expected": {
+      "goal": "find_job",
+      "skillsAll": [
+        "SQL",
+        "Airflow"
+      ],
+      "interestsAny": [
+        "Оркестрация данных"
+      ],
+      "minRelevantInTopFive": 3,
+      "description": "Кандидат ищет работу, знает SQL и Airflow и указывает интерес к оркестрации данных."
+    }
+  },
+  {
+    "id": "go-queue-mentor",
+    "scenario": "Наставник по очередям в Go-сервисах",
+    "input": {
+      "role": "Начинающий Go-разработчик",
+      "skills": [
+        "Go",
+        "PostgreSQL",
+        "Docker"
+      ],
+      "experienceYears": 1,
+      "interests": [
+        "API",
+        "Системный дизайн"
+      ],
+      "about": "Добавил обработчик фоновых задач. Нужна помощь с повторной доставкой и с тем, как заметить отставание очереди.",
+      "goal": "find_mentor",
+      "lookingFor": [
+        "Go",
+        "RabbitMQ"
+      ]
+    },
+    "expected": {
+      "goal": "be_mentor",
+      "skillsAll": [
+        "Go",
+        "RabbitMQ"
+      ],
+      "minExperienceYears": 4,
+      "interestsAny": [
+        "API",
+        "Системный дизайн"
+      ],
+      "minRelevantInTopFive": 3,
+      "description": "Участник предлагает наставничество и может разобрать очереди RabbitMQ в Go. Стаж не меньше четырёх лет."
+    }
+  },
+  {
+    "id": "ux-research-mentor",
+    "scenario": "Наставник для первых пользовательских интервью",
+    "input": {
+      "role": "Младший продуктовый дизайнер",
+      "skills": [
+        "Figma",
+        "Прототипирование"
+      ],
+      "experienceYears": 1,
+      "interests": [
+        "Исследования пользователей",
+        "Веб-доступность"
+      ],
+      "about": "Могу собрать прототип, хочу научиться задавать вопросы на интервью и отделять наблюдения от предположений.",
+      "goal": "find_mentor",
+      "lookingFor": [
+        "UX-исследования",
+        "Юзабилити-тестирование"
+      ]
+    },
+    "expected": {
+      "goal": "be_mentor",
+      "skillsAll": [
+        "UX-исследования"
+      ],
+      "minExperienceYears": 4,
+      "interestsAny": [
+        "Исследования пользователей"
+      ],
+      "minRelevantInTopFive": 3,
+      "description": "Наставник занимается исследованиями пользователей, указывает соответствующий навык и имеет не меньше четырёх лет опыта."
+    }
+  },
+  {
+    "id": "mentor-junior-data",
+    "scenario": "Поиск начинающих аналитиков для наставничества",
+    "input": {
+      "role": "Аналитик и наставник",
+      "skills": [
+        "SQL",
+        "Python",
+        "pandas",
+        "Дашборды"
+      ],
+      "experienceYears": 7,
+      "interests": [
+        "Продуктовая аналитика",
+        "SQL для аналитики"
+      ],
+      "about": "Могу разобрать первую воронку, дать обратную связь по SQL и помочь объяснить цифры команде.",
+      "goal": "be_mentor"
+    },
+    "expected": {
+      "goal": "find_mentor",
+      "skillsAll": [
+        "SQL"
+      ],
+      "maxExperienceYears": 2,
+      "interestsAny": [
+        "Продуктовая аналитика",
+        "SQL для аналитики"
+      ],
+      "minRelevantInTopFive": 3,
+      "description": "Начинающий аналитик с опытом до двух лет ищет наставника и хочет применять SQL к продуктовым задачам."
+    }
+  },
+  {
+    "id": "edtech-product-cofounder",
+    "scenario": "Сооснователь по продукту для платформы колледжей",
+    "input": {
+      "role": "Разработчик сервиса для колледжей",
+      "skills": [
+        "React",
+        "Node.js",
+        "TypeScript",
+        "PostgreSQL"
+      ],
+      "experienceYears": 5,
+      "interests": [
+        "EdTech",
+        "Доступное образование"
+      ],
+      "about": "Есть рабочий кабинет преподавателя. Ищу партнёра, который проверит пользу продукта с колледжами и проведёт пилот.",
+      "goal": "find_cofounder",
+      "lookingFor": [
+        "Продуктовая стратегия",
+        "UX-исследования",
+        "B2B-продажи"
+      ]
+    },
+    "expected": {
+      "goal": "find_cofounder",
+      "skillsAll": [
+        "Продуктовая стратегия",
+        "UX-исследования"
+      ],
+      "lookingForAny": [
+        "React",
+        "Node.js"
+      ],
+      "interestsAny": [
+        "EdTech"
+      ],
+      "minRelevantInTopFive": 3,
+      "description": "Партнёр по EdTech умеет исследовать потребности и вести продукт и сам ищет разработчика с React или Node.js."
+    }
+  },
+  {
+    "id": "industrial-vision-cofounder",
+    "scenario": "Технический сооснователь для проверки качества на производстве",
+    "input": {
+      "role": "Руководитель пилотов автоматизации",
+      "skills": [
+        "B2B-продажи",
+        "Управление пилотами",
+        "Производственные процессы"
+      ],
+      "experienceYears": 7,
+      "interests": [
+        "Промышленная аналитика",
+        "Обработка изображений"
+      ],
+      "about": "Могу договориться с производством о пилоте. Ищу специалиста, который соберёт прототип для поиска дефектов по снимкам.",
+      "goal": "find_cofounder",
+      "lookingFor": [
+        "Python",
+        "PyTorch",
+        "Компьютерное зрение"
+      ]
+    },
+    "expected": {
+      "goal": "find_cofounder",
+      "skillsAll": [
+        "Python",
+        "PyTorch"
+      ],
+      "lookingForAll": [
+        "B2B-продажи"
+      ],
+      "interestsAny": [
+        "Промышленная аналитика"
+      ],
+      "minRelevantInTopFive": 3,
+      "description": "Технический партнёр может сделать прототип на Python и PyTorch, интересуется производством и ищет помощь с B2B-продажами."
+    }
+  },
+  {
+    "id": "sre-exchange",
+    "scenario": "Обмен опытом по наблюдаемости и дежурствам",
+    "input": {
+      "role": "Инженер по надёжности сервисов",
+      "skills": [
+        "Kubernetes",
+        "Prometheus",
+        "Grafana"
+      ],
+      "experienceYears": 5,
+      "interests": [
+        "Наблюдаемость",
+        "Реагирование на инциденты"
+      ],
+      "about": "Пересматриваю уведомления для дежурной смены. Хочу сравнить набор метрик и формат разбора инцидентов.",
+      "goal": "exchange_experience"
+    },
+    "expected": {
+      "goal": "exchange_experience",
+      "skillsAll": [
+        "Kubernetes",
+        "Prometheus"
+      ],
+      "interestsAny": [
+        "Наблюдаемость",
+        "Реагирование на инциденты"
+      ],
+      "minRelevantInTopFive": 3,
+      "description": "Собеседник тоже готов обменяться опытом, работает с Kubernetes и Prometheus и интересуется метриками или разбором инцидентов."
+    }
+  }
+]
