@@ -92,12 +92,6 @@ function RecommendationCard({
           onClick={() => setExpanded(current => !current)}
         >{expanded ? t.collapse : t.expand}</button>
       </div>
-      <div id={detailsId} className="result-details" hidden={!expanded}>
-        {!!candidate.skills.length && <ul className="skill-list" aria-label={t.skillsAriaLabel}>
-          {candidate.skills.map((skill, index) => (
-            <li key={index} lang={detectSkillLocale(skill) ?? undefined}>{skill}</li>
-          ))}
-        </ul>}
         {icebreaker && <div className="icebreaker">
           <div className="phrase-heading">
             <strong>{t.icebreakerTitle}</strong>
@@ -106,6 +100,12 @@ function RecommendationCard({
           <p>{icebreaker}</p>
           <span className="copy-status" aria-live="polite">{copyStatus}</span>
         </div>}
+      <div id={detailsId} className="result-details" hidden={!expanded}>
+        {!!candidate.skills.length && <ul className="skill-list" aria-label={t.skillsAriaLabel}>
+          {candidate.skills.map((skill, index) => (
+            <li key={index} lang={detectSkillLocale(skill) ?? undefined}>{skill}</li>
+          ))}
+        </ul>}
         {bookings && onBookSlot && onCancelSlot && <CandidateMeetingPicker
           candidateId={candidate.id}
           candidateName={candidate.name}
