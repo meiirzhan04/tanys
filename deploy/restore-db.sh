@@ -44,6 +44,16 @@ if [ -n "${VERIFY_DATABASE_URL:-}" ]; then
   pg_restore --clean --if-exists --no-owner --no-privileges --exit-on-error \
     -d "$VERIFY_DATABASE_URL" "$BACKUP_FILE"
 
+  # Replay deleted account tombstones to enforce deletion rights after restoring backup (Issue #57)
+  psql "$VERIFY_DATABASE_URL" -v ON_ERROR_STOP=1 -c "
+    DO \$\$
+    BEGIN
+      IF to_regclass('public.deleted_account_tombstones') IS NOT NULL THEN
+        DELETE FROM users WHERE id IN (SELECT user_id FROM deleted_account_tombstones);
+      END IF;
+    END \$\$;
+  "
+
   MIGRATION_COUNT="$(psql "$VERIFY_DATABASE_URL" -tAc "SELECT count(*) FROM schema_migrations;" | tr -d '[:space:]')"
   USERS_COUNT="$(psql "$VERIFY_DATABASE_URL" -tAc "SELECT count(*) FROM users;" | tr -d '[:space:]')"
   EVENTS_COUNT="$(psql "$VERIFY_DATABASE_URL" -tAc "SELECT count(*) FROM events;" | tr -d '[:space:]')"
@@ -70,6 +80,17 @@ else
 
   docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T db \
     pg_restore -U "$POSTGRES_USER" -d "$VERIFY_DB" --no-owner --no-privileges --exit-on-error < "$BACKUP_FILE"
+
+  # Replay deleted account tombstones to enforce deletion rights after restoring backup (Issue #57)
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T db \
+    psql -U "$POSTGRES_USER" -d "$VERIFY_DB" -v ON_ERROR_STOP=1 -c "
+      DO \$\$
+      BEGIN
+        IF to_regclass('public.deleted_account_tombstones') IS NOT NULL THEN
+          DELETE FROM users WHERE id IN (SELECT user_id FROM deleted_account_tombstones);
+        END IF;
+      END \$\$;
+    "
 
   MIGRATION_COUNT="$(docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec -T db \
     psql -U "$POSTGRES_USER" -d "$VERIFY_DB" -tAc "SELECT count(*) FROM schema_migrations;" | tr -d '[:space:]')"

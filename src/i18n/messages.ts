@@ -132,6 +132,9 @@ export interface Messages {
     loggingOut: string
     leaveEvent: string
     leavingEvent: string
+    deleteAccount: string
+    deletingAccount: string
+    deleteAccountConfirm: string
     eventClosedNotice: string
     profileTitle: string
     profileEditTitle: string
@@ -162,6 +165,7 @@ export interface Messages {
       genericSave: string
       authUnavailable: string
       genericRequest: string
+      deleteAccountFailed: string
     }
     unsaved: {
       title: string
@@ -456,6 +460,9 @@ export const messagesByLocale: Record<Locale, Messages> = {
       loggingOut: 'Выход…',
       leaveEvent: 'Выйти из мероприятия',
       leavingEvent: 'Выходим…',
+      deleteAccount: 'Удалить аккаунт',
+      deletingAccount: 'Удаление аккаунта…',
+      deleteAccountConfirm: 'Удалить аккаунт и все связанные данные? Это действие необратимо.',
       eventClosedNotice: 'Мероприятие завершено. Редактирование анкеты недоступно.',
       profileTitle: 'Анкета в мероприятии',
       profileEditTitle: 'Редактировать анкету',
@@ -486,6 +493,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
         genericSave: 'Не удалось сохранить анкету. Введённые данные сохранены на экране.',
         authUnavailable: 'Сервер входа временно недоступен. Вы можете вернуться в демо и попробовать войти позже.',
         genericRequest: 'Произошла ошибка. Попробуйте повторить действие.',
+        deleteAccountFailed: 'Не удалось удалить аккаунт. Попробуйте позже.',
       },
       unsaved: {
         title: 'Есть несохранённые изменения анкеты',
@@ -778,6 +786,9 @@ export const messagesByLocale: Record<Locale, Messages> = {
       loggingOut: 'Шығуда…',
       leaveEvent: 'Іс-шарадан шығу',
       leavingEvent: 'Шығуда…',
+      deleteAccount: 'Аккаунтты өшіру',
+      deletingAccount: 'Аккаунт өшірілуде…',
+      deleteAccountConfirm: 'Аккаунтты және барлық байланысты деректерді өшіруді растайсыз ба? Бұл әрекетті қайтару мүмкін емес.',
       eventClosedNotice: 'Іс-шара аяқталды. Сауалнаманы өзгерту қолжетімсіз.',
       profileTitle: 'Іс-шарадағы анкета',
       profileEditTitle: 'Анкетаны өңдеу',
@@ -808,6 +819,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
         genericSave: 'Анкетаны сақтау мүмкін болмады. Енгізілген деректер экранда сақталды.',
         authUnavailable: 'Кіру сервері уақытша қолжетімсіз. Демоға оралып, кейінірек қайта кіріп көріңіз.',
         genericRequest: 'Қате орын алды. Әрекетті қайталап көріңіз.',
+        deleteAccountFailed: 'Аккаунтты өшіру мүмкін болмады. Кейінірек қайталап көріңіз.',
       },
       unsaved: {
         title: 'Анкетада сақталмаған өзгерістер бар',
@@ -1100,6 +1112,9 @@ export const messagesByLocale: Record<Locale, Messages> = {
       loggingOut: 'Signing out…',
       leaveEvent: 'Leave event',
       leavingEvent: 'Leaving…',
+      deleteAccount: 'Delete account',
+      deletingAccount: 'Deleting account…',
+      deleteAccountConfirm: 'Delete account and all associated data? This action cannot be undone.',
       eventClosedNotice: 'This event is closed. Profile editing is disabled.',
       profileTitle: 'Event profile',
       profileEditTitle: 'Edit profile',
@@ -1130,6 +1145,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
         genericSave: 'Could not save your profile. Your entered fields are preserved on screen.',
         authUnavailable: 'Sign-in is temporarily unavailable. Return to the demo or try signing in later.',
         genericRequest: 'Something went wrong. Please try again.',
+        deleteAccountFailed: 'Failed to delete account. Please try again later.',
       },
       unsaved: {
         title: 'You have unsaved profile changes',

@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import nodemailer from 'nodemailer'
 import { pool } from './db.js'
 import { HttpError, json, readBody, transaction, uuid } from './http.js'
+import { deleteUserAccount } from './retention.js'
 
 const sha = (value: string) => createHash('sha256').update(value).digest('hex')
 export const appOrigin = new URL(process.env.APP_ORIGIN || 'http://localhost:3000').origin
@@ -82,14 +83,53 @@ async function signIn(req: IncomingMessage, res: ServerResponse) {
   json(res, 200, { id: user })
 }
 
+async function deleteAccountHandler(req: IncomingMessage, res: ServerResponse) {
+  const userId = await viewer(req)
+  let body: Record<string, unknown> = {}
+  if (req.headers['content-type']?.split(';')[0]?.trim() === 'application/json') {
+    try {
+      body = await readBody(req)
+    } catch (e) {
+      if (e instanceof HttpError && e.status === 400) throw e
+      body = {}
+    }
+  }
+
+  const query = new URL(req.url || '', 'http://localhost').searchParams
+  const queryConfirm = query.get('confirm') === 'true'
+  const explicitConfirm = body.confirm === true || body.confirmation === 'DELETE' || queryConfirm
+
+  if (body.confirm === false) {
+    throw new HttpError(400, 'confirmation_required')
+  }
+
+  if (!explicitConfirm) {
+    const sessionRes = await pool.query(
+      'SELECT created_at FROM sessions WHERE digest=$1 AND expires_at>now()',
+      [sha(token(req) || '')],
+    )
+    const sessionCreatedAt = sessionRes.rows[0]?.created_at
+    const isRecent = sessionCreatedAt && (Date.now() - new Date(sessionCreatedAt).getTime() < 24 * 60 * 60 * 1000)
+    if (!isRecent) {
+      throw new HttpError(400, 'confirmation_required')
+    }
+  }
+
+  await transaction(client => deleteUserAccount(userId, client))
+  res.setHeader('Set-Cookie', cookie('', 0))
+  json(res, 204)
+}
+
 export async function authRoute(req: IncomingMessage, res: ServerResponse, path: string) {
   if (req.method === 'POST' && path === '/auth/challenges') await challenge(req,res)
   else if (req.method === 'POST' && path === '/auth/sessions') await signIn(req,res)
-  else if (req.method === 'GET' && path === '/me') json(res,200,{ id: await viewer(req) })
+  else if (req.method === 'GET' && path === '/me') json(res, 200, { id: await viewer(req) })
   else if (req.method === 'DELETE' && path === '/auth/session') {
     await pool.query('DELETE FROM sessions WHERE digest=$1', [sha(token(req) || '')])
     res.setHeader('Set-Cookie', cookie('',0))
     json(res,204)
-  } else return false
+  }
+  else if (req.method === 'DELETE' && path === '/me') await deleteAccountHandler(req, res)
+  else return false
   return true
 }

@@ -78,6 +78,8 @@ h1, h2, p { margin: 0; }
 .secondary-button:hover { background: var(--accent-soft); }
 .text-button { padding: 5px 0; border: 0; color: var(--accent); background: transparent; font-weight: 650; font-size: 13px; text-align: left; }
 .text-button:hover { text-decoration: underline; text-underline-offset: 3px; }
+.text-button.danger-button { color: #d9383a; }
+.text-button.danger-button:hover { color: #b32628; }
 
 .results-list { --row-columns: minmax(0, 1fr) minmax(0, 1.5fr) 96px; }
 .directory-header, .result-row { display: grid; grid-template-columns: var(--row-columns); align-items: center; gap: 16px; padding: 14px 18px; }

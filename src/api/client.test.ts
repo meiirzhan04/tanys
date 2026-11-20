@@ -103,6 +103,7 @@ describe('createTanysApiClient', () => {
     const recs = await api.getEventRecommendations('evt-1', 'kk')
     assert.deepEqual(recs, [])
     await api.logout()
+    await api.deleteAccount({ confirm: true })
 
     assert.equal(calls.every(call => call.credentials === 'same-origin'), true)
     assert.equal(calls[0].url, '/api/v1/auth/challenges')
@@ -110,6 +111,9 @@ describe('createTanysApiClient', () => {
     assert.equal(calls[1].body, '{"challengeId":"chg-1","code":"123456"}')
     assert.equal(calls[2].url, '/api/v1/events/evt-1/members/me')
     assert.equal(calls[4].url, '/api/v1/events/evt-1/recommendations?locale=kk')
+    const deleteMeCall = calls.find(call => call.url === '/api/v1/me' && call.method === 'DELETE')
+    assert.ok(deleteMeCall)
+    assert.equal(deleteMeCall?.body, '{"confirm":true}')
   })
 
   it('classifies 401, expired invites, and network failures accurately', async () => {

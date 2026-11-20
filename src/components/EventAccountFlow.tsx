@@ -198,6 +198,7 @@ export function EventAccountFlow({
   const [contactSaved, setContactSaved] = useState(false)
   const [loggingOut, setLoggingOut] = useState(false)
   const [leavingEvent, setLeavingEvent] = useState(false)
+  const [deletingAccount, setDeletingAccount] = useState(false)
 
   const prevIntrosRef = useRef<readonly IntroductionItem[]>([])
   const prevMeetingsRef = useRef<readonly ServerMeeting[]>([])
@@ -524,6 +525,27 @@ export function EventAccountFlow({
       setEventError(formatApiError(error, locale, 'general'))
     } finally {
       setLeavingEvent(false)
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (!window.confirm(t.deleteAccountConfirm)) return
+    setDeletingAccount(true)
+    setEventError('')
+    try {
+      await api.deleteAccount({ confirm: true })
+      setUser(null)
+      setEvents([])
+      setActiveEventId('')
+      setActiveEvent(null)
+      setRecommendations(null)
+      setDraft(emptyDraft())
+      setHasSavedProfile(false)
+      onExitToDemo()
+    } catch (error) {
+      setEventError(formatApiError(error, locale, 'general'))
+    } finally {
+      setDeletingAccount(false)
     }
   }
 
@@ -1111,10 +1133,16 @@ export function EventAccountFlow({
               <button
                 type="button"
                 className="text-button"
-                disabled={leavingEvent || saving}
+                disabled={leavingEvent || saving || deletingAccount}
                 onClick={event => guardNavigation(() => void handleLeaveEvent(), event.currentTarget)}
               >{leavingEvent ? t.leavingEvent : t.leaveEvent}</button>
             )}
+            <button
+              type="button"
+              className="text-button danger-button"
+              disabled={deletingAccount || leavingEvent || loggingOut || saving}
+              onClick={() => void handleDeleteAccount()}
+            >{deletingAccount ? t.deletingAccount : t.deleteAccount}</button>
             <button type="button" className="secondary-button" onClick={event => guardNavigation(onExitToDemo, event.currentTarget)}>
               {t.backToDemo}
             </button>
