@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { isApiError } from '../api/client'
 import type {
@@ -16,6 +16,8 @@ import { getMessages } from '../i18n/messages'
 import type { Locale } from '../matching/types'
 import { getGoalLabels } from './goalLabels'
 import { InterestMap } from './InterestMap'
+import { buildInviteUrl, getInviteState } from './inviteQr'
+import { InviteQrModal } from './InviteQrModal'
 
 export interface OrganizerCabinetProps {
   api: TanysApiClient
@@ -75,6 +77,8 @@ export function OrganizerCabinet({
   const [invites, setInvites] = useState<EventInvite[]>([])
   const [issuingInvite, setIssuingInvite] = useState(false)
   const [copiedInviteId, setCopiedInviteId] = useState('')
+  const [qrInviteId, setQrInviteId] = useState<string | null>(null)
+  const qrTriggerRef = useRef<HTMLButtonElement | null>(null)
   const [members, setMembers] = useState<EventMemberItem[]>([])
   const [interests, setInterests] = useState<EventInterestsPayload | null>(null)
   const [booths, setBooths] = useState<EventBooth[]>([])
@@ -96,6 +100,7 @@ export function OrganizerCabinet({
   useEffect(() => {
     setEditName(activeEvent?.name ?? '')
     setInvites([])
+    setQrInviteId(null)
     setMembers([])
     setInterests(null)
     setBooths([])
@@ -236,7 +241,7 @@ export function OrganizerCabinet({
 
   async function handleCopyInvite(invite: EventInvite) {
     if (!activeEvent) return
-    const url = `${window.location.origin}/invite/${encodeURIComponent(activeEvent.id)}/${encodeURIComponent(invite.token)}`
+    const url = buildInviteUrl(window.location.origin, activeEvent.id, invite.token)
     try {
       await navigator.clipboard.writeText(url)
       setCopiedInviteId(invite.id)
@@ -440,18 +445,29 @@ export function OrganizerCabinet({
             ) : (
               <ul className="invite-list">
                 {invites.map(invite => {
-                  const fullUrl = `${window.location.origin}/invite/${encodeURIComponent(activeEvent.id)}/${encodeURIComponent(invite.token)}`
+                  const fullUrl = buildInviteUrl(window.location.origin, activeEvent.id, invite.token)
+                  const inviteState = getInviteState(invite)
                   return (
                     <li key={invite.id} className="invite-row" data-invite-id={invite.id}>
                       <code className="invite-url">{fullUrl}</code>
                       <div className="social-card__actions">
-                        {invite.revoked ? (
-                          <span className="status-badge status-badge--cancelled">{o.inviteRevoked}</span>
+                        {inviteState !== 'active' ? (
+                          <span className="status-badge status-badge--cancelled">
+                            {inviteState === 'revoked' ? o.inviteRevoked : o.inviteExpired}
+                          </span>
                         ) : (
                           <>
                             <button type="button" className="secondary-button" onClick={() => void handleCopyInvite(invite)}>
                               {copiedInviteId === invite.id ? o.inviteCopied : o.copyInvite}
                             </button>
+                            <button
+                              type="button"
+                              className="secondary-button"
+                              onClick={event => {
+                                qrTriggerRef.current = event.currentTarget
+                                setQrInviteId(invite.id)
+                              }}
+                            >{o.showQr}</button>
                             <button type="button" className="meeting-slot-cancel" onClick={() => void handleRevokeInvite(invite.id)}>
                               {o.revokeInvite}
                             </button>
@@ -668,6 +684,27 @@ export function OrganizerCabinet({
           </div>
         </>
       )}
+
+      {activeEvent && qrInviteId && (() => {
+        const activeInvite = invites.find(item => item.id === qrInviteId)
+        if (!activeInvite) return null
+        const fullUrl = buildInviteUrl(window.location.origin, activeEvent.id, activeInvite.token)
+        return (
+          <InviteQrModal
+            eventName={activeEvent.name || activeEvent.id}
+            inviteUrl={fullUrl}
+            revoked={activeInvite.revoked}
+            expiresAt={activeInvite.expiresAt}
+            locale={locale}
+            copied={copiedInviteId === activeInvite.id}
+            onCopy={() => void handleCopyInvite(activeInvite)}
+            onClose={() => {
+              setQrInviteId(null)
+              requestAnimationFrame(() => qrTriggerRef.current?.focus())
+            }}
+          />
+        )
+      })()}
     </section>
   )
 }
