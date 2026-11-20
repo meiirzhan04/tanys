@@ -1,0 +1,35 @@
+[
+  {
+    "id": "demo-001",
+    "name": "Алия",
+    "role": "Backend-разработчик",
+    "skills": [
+      "Python",
+      "FastAPI"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "API"
+    ],
+    "about": "Ищу первую стажировку в backend.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-002",
+    "name": "Данияр",
+    "role": "Тимлид",
+    "skills": [
+      "Python"
+    ],
+    "experienceYears": 7,
+    "interests": [
+      "API"
+    ],
+    "about": "Нанимаю стажёра для разработки API.",
+    "goal": "hire",
+    "lookingFor": [
+      "Python",
+      "FastAPI"
+    ]
+  }
+]
