@@ -1,3 +1,4 @@
+import { accountDialogCopy } from './components/profile/accountDialogCopy'
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import {
   isAccountRoute,
@@ -122,6 +123,7 @@ export default function App() {
   const langRef = useRef<HTMLDivElement>(null)
   const langTriggerRef = useRef<HTMLButtonElement>(null)
   const langMenuRef = useRef<HTMLDivElement>(null)
+  const [accountAuthenticated, setAccountAuthenticated] = useState(false)
   const [exitRequestSeq, setExitRequestSeq] = useState(0)
   const [locale, setLocale] = useState<Locale>(() => {
     const initial = resolveInitialLocale()
@@ -434,17 +436,17 @@ export default function App() {
               </div>
             </div>
 
-            <button
-              type="button"
-              className="header-link-btn"
-              onClick={() => {
-                if (mode === 'account') {
-                  setExitRequestSeq(current => current + 1)
-                } else {
-                  openAccountMode()
-                }
-              }}
-            >{mode === 'account' ? messages.account.backToDemo : messages.account.openAccount}</button>
+            <button type="button" className="header-link-btn" onClick={() => {
+              if (mode === 'account') setExitRequestSeq(current => current + 1)
+              else openAccountMode()
+            }}>
+              {mode === 'account' && accountAuthenticated ? <>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M9 4H4v16h5m-1-8h13m-5-5 5 5-5 5" />
+                </svg>
+                <span className="header-logout-label">{accountDialogCopy[locale].logoutAction}</span>
+              </> : mode === 'account' ? messages.account.backToDemo : messages.account.openAccount}
+            </button>
           </div>
         </div>
       </header>
@@ -461,6 +463,7 @@ export default function App() {
         <EventAccountFlow
           locale={locale}
           initialInvite={initialInvite}
+          onAuthenticatedChange={setAccountAuthenticated}
           exitRequestSeq={exitRequestSeq}
           onExitToDemo={exitToDemoHome}
         />

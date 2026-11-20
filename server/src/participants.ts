@@ -29,7 +29,8 @@ export async function participantRoute(req: IncomingMessage, res: ServerResponse
 
   const member = await pool.query('SELECT 1 FROM memberships WHERE event_id=$1 AND user_id=$2', [event, user])
   if (!member.rowCount) throw new HttpError(404, 'not_found')
-  if (query.length < MIN_QUERY || query.length > 64) {
+  const browse = !query && params.get('browse') === '1'
+  if ((!browse && query.length < MIN_QUERY) || query.length > 64) {
     json(res, 200, { items: [], query, minLength: MIN_QUERY })
     return true
   }
@@ -47,7 +48,7 @@ export async function participantRoute(req: IncomingMessage, res: ServerResponse
             AND least(i.sender, i.recipient) = least(p.user_id, $2::uuid)
             AND greatest(i.sender, i.recipient) = greatest(p.user_id, $2::uuid)
       WHERE p.event_id = $1 AND p.visible AND p.user_id <> $2
-        AND (u.handle LIKE $4 ESCAPE '\\' OR lower(p.name) LIKE $5 ESCAPE '\\')
+        AND ($3 = '' OR u.handle LIKE $4 ESCAPE '\\' OR lower(p.name) LIKE $5 ESCAPE '\\')
         AND NOT EXISTS (SELECT 1 FROM event_blocks b WHERE b.event_id = p.event_id
               AND (b.blocker_id, b.blocked_id) IN ((p.user_id, $2::uuid), ($2::uuid, p.user_id)))
         AND NOT EXISTS (SELECT 1 FROM event_restrictions r WHERE r.event_id = p.event_id AND r.user_id IN (p.user_id, $2::uuid))

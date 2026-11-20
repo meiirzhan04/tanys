@@ -114,3 +114,5 @@ ollama pull qwen2.5:1.5b
 Задайте `TANYS_OLLAMA_URL=http://127.0.0.1:11434` в окружении API (`TANYS_EMBEDDING_MODEL` и `TANYS_LLM_MODEL` при необходимости). Модель используется только для сопоставления ролевых формулировок в серверном режиме; если Ollama выключен или недоступен, сервер мгновенно использует детерминированные локальные правила без задержек.
 
 [Ollama embeddings](https://docs.ollama.com/api/embed) · [Ollama structured outputs](https://docs.ollama.com/capabilities/structured-outputs)
+
+Доступ к `/admin` выдаёт оператор БД после миграций, по проверенному UUID аккаунта: `UPDATE users SET is_admin = true WHERE id = $1` (параметр — UUID). Кабинет позволяет назначать и отзывать роль организатора. Для управления событием нужны роль организатора и членство организатора именно в этом событии.

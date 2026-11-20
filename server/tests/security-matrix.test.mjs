@@ -227,11 +227,9 @@ function createMemoryDatabase() {
       invites.set(id, { id, eventId: params[0], digest: params[1], expiresAt: params[2], revoked: false })
       return { rowCount: 1, rows: [{ id }] }
     }
-    if (sql.startsWith('SELECT 1 FROM event_invites WHERE event_id=$1 AND digest=$2')) {
-      const found = [...invites.values()].some(
-        (i) => i.eventId === params[0] && i.digest === params[1] && !i.revoked && +i.expiresAt > Date.now(),
-      )
-      return { rowCount: found ? 1 : 0, rows: found ? [{ '?column?': 1 }] : [] }
+    if (sql.startsWith('SELECT revoked, expires_at <= now() AS expired FROM event_invites')) {
+      const invite = [...invites.values()].find(i => i.eventId === params[0] && i.digest === params[1])
+      return { rows: invite ? [{ revoked: invite.revoked, expired: +invite.expiresAt <= Date.now() }] : [] }
     }
     if (sql.startsWith('UPDATE event_invites SET revoked=true WHERE id=$1 AND event_id=$2')) {
       const inv = invites.get(params[0])
@@ -456,11 +454,8 @@ function createMemoryDatabase() {
     }
 
     // Admin routes
-    if (sql.startsWith('SELECT u.can_create_events, EXISTS(SELECT 1 FROM users WHERE can_create_events)')) {
-      const u = users.get(params[0])
-      if (!u) return { rowCount: 0, rows: [] }
-      const hasAny = [...users.values()].some((item) => item.canCreateEvents)
-      return { rowCount: 1, rows: [{ can_create_events: u.canCreateEvents, has_any_organizer: hasAny }] }
+    if (sql.startsWith('SELECT is_admin FROM users WHERE id=$1')) {
+      return { rows: [{ is_admin: users.get(params[0])?.isAdmin === true }] }
     }
     if (sql.startsWith('SELECT u.id, u.username, u.can_create_events AS "canCreateEvents"')) {
       const rows = [...users.values()].map((u) => ({
@@ -548,6 +543,7 @@ function createMemoryDatabase() {
   }
 
   return {
+    grantAdmin(userId) { users.get(userId).isAdmin = true },
     grantOrganizer(userId) {
       const u = users.get(userId)
       if (u) u.canCreateEvents = true
@@ -578,6 +574,13 @@ async function createMatrixHarness() {
           'docker',
           ['compose', '-f', 'compose.api.yaml', 'exec', '-T', 'db', 'psql', '-U', 'tanys', '-v', 'ON_ERROR_STOP=1'],
           { input: `UPDATE users SET can_create_events=true WHERE id='${userId}';` },
+        )
+      },
+      grantAdmin(userId) {
+        execFileSync(
+          'docker',
+          ['compose', '-f', 'compose.api.yaml', 'exec', '-T', 'db', 'psql', '-U', 'tanys', '-v', 'ON_ERROR_STOP=1'],
+          { input: `UPDATE users SET is_admin=true WHERE id='${userId}';` },
         )
       },
       async close() {},
@@ -637,6 +640,7 @@ async function createMatrixHarness() {
     expectSecureCookie: true,
     logs,
     setFailure: db.setFailure,
+    grantAdmin: db.grantAdmin,
     grantOrganizer: (userId) => db.grantOrganizer(userId),
     async close() {
       await new Promise((resolve) => server.close(resolve))
@@ -695,9 +699,10 @@ test('security and event isolation matrix across guest, participants, and cross-
     )
 
     // Register actors: two organizers (Event A and Event B) + participants
+    const partA1 = await registerAccount('pa1')
+    assert.equal((await api(partA1.cookie, 'GET', '/admin/overview')).status, 403)
     const orgA = await registerAccount('orga', true)
     const orgB = await registerAccount('orgb', true)
-    const partA1 = await registerAccount('pa1')
     const partA2 = await registerAccount('pa2')
     const partA3 = await registerAccount('pa3')
     const partB1 = await registerAccount('pb1')
@@ -893,6 +898,8 @@ test('security and event isolation matrix across guest, participants, and cross-
     assert.equal((await api(null, 'GET', '/admin/overview')).status, 401)
     assert.equal((await api(partA1.cookie, 'GET', '/admin/overview')).status, 403)
     assert.equal((await api(partA1.cookie, 'PATCH', `/admin/users/${partA3.id}`, { canCreateEvents: true })).status, 403)
+    assert.equal((await api(orgA.cookie, 'GET', '/admin/overview')).status, 403)
+    env.grantAdmin(orgA.id)
     const overview = await api(orgA.cookie, 'GET', '/admin/overview')
     assert.equal(overview.status, 200)
     assert.ok(overview.body.stats.usersCount >= 6)
@@ -903,7 +910,13 @@ test('security and event isolation matrix across guest, participants, and cross-
     const promoted = await api(orgA.cookie, 'PATCH', `/admin/users/${partB1.id}`, { canCreateEvents: true })
     assert.equal(promoted.status, 200)
     assert.equal(promoted.body.canCreateEvents, true)
+    assert.equal((await api(partB1.cookie, 'GET', '/me')).body.canCreateEvents, true)
     assert.equal((await api(orgA.cookie, 'PATCH', `/admin/users/${partB1.id}`, { canCreateEvents: false })).status, 200)
+
+    assert.equal((await api(partB1.cookie, 'GET', '/me')).body.canCreateEvents, false)
+    assert.equal((await api(orgA.cookie, 'PATCH', `/admin/users/${orgB.id}`, { canCreateEvents: false })).status, 200)
+    assert.equal((await api(orgB.cookie, 'GET', `/events/${evB}/members`)).status, 403)
+    assert.equal((await api(orgB.cookie, 'POST', `/events/${evB}/invites`, { expiresAt: inviteExp })).status, 403)
 
     // 6. Log secret/PII redaction and sanitized 500 error check (CI handler mode)
     if (!env.isLive) {

@@ -32,8 +32,9 @@ export function ConfirmDialog({
   const id = useId()
   const cancelRef = useRef<HTMLButtonElement>(null)
 
+  useEffect(() => { cancelRef.current?.focus() }, [])
+
   useEffect(() => {
-    cancelRef.current?.focus()
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && !busy) {
         event.preventDefault()

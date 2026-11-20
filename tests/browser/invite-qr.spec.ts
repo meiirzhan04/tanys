@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
-import type { BrowserContext } from '@playwright/test'
+import { getMessages } from '../../src/i18n/messages'
+import type { BrowserContext, Page } from '@playwright/test'
 
 function createInviteQrBackend() {
   const eventId = 'evt-qr-1'
@@ -7,8 +8,8 @@ function createInviteQrBackend() {
   const authByContext = new Map<BrowserContext, string | null>()
   let seq = 0
 
-  async function attach(context: BrowserContext) {
-    authByContext.set(context, null)
+  async function attach(context: BrowserContext, initialUser: string | null = null) {
+    authByContext.set(context, initialUser)
     await context.route('**/api/v1/**', async route => {
       const req = route.request()
       const path = new URL(req.url()).pathname.replace(/^\/api\/v1/, '')
@@ -18,15 +19,16 @@ function createInviteQrBackend() {
       const respond = (status: number, data?: unknown) =>
         route.fulfill({ status, contentType: 'application/json', body: status === 204 ? '' : JSON.stringify(data ?? {}) })
 
-      if (method === 'POST' && path === '/auth/password') {
+      if (method === 'POST' && (path === '/auth/password' || path === '/auth/register')) {
         const uid = String(body.username ?? '').toLowerCase() === 'org' ? 'org-1' : 'guest-1'
         authByContext.set(context, uid)
         return respond(200, { id: uid })
       }
       const viewerId = authByContext.get(context)
       if (!viewerId) return respond(401, { error: { code: 'session_required' } })
-      if (method === 'GET' && path === '/me') return respond(200, { id: viewerId })
+      if (method === 'GET' && path === '/me') return respond(200, { id: viewerId, canCreateEvents: viewerId === 'org-1' })
 
+      if (method === 'GET' && path === '/me/profile') return respond(200, { name: '', profession: '', about: '' })
       if (method === 'GET' && path === '/events') {
         const items = viewerId === 'org-1'
           ? [{ id: eventId, name: 'Almaty QR Meetup', role: 'organizer', status: 'active', timeZone: 'Asia/Almaty' }]
@@ -36,7 +38,7 @@ function createInviteQrBackend() {
       if (method === 'GET' && path === `/events/${eventId}`) {
         return respond(200, {
           id: eventId,
-          name: 'Almaty QR Meetup',
+          name: 'Almaty QR Meetup', role: viewerId === 'org-1' ? 'organizer' : 'participant',
           status: 'active',
           timeZone: 'Asia/Almaty',
           endsAt: new Date(Date.now() + 8 * 3600_000).toISOString(),
@@ -114,6 +116,8 @@ test('generates invite QR locally without external requests, closes with Escape,
     const dialog = orgPage.getByRole('dialog')
     await expect(dialog).toBeVisible()
     await expect(dialog.locator('svg')).toBeVisible()
+    const exported = await dialog.locator('a[download]').getAttribute('href')
+    expect(decodeURIComponent(exported!.split(',').slice(1).join(','))).toContain('<svg')
     await expect(dialog.locator('.invite-url')).toHaveText(inviteUrl)
 
     // Verify no horizontal overflow inside mobile viewport
@@ -139,18 +143,98 @@ test('generates invite QR locally without external requests, closes with Escape,
     // Assert zero external QR API requests were ever made
     expect(externalRequests).toEqual([])
 
+    // Follow the generated URL after registration, including a reload before registration.
+    const entrant = await guestCtx.newPage()
+    await entrant.goto('/join')
+    await entrant.locator('input[inputmode=url]').fill(inviteUrl)
+    await entrant.locator('button[type=submit]').click()
+    await expect(entrant).toHaveURL(inviteUrl)
+    await expect(entrant.locator('#auth-title')).toBeVisible()
+    await entrant.reload()
+    await entrant.locator('.purpose-toggle button').last().click()
+    await entrant.locator('input[name=username]').fill('newuser')
+    await entrant.locator('input[name=password]').fill('browser-test-password')
+    await entrant.locator('.auth-form button[type=submit]').click()
+    await expect(entrant.locator('#event-profile-title')).toBeVisible()
+    await expect(entrant).toHaveURL(/\/events\/evt-qr-1$/)
+
     // Revoke invite -> QR action disappears and old scanned URL is rejected by server
     await orgPage.locator('.invite-row button', { hasText: 'Revoke' }).click()
     await expect(orgPage.locator('.invite-row button', { hasText: 'Show QR' })).toHaveCount(0)
 
     const guestPage = await guestCtx.newPage()
     await guestPage.goto(new URL(inviteUrl).pathname)
-    await guestPage.locator('input[name="username"]').fill('guest')
-    await guestPage.locator('input[name="password"]').fill('browser-test-password')
-    await guestPage.locator('.auth-form button[type="submit"]').click()
-    await expect(guestPage.locator('#expired-invite-title')).toBeVisible()
+    await expect(guestPage.locator('#expired-invite-title')).toHaveText(getMessages('ru').account.inviteRevoked)
   } finally {
     await orgCtx.close()
     await guestCtx.close()
   }
 })
+
+test('retry keeps the invited event even when it is outside the first events page', async ({ page, context }) => {
+  await createInviteQrBackend().attach(context, 'guest-1')
+  let joins = 0
+  await page.route('**/api/v1/events/evt-qr-1/members/me', route => {
+    joins += 1
+    return route.fulfill({ json: joins === 1 ? { error: { code: 'unavailable' } } : { role: 'participant' },
+      status: joins === 1 ? 503 : 200 })
+  })
+  await page.goto('/invite/evt-qr-1/' + 'a'.repeat(64))
+  await expect(page.locator('#expired-invite-title')).toHaveText(getMessages('ru').account.inviteUnavailable)
+  await page.getByRole('button', { name: getMessages('ru').account.inviteRetry }).click()
+  await expect(page.locator('#event-profile-title')).toBeVisible()
+  await expect(page).toHaveURL(/\/events\/evt-qr-1$/)
+  expect(joins).toBe(2)
+})
+
+async function fitsViewport(page: Page, selector: string) {
+  const bounds = await page.locator(selector).boundingBox()
+  const viewport = page.viewportSize()!
+  expect(bounds).not.toBeNull()
+  expect(bounds!.x).toBeGreaterThanOrEqual(0)
+  expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(viewport.width + 1)
+  expect(bounds!.height).toBeLessThanOrEqual(viewport.height)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(viewport.width)
+}
+
+for (const locale of ['kk', 'ru', 'en'] as const) {
+  for (const theme of ['light', 'dark'] as const) {
+    for (const organizer of [false, true]) {
+      test(`account, logout and invite layout: ${locale}, ${theme}, ${organizer ? 'organizer' : 'user'}`, async ({ page, context }, info) => {
+        test.skip(info.project.name !== 'desktop-chrome', 'Explicit viewport matrix in Chromium')
+        await createInviteQrBackend().attach(context, organizer ? 'org-1' : 'guest-1')
+        await page.addInitScript(({ locale, theme }) => {
+          localStorage.setItem('tanys.locale.v1', locale)
+          localStorage.setItem('tanys.theme.v3', theme)
+        }, { locale, theme })
+        await page.goto('/login')
+        const t = getMessages(locale)
+        await page.locator('.nav-profile-btn').click()
+        await expect(page.locator('html')).toHaveAttribute('lang', locale)
+        await expect(page.locator('html')).toHaveAttribute('data-theme', theme)
+        await expect(page.locator('.nav-organizer-btn')).toHaveCount(organizer ? 1 : 0)
+        const widths = [320, 390, 768, 1024, 1440, 1920]
+        for (const width of widths) {
+          await page.setViewportSize({ width, height: 800 })
+          await fitsViewport(page, '.account-settings__header')
+          await page.locator('.header-link-btn').click()
+          await expect(page.getByRole('alertdialog')).toBeVisible()
+          await fitsViewport(page, '[role=alertdialog]')
+          await page.keyboard.press('Escape')
+          await expect(page.locator('#me-title')).toBeVisible()
+        }
+        if (organizer) {
+          await page.locator('.nav-organizer-btn').click()
+          await page.getByRole('button', { name: t.organizer.createInviteButton }).click()
+          await page.getByRole('button', { name: t.organizer.showQr }).click()
+          await expect(page.locator('.qr-svg-box svg')).toBeVisible()
+          for (const width of widths) {
+            await page.setViewportSize({ width, height: 800 })
+            await fitsViewport(page, '[role=dialog]')
+            await fitsViewport(page, '.qr-svg-box')
+          }
+        }
+      })
+    }
+  }
+}

@@ -39,7 +39,7 @@ function createModerationBackend() {
       }
       const viewerId = authByContext.get(context)
       if (!viewerId) return respond(401, { error: { code: 'session_required' } })
-      if (method === 'GET' && path === '/me') return respond(200, { id: viewerId })
+      if (method === 'GET' && path === '/me') return respond(200, { id: viewerId, canCreateEvents: viewerId === 'org-1' })
 
       if (method === 'GET' && path === '/events') {
         return respond(200, {

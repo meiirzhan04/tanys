@@ -30,7 +30,6 @@ export interface ConnectionsCopy {
   requestsTitle: string
   ownContactMissing: string
   ownContactSet: (value: string) => string
-  openProfile: string
   messageFrom: string
   copy: string
   copied: string
@@ -68,9 +67,8 @@ export const connectionsCopy: Record<Locale, ConnectionsCopy> = {
     sendError: 'Запрос не отправлен. Попробуйте ещё раз.',
     close: 'Закрыть',
     requestsTitle: 'Запросы',
-    ownContactMissing: 'Добавьте контакт в профиле — его увидят только после взаимного согласия.',
+    ownContactMissing: 'Добавьте контакт — его увидят только после взаимного согласия.',
     ownContactSet: value => `Ваш контакт для знакомств: ${value}`,
-    openProfile: 'Открыть профиль',
     messageFrom: 'Сообщение',
     copy: 'Скопировать',
     copied: 'Скопировано',
@@ -106,9 +104,8 @@ export const connectionsCopy: Record<Locale, ConnectionsCopy> = {
     sendError: 'Сұрау жіберілмеді. Қайталап көріңіз.',
     close: 'Жабу',
     requestsTitle: 'Сұраулар',
-    ownContactMissing: 'Профильде байланыс қосыңыз — оны тек өзара келісімнен кейін көреді.',
+    ownContactMissing: 'Байланыс дерегін қосыңыз — оны тек өзара келісімнен кейін көреді.',
     ownContactSet: value => `Танысуға арналған байланысыңыз: ${value}`,
-    openProfile: 'Профильді ашу',
     messageFrom: 'Хабарлама',
     copy: 'Көшіру',
     copied: 'Көшірілді',
@@ -144,9 +141,8 @@ export const connectionsCopy: Record<Locale, ConnectionsCopy> = {
     sendError: 'The request was not sent. Please try again.',
     close: 'Close',
     requestsTitle: 'Requests',
-    ownContactMissing: 'Add a contact in your profile — it is shown only after you both agree.',
+    ownContactMissing: 'Add a contact — it is shown only after you both agree.',
     ownContactSet: value => `Your contact for introductions: ${value}`,
-    openProfile: 'Open profile',
     messageFrom: 'Message',
     copy: 'Copy',
     copied: 'Copied',

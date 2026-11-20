@@ -56,12 +56,12 @@ export function ParticipantSearch({
 
   useEffect(() => {
     const normalized = query.trim().replace(/^@+/, '')
-    if (!normalized) {
+    if (!normalized && !open) {
       setState('idle')
       setResults([])
       return
     }
-    if (normalized.length < minLength) {
+    if (normalized && normalized.length < minLength) {
       setState('short')
       setResults([])
       return
@@ -71,6 +71,7 @@ export function ParticipantSearch({
     const timer = window.setTimeout(() => {
       api.searchParticipants(eventId, normalized, controller.signal)
         .then(result => {
+          if (controller.signal.aborted) return
           setResults(result.items)
           setMinLength(result.minLength)
           setActive(result.items.length ? 0 : -1)
@@ -85,7 +86,7 @@ export function ParticipantSearch({
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [api, eventId, query, minLength, attempt])
+  }, [api, eventId, query, minLength, attempt, open])
 
   useEffect(() => {
     if (!open) return
