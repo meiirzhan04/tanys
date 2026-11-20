@@ -26,6 +26,7 @@ services:
       PGUSER: ${POSTGRES_USER:?POSTGRES_USER is required}
       PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       PGDATABASE: ${POSTGRES_DB:?POSTGRES_DB is required}
+      DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}@db/${POSTGRES_DB:?POSTGRES_DB is required}
     networks:
       - internal
     depends_on:
@@ -45,6 +46,7 @@ services:
       PGUSER: ${POSTGRES_USER:?POSTGRES_USER is required}
       PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       PGDATABASE: ${POSTGRES_DB:?POSTGRES_DB is required}
+      DATABASE_URL: postgres://${POSTGRES_USER:?POSTGRES_USER is required}@db/${POSTGRES_DB:?POSTGRES_DB is required}
       SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
       SMTP_URL: ${SMTP_URL:?SMTP_URL is required}
       MAIL_FROM: ${MAIL_FROM:?MAIL_FROM is required}
