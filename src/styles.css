@@ -228,21 +228,61 @@ p { text-wrap: pretty; }
   color: var(--header-ink);
 }
 .brand:hover:not(:disabled) { transform: none; }
-.brand-lockup { display: inline-flex; align-items: center; gap: 10px; }
-.tanys-mark {
-  display: block;
-  flex-shrink: 0;
-  filter: drop-shadow(0 6px 14px rgba(255, 85, 0, 0.35));
+.brand-lockup { display: inline-flex; align-items: center; color: var(--header-ink); }
+.brand-lockup .brand-lockup__compact { display: none; }
+
+/* Brand mark: two heads that meet in one body. Entrance once, then a gentle periodic "meeting" nod. */
+.tanys-mark,
+.tanys-logo { display: block; flex-shrink: 0; overflow: visible; }
+.tanys-mark { filter: drop-shadow(0 6px 14px rgba(255, 90, 20, 0.32)); }
+.tanys-logo .tanys-mark__body { filter: drop-shadow(0 10px 18px rgba(255, 90, 20, 0.28)); }
+.tanys-mark__head,
+.tanys-mark__body,
+.tanys-mark__bridge,
+.tanys-logo__word { transform-box: fill-box; transform-origin: center; }
+.tanys-mark__head { transition: translate 420ms var(--ease-out); }
+.tanys-anim .tanys-mark__body { transform-origin: 50% 100%; animation: tanysBodyIn 760ms var(--ease-out) both; }
+.tanys-anim .tanys-mark__head--left { animation: tanysHeadIn 680ms var(--ease-out) 140ms both, tanysMeetLeft 7s ease-in-out 1.6s infinite; }
+.tanys-anim .tanys-mark__head--right { animation: tanysHeadIn 680ms var(--ease-out) 260ms both, tanysMeetRight 7s ease-in-out 1.6s infinite; }
+.tanys-anim .tanys-mark__bridge { animation: tanysBridgeIn 700ms ease-out 420ms both, tanysBridgeGlow 3.6s ease-in-out 1.2s infinite; }
+.tanys-anim .tanys-logo__word { animation: tanysWordIn 820ms var(--ease-out) 320ms both; }
+.brand:hover .tanys-mark__head--left,
+.brand:focus-visible .tanys-mark__head--left { translate: 7% 0; }
+.brand:hover .tanys-mark__head--right,
+.brand:focus-visible .tanys-mark__head--right { translate: -7% 0; }
+
+@keyframes tanysBodyIn {
+  from { opacity: 0; transform: translateY(14%) scaleY(0.7); }
+  to { opacity: 1; transform: none; }
 }
-.tanys-mark__ring { transform-box: fill-box; transform-origin: center; transition: transform 420ms var(--ease-out); }
-.brand:hover .tanys-mark__ring--left { transform: translateX(-1.2px); }
-.brand:hover .tanys-mark__ring--right { transform: translateX(1.2px); }
-.brand-word {
-  font-size: 21px;
-  font-weight: 650;
-  letter-spacing: -0.05em;
-  line-height: 1;
-  color: var(--header-ink);
+@keyframes tanysHeadIn {
+  0% { opacity: 0; transform: translateY(-45%) scale(0.35); }
+  70% { opacity: 1; transform: translateY(4%) scale(1.06); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes tanysMeetLeft {
+  0%, 84%, 100% { transform: none; }
+  90% { transform: translateX(9%) translateY(-3%); }
+}
+@keyframes tanysMeetRight {
+  0%, 84%, 100% { transform: none; }
+  90% { transform: translateX(-9%) translateY(-3%); }
+}
+@keyframes tanysBridgeIn {
+  from { opacity: 0; transform: scale(0.6); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes tanysBridgeGlow {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+@keyframes tanysWordIn {
+  from { opacity: 0; clip-path: inset(0 100% 0 0); transform: translateX(-2%); }
+  to { opacity: 1; clip-path: inset(0 0 0 0); transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tanys-anim *,
+  .tanys-mark__head { animation: none !important; transition: none !important; }
 }
 .brand-tag {
   font-size: 11px;
@@ -439,8 +479,9 @@ p { text-wrap: pretty; }
   line-height: 1.5;
 }
 .site-footer__inner p { max-width: 70ch; }
-.site-footer .brand-word { font-size: 17px; color: var(--ink); }
-.site-footer .tanys-mark { filter: none; }
+.site-footer .brand-lockup { color: var(--ink); }
+.site-footer .tanys-mark,
+.site-footer .tanys-logo .tanys-mark__body { filter: none; }
 
 /* Workspace & sidebar navigation */
 .workspace {
@@ -1475,7 +1516,8 @@ p { text-wrap: pretty; }
 }
 
 @media (max-width: 380px) {
-  .brand-word { display: none; }
+  .brand-lockup .brand-lockup__full { display: none; }
+  .brand-lockup .brand-lockup__compact { display: block; }
 }
 
 @media (max-width: 600px) {

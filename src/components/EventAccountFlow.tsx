@@ -1125,7 +1125,7 @@ export function EventAccountFlow({
             </div>
             <div className="auth-circuit-box">
               <div className="showcase-chip">
-                <TanysMark size={40} />
+                <TanysMark size={54} />
                 <span className="showcase-chip__sub">QR · 1:1</span>
               </div>
               <div className="auth-Showcase-grid">
