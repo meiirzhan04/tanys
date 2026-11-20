@@ -36,7 +36,7 @@ const candidates: readonly Candidate[] = resolveAppCandidates(profiles, previewP
 const interestSummary = summarizeInterests(parseCandidates(profiles))
 type View = 'profile' | 'results' | 'schedule' | 'interests'
 type Theme = 'light' | 'dark'
-const THEME_STORAGE_KEY = 'tanys.theme.v2'
+const THEME_STORAGE_KEY = 'tanys.theme.v3'
 
 function resolveInitialTheme(): Theme {
   try {
@@ -45,76 +45,55 @@ function resolveInitialTheme(): Theme {
   } catch {
     // Ignore storage restrictions.
   }
-  return 'light'
+  return 'dark'
 }
 
 const HEADER_EXTRA = {
-  ru: { admin: 'Админ', toDark: 'Тёмная', toLight: 'Светлая' },
-  kk: { admin: 'Әкімші', toDark: 'Қараңғы', toLight: 'Жарық' },
-  en: { admin: 'Admin', toDark: 'Dark', toLight: 'Light' },
+  ru: { toDark: 'Тёмная', toLight: 'Светлая' },
+  kk: { toDark: 'Қараңғы', toLight: 'Жарық' },
+  en: { toDark: 'Dark', toLight: 'Light' },
 } as const
 
-const PHOTO_SHOWCASE_COPY = {
-  ru: [
-    {
-      src: '/photos/meetup-hall.jpg',
-      badge: 'Qazaq IT Community · Live',
-      title: 'Живые IT-митапы и конференции',
-      caption: 'Подбор собеседников под реальную программу и формат площадки.',
-    },
-    {
-      src: '/photos/networking-talk.jpg',
-      badge: '1:1 Нетворкинг · 20 мин',
-      title: 'Точные слоты без хаоса',
-      caption: 'Назначайте встречи по общим целям, стеку и свободным окнам.',
-    },
-    {
-      src: '/photos/team-session.jpg',
-      badge: 'QR Check-in · Стенды',
-      title: 'Быстрый вход по QR-коду',
-      caption: 'Сканируйте приглашение и сразу открывайте контакты и стенды.',
-    },
-  ],
-  kk: [
-    {
-      src: '/photos/meetup-hall.jpg',
-      badge: 'Qazaq IT Community · Live',
-      title: 'Тікелей IT-митаптар мен конференциялар',
-      caption: 'Нақты бағдарлама мен алаң форматына сай серіктес таңдау.',
-    },
-    {
-      src: '/photos/networking-talk.jpg',
-      badge: '1:1 Нетворкинг · 20 мин',
-      title: 'Артық әуресіз нақты уақыттар',
-      caption: 'Мақсат, стек және бос уақыт бойынша кездесулерді жоспарлаңыз.',
-    },
-    {
-      src: '/photos/team-session.jpg',
-      badge: 'QR Check-in · Стендтер',
-      title: 'QR-код арқылы лезде кіру',
-      caption: 'Шақыруды сканерлеп, байланыс пен серіктес стендтерін ашыңыз.',
-    },
-  ],
-  en: [
-    {
-      src: '/photos/meetup-hall.jpg',
-      badge: 'Qazaq IT Community · Live',
-      title: 'Live IT meetups & tech conferences',
-      caption: 'Curated introductions tailored to the real event schedule.',
-    },
-    {
-      src: '/photos/networking-talk.jpg',
-      badge: '1:1 Networking · 20 min',
-      title: 'Focused 1:1 slots without noise',
-      caption: 'Schedule meetings around shared goals, stack, and open windows.',
-    },
-    {
-      src: '/photos/team-session.jpg',
-      badge: 'QR Check-in · Booths',
-      title: 'Instant QR event pass',
-      caption: 'Scan an organizer invite link to unlock attendees and booths.',
-    },
-  ],
+const GCORE_HERO_COPY = {
+  ru: {
+    pill: '✦ Tanys Networking Engine',
+    headline: 'Exact 1:1 Matches at Live Tech Events',
+    subhead: 'Алгоритмический подбор собеседников по целям, стеку, опыту и свободным 20-минутным слотам.',
+    nodes: [
+      { code: '1:1', label: 'Слоты 20 мин' },
+      { code: 'QR', label: 'Инвайт-пропуск' },
+      { code: 'API', label: 'Стек и навыки' },
+      { code: '6×', label: 'Цели встреч' },
+      { code: 'TG', label: 'Обмен контактом' },
+      { code: 'EXP', label: 'Стенды и темы' },
+    ],
+  },
+  kk: {
+    pill: '✦ Tanys Networking Engine',
+    headline: 'Exact 1:1 Matches at Live Tech Events',
+    subhead: 'Мақсат, стек, тәжірибе және бос 20 минуттық уақыт слоттары бойынша дәл серіктес таңдау.',
+    nodes: [
+      { code: '1:1', label: '20 мин слоттар' },
+      { code: 'QR', label: 'Шақыру рұқсаты' },
+      { code: 'API', label: 'Стек пен дағды' },
+      { code: '6×', label: 'Кездесу мақсаты' },
+      { code: 'TG', label: 'Контакт алмасу' },
+      { code: 'EXP', label: 'Стендтер картасы' },
+    ],
+  },
+  en: {
+    pill: '✦ Tanys Networking Engine',
+    headline: 'Exact 1:1 Matches at Live Tech Events',
+    subhead: 'High-precision attendee matching across goals, engineering stack, seniority, and 20-minute slots.',
+    nodes: [
+      { code: '1:1', label: '20-min slots' },
+      { code: 'QR', label: 'Instant pass' },
+      { code: 'API', label: 'Stack matching' },
+      { code: '6×', label: 'Goal alignment' },
+      { code: 'TG', label: 'Contact reveal' },
+      { code: 'EXP', label: 'Partner booths' },
+    ],
+  },
 } as const
 
 function getResultsMessage(session: RecommendationSession, locale: Locale): string {
@@ -216,16 +195,9 @@ export default function App() {
   }
 
   const extra = HEADER_EXTRA[locale]
+  const hero = GCORE_HERO_COPY[locale]
 
-  function openAdminMode() {
-    saveAccountModePreference(false)
-    if (typeof window !== 'undefined' && window.history?.replaceState) {
-      window.history.replaceState(null, '', '/admin')
-    }
-    setMode('admin')
-  }
-
-  function exitAdminToDemo() {
+  function exitAdminToHome() {
     if (typeof window !== 'undefined' && window.history?.replaceState) {
       window.history.replaceState(null, '', '/')
     }
@@ -234,24 +206,18 @@ export default function App() {
 
   return (
     <div className="app-shell">
+      <div className="gcore-flare" aria-hidden="true" />
       <header className="site-header">
         <div className="site-width header-inner">
           <span className="brand"><span className="brand-mark" aria-hidden="true">T</span>Tanys</span>
           <span className="header-context">{messages.header.context}</span>
           <div className="header-actions">
-            {mode === 'demo' && <span className="demo-status">{messages.header.demoStatus}</span>}
             <button
               type="button"
               className="header-theme-btn"
               aria-pressed={theme === 'dark'}
               onClick={() => setTheme(current => (current === 'dark' ? 'light' : 'dark'))}
             >{theme === 'dark' ? extra.toLight : extra.toDark}</button>
-            <button
-              type="button"
-              className="header-admin-btn"
-              aria-pressed={mode === 'admin'}
-              onClick={() => (mode === 'admin' ? exitAdminToDemo() : openAdminMode())}
-            >{extra.admin}</button>
             <button
               type="button"
               className="header-link-btn"
@@ -284,7 +250,7 @@ export default function App() {
       {mode === 'admin' ? (
         <AdminDashboard
           locale={locale}
-          onBack={exitAdminToDemo}
+          onBack={exitAdminToHome}
           onOpenAccount={() => {
             saveAccountModePreference(true)
             syncAccountLocationUrl(true)
@@ -320,19 +286,48 @@ export default function App() {
 
           <main className="main-content">
             <div hidden={view !== 'profile'}>
-              <div className="photo-showcase-grid" aria-hidden="true">
-                {PHOTO_SHOWCASE_COPY[locale].map(card => (
-                  <article key={card.src} className="surface photo-card">
-                    <div className="photo-card__media">
-                      <img src={card.src} alt="" loading="lazy" />
-                      <span className="photo-card__badge">{card.badge}</span>
-                    </div>
-                    <div className="photo-card__body">
-                      <strong>{card.title}</strong>
-                      <p>{card.caption}</p>
-                    </div>
-                  </article>
-                ))}
+              <div className="gcore-hero surface" aria-hidden="true">
+                <div className="gcore-hero__top">
+                  <span className="gcore-pill">{hero.pill}</span>
+                  <strong className="gcore-hero__title">{hero.headline}</strong>
+                  <p className="gcore-hero__sub">{hero.subhead}</p>
+                </div>
+                <div className="gcore-circuit">
+                  <svg className="gcore-circuit__svg" viewBox="0 0 760 210" fill="none" preserveAspectRatio="none">
+                    <path className="trace-base" d="M120 42 H270 L320 92 H380" />
+                    <path className="trace-pulse" d="M120 42 H270 L320 92 H380" />
+                    <path className="trace-base" d="M84 105 H380" />
+                    <path className="trace-pulse trace-pulse--d2" d="M84 105 H380" />
+                    <path className="trace-base" d="M120 168 H270 L320 118 H380" />
+                    <path className="trace-pulse trace-pulse--d3" d="M120 168 H270 L320 118 H380" />
+                    <path className="trace-base" d="M640 42 H490 L440 92 H380" />
+                    <path className="trace-pulse trace-pulse--d2" d="M640 42 H490 L440 92 H380" />
+                    <path className="trace-base" d="M676 105 H380" />
+                    <path className="trace-pulse trace-pulse--d3" d="M676 105 H380" />
+                    <path className="trace-base" d="M640 168 H490 L440 118 H380" />
+                    <path className="trace-pulse" d="M640 168 H490 L440 118 H380" />
+                  </svg>
+                  <div className="gcore-nodes-col">
+                    {hero.nodes.slice(0, 3).map(n => (
+                      <div key={n.code} className="gcore-node">
+                        <span className="gcore-node__code">{n.code}</span>
+                        <span className="gcore-node__label">{n.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="gcore-chip">
+                    <span className="gcore-chip__core">AI · 1:1</span>
+                    <span className="gcore-chip__sub">TANYS</span>
+                  </div>
+                  <div className="gcore-nodes-col gcore-nodes-col--right">
+                    {hero.nodes.slice(3, 6).map(n => (
+                      <div key={n.code} className="gcore-node">
+                        <span className="gcore-node__code">{n.code}</span>
+                        <span className="gcore-node__label">{n.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
               <ProfileForm onSubmit={submit} example={sampleProfile} locale={locale} />
             </div>

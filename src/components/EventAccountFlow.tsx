@@ -1028,21 +1028,24 @@ export function EventAccountFlow({
           </section>
 
           <aside className="surface auth-showcase" aria-hidden="true">
-            <div className="auth-showcase__hero">
-              <img src="/photos/meetup-hall.jpg" alt="" />
-              <span className="photo-card__badge">{authShowcase.tag}</span>
+            <div className="auth-showcase__top">
+              <span className="gcore-pill">✦ {authShowcase.tag}</span>
+              <strong className="auth-showcase__headline">{authShowcase.headline}</strong>
+              <p className="auth-showcase__caption">{authShowcase.caption}</p>
             </div>
-            <div className="auth-showcase__row">
-              <img src="/photos/networking-talk.jpg" alt="" />
-              <div className="auth-showcase__text">
-                <strong>{authShowcase.headline}</strong>
-                <p>{authShowcase.caption}</p>
+            <div className="auth-circuit-box">
+              <div className="gcore-chip">
+                <span className="gcore-chip__core">QR · 1:1</span>
+                <span className="gcore-chip__sub">TANYS</span>
               </div>
-            </div>
-            <div className="auth-showcase__pills">
-              {authShowcase.badges.map(badge => (
-                <span key={badge} className="visibility-pill">{badge}</span>
-              ))}
+              <div className="auth-Showcase-grid">
+                {authShowcase.badges.map((badge, idx) => (
+                  <div key={badge} className="gcore-node">
+                    <span className="gcore-node__code">{idx === 0 ? 'KZ' : idx === 1 ? '1:1' : 'QR'}</span>
+                    <span className="gcore-node__label">{badge}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </aside>
         </div>
@@ -1154,9 +1157,6 @@ export function EventAccountFlow({
               disabled={deletingAccount || leavingEvent || loggingOut || saving}
               onClick={() => void handleDeleteAccount()}
             >{deletingAccount ? t.deletingAccount : t.deleteAccount}</button>
-            <button type="button" className="secondary-button" onClick={event => guardNavigation(onExitToDemo, event.currentTarget)}>
-              {t.backToDemo}
-            </button>
           </div>
         </div>
 
