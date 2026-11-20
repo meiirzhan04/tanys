@@ -9,7 +9,6 @@ import {
   syncAccountLocationUrl,
 } from './api/inviteRoute'
 import { TanysWordmark } from './components/brand/TanysLogo'
-import { shellCopy } from './components/connections/connectionsCopy'
 import { BackToTop } from './components/shell/BackToTop'
 import { SiteFooter } from './components/shell/SiteFooter'
 import { EventAccountFlow } from './components/EventAccountFlow'
@@ -305,15 +304,9 @@ export default function App() {
       <header className="site-header">
         <div className="site-width header-inner">
           {mode === 'demo' ? (
-            <span className="brand-group">
-              <button type="button" className="brand" aria-label="Tanys" onClick={handleGoHome}>
-                <TanysWordmark size={28} />
-              </button>
-              <span className="demo-chip" title={shellCopy[locale].demoNote}>
-                {shellCopy[locale].demoBadge}
-                <span className="demo-chip__note"> · {shellCopy[locale].demoShort}</span>
-              </span>
-            </span>
+            <button type="button" className="brand" aria-label="Tanys" onClick={handleGoHome}>
+              <TanysWordmark size={28} />
+            </button>
           ) : (
             <span className="brand">
               <TanysWordmark size={28} />
@@ -547,7 +540,7 @@ export default function App() {
         </div>
         </>
       )}
-      <SiteFooter locale={locale} demo={mode === 'demo'} />
+      <SiteFooter locale={locale} />
       <BackToTop locale={locale} />
     </div>
   )

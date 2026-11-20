@@ -74,11 +74,13 @@ export interface IntroductionsPanelProps {
   slotsByIntroId: Readonly<Record<string, readonly CommonSlot[]>>
   loadingSlotsIntroId: string
   proposingSlotKey: string
-  /** The viewer's own contact (owner-only), shown as a status line; editable here before exchanging contacts. */
+  ownProfile: 'visible' | 'hidden' | 'missing'
+  /** The viewer's own contact (owner-only); revealed to a person only after both agree. */
   contactValue: string
   socialError: string
   socialNotice: string
   onRequest: (userId: string, message: string) => Promise<string>
+  onOpenQuestionnaire: () => void
   onSaveContact: (value: string) => Promise<string>
   onUpdateIntro: (introId: string, status: Exclude<IntroductionStatus, 'pending'>) => void
   onToggleSlots: (introId: string) => void
@@ -99,10 +101,12 @@ export function IntroductionsPanel({
   slotsByIntroId,
   loadingSlotsIntroId,
   proposingSlotKey,
+  ownProfile,
   contactValue,
   socialError,
   socialNotice,
   onRequest,
+  onOpenQuestionnaire,
   onSaveContact,
   onUpdateIntro,
   onToggleSlots,
@@ -252,6 +256,8 @@ export function IntroductionsPanel({
           locale={locale}
           introductions={introductions}
           busyIntroId={busyIntroId}
+          ownProfile={ownProfile}
+          onOpenQuestionnaire={onOpenQuestionnaire}
           onRequest={onRequest}
           onUpdateIntro={onUpdateIntro}
           onShowIntroduction={showIntroduction}
@@ -290,6 +296,21 @@ export function IntroductionsPanel({
               <div className="requests__empty"><p>{tab === 'incoming' ? s.noIncoming : s.noOutgoing}</p></div>
             )}
           </div>
+        </section>
+        <section className="surface own-contact-card" aria-labelledby={`${tabsId}-contact`}>
+          <span className="own-contact-card__icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" /><path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="currentColor" strokeWidth="1.8" /></svg>
+          </span>
+          <div className="own-contact-card__body">
+            <h3 id={`${tabsId}-contact`}>{c.contactTitle}</h3>
+            <p>{c.contactExplain}</p>
+            <p className="own-contact-card__value" data-contact-value>
+              {contactValue ? <strong>{contactValue}</strong> : <span>{c.contactNotSet}</span>}
+            </p>
+          </div>
+          <button type="button" className="secondary-button" data-edit="contact" onClick={() => setEditingContact(true)}>
+            {contactValue ? ic.editContact : c.contactAdd}
+          </button>
         {editingContact && (
           <EditFieldDialog
             title={ic.editContact}
@@ -306,13 +327,6 @@ export function IntroductionsPanel({
             onClose={() => setEditingContact(false)}
           />
         )}
-          <div className="own-contact">
-            <p>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" /><path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="currentColor" strokeWidth="1.8" /></svg>
-              {contactValue ? c.ownContactSet(contactValue) : c.ownContactMissing}
-            </p>
-            <button type="button" className="text-button" data-edit="contact" onClick={() => setEditingContact(true)}>{ic.editContact}</button>
-          </div>
         </section>
       </div>
     </section>

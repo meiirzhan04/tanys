@@ -46,6 +46,11 @@ test('handle search finds the participant by any case or @, and never leaks emai
     assert.equal(result.body.items.some(item => item.userId === b.id), false)
   }
   assert.deepEqual((await raw(b, 'GET', `/events/${event}/participants?q=b`)).body.items, [])
+  // Name search is case-insensitive for Cyrillic and Kazakh regardless of the database locale.
+  await call(c, 'PUT', '/profile', 200, { ...profile, name: 'Әсел Дулатқызы', visible: true })
+  for (const q of ['дулат', 'ӘСЕЛ', 'әсел']) {
+    assert.deepEqual((await raw(b, 'GET', `/events/${event}/participants?q=${encodeURIComponent(q)}`)).body.items.map(item => item.userId), [c.id], q)
+  }
   const outsider = fixture(1).people[0]
   assert.equal((await raw(outsider, 'GET', `/events/${event}/participants?q=backend`)).status, 404)
 

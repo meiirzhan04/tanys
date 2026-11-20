@@ -72,7 +72,8 @@ function emptyDraft(): EventProfileDraft {
     interests: '',
     about: '',
     lookingFor: '',
-    visible: false,
+    // Visible by default: hidden questionnaires cannot be found or receive requests, which confused people.
+    visible: true,
     consentAccepted: false,
   }
 }
@@ -1349,9 +1350,11 @@ export function EventAccountFlow({
             loadingSlotsIntroId={loadingSlotsIntroId}
             proposingSlotKey={proposingSlotKey}
             contactValue={contactValue}
+            ownProfile={!hasSavedProfile ? 'missing' : savedBaseline?.visible ? 'visible' : 'hidden'}
             socialError={socialError}
             socialNotice={socialNotice}
             onRequest={handleRequestFromSearch}
+            onOpenQuestionnaire={() => guardNavigation(() => setTab('profile'))}
             onSaveContact={saveContact}
             onUpdateIntro={(introId, status) => void handleUpdateIntro(introId, status)}
             onToggleSlots={introId => void handleToggleSlots(introId)}

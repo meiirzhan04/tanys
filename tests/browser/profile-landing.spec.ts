@@ -129,7 +129,7 @@ test('account profile and three event questionnaires stay independent after relo
       await expect(page.locator('[name=role]')).toHaveValue(id === 'D' ? 'Software Engineer' : 'Role ' + id)
       if (id === 'D') {
         await expect(page.locator('[name=about]')).toHaveValue('My account bio')
-        await expect(page.locator('[name=visible]')).not.toBeChecked()
+        await expect(page.locator('[name=visible]')).toBeChecked()
       }
       if (id === 'A') {
         await page.locator('[name=name]').fill('New event name')
@@ -152,7 +152,7 @@ test('account profile and three event questionnaires stay independent after relo
     await page.locator('[data-edit=contact]').click()
     await page.getByRole('dialog').locator('[name=profileContact]').fill('@aliya_dev')
     await page.getByRole('dialog').getByRole('button', { name: 'Сохранить' }).click()
-    await expect(page.locator('.own-contact')).toContainText('@aliya_dev')
+    await expect(page.locator('.own-contact-card [data-contact-value]')).toContainText('@aliya_dev')
     await page.locator('.nav-profile-btn').click()
 
     // Cancel keeps the session; confirming signs out to the sign-in screen
