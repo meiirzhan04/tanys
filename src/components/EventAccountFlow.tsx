@@ -1173,7 +1173,7 @@ export function EventAccountFlow({
             refreshing={socialRefreshing}
           />
         ) : tab === 'meetings' ? (
-          <>
+          <div className="meetings-bento-grid bento-grid">
           {!isClosed && (
             <AvailabilityEditor
               key={activeEventId}
@@ -1196,7 +1196,7 @@ export function EventAccountFlow({
             onRefresh={() => { if (activeEventId) void refreshSocialState(activeEventId, true) }}
             refreshing={socialRefreshing}
           />
-          </>
+          </div>
         ) : tab === 'results' ? (
           recsLoading && recommendations === null ? (
             <div className="surface status-panel" role="status" aria-live="polite" aria-busy="true">

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { FormEvent } from 'react'
+import type { FormEvent, MouseEvent } from 'react'
 import { isApiError } from '../api/client'
 import type {
   EventBooth,
@@ -31,12 +31,40 @@ export interface OrganizerCabinetProps {
   onBoothsChanged: (booths: EventBooth[]) => void
 }
 
+const TIMEZONE_OPTIONS = [
+  { value: 'Asia/Almaty', label: 'Asia/Almaty (UTC+5 — Алматы / Астана)' },
+  { value: 'Asia/Aqtobe', label: 'Asia/Aqtobe (UTC+5 — Актобе)' },
+  { value: 'Asia/Tashkent', label: 'Asia/Tashkent (UTC+5 — Ташкент)' },
+  { value: 'Asia/Bishkek', label: 'Asia/Bishkek (UTC+6 — Бишкек)' },
+  { value: 'Asia/Dubai', label: 'Asia/Dubai (UTC+4 — Дубай)' },
+  { value: 'Asia/Baku', label: 'Asia/Baku (UTC+4 — Баку)' },
+  { value: 'Europe/Moscow', label: 'Europe/Moscow (UTC+3 — Москва)' },
+  { value: 'Europe/Berlin', label: 'Europe/Berlin (UTC+1 — Берлин)' },
+  { value: 'Europe/London', label: 'Europe/London (UTC+0 — Лондон)' },
+  { value: 'America/New_York', label: 'America/New_York (UTC-5 — Нью-Йорк)' },
+  { value: 'Asia/Tokyo', label: 'Asia/Tokyo (UTC+9 — Токио)' },
+  { value: 'UTC', label: 'UTC (Координированное время)' },
+] as const
+
+function toLocalDateTimeInput(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
 function defaultStartsAt(): string {
-  return new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 19) + 'Z'
+  return toLocalDateTimeInput(new Date(Date.now() + 60 * 60 * 1000))
 }
 
 function defaultEndsAt(): string {
-  return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 19) + 'Z'
+  return toLocalDateTimeInput(new Date(Date.now() + 8 * 60 * 60 * 1000))
+}
+
+function openPicker(event: MouseEvent<HTMLInputElement>) {
+  try {
+    event.currentTarget.showPicker?.()
+  } catch {
+    // Fallback to native browser inline calendar controls.
+  }
 }
 
 function parseTopicList(value: string): string[] {
@@ -151,7 +179,9 @@ export function OrganizerCabinet({
 
   async function handleCreateEvent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!newName.trim() || !newStartsAt.trim() || !newEndsAt.trim()) {
+    const parsedStart = new Date(newStartsAt.trim())
+    const parsedEnd = new Date(newEndsAt.trim())
+    if (!newName.trim() || !Number.isFinite(+parsedStart) || !Number.isFinite(+parsedEnd) || +parsedEnd <= +parsedStart) {
       setError(o.invalidEventFields)
       return
     }
@@ -162,8 +192,8 @@ export function OrganizerCabinet({
       const created = await api.createEvent({
         name: newName.trim(),
         timeZone: newTimeZone.trim() || 'Asia/Almaty',
-        startsAt: newStartsAt.trim(),
-        endsAt: newEndsAt.trim(),
+        startsAt: parsedStart.toISOString(),
+        endsAt: parsedEnd.toISOString(),
       })
       setNewName('')
       await onEventCreated(created)
@@ -378,7 +408,7 @@ export function OrganizerCabinet({
       {notice && <div className="info-banner" role="status">{notice}</div>}
 
       {/* 1. Create new event form (without touching JSON!) */}
-      <form className="surface organizer-card" onSubmit={handleCreateEvent} noValidate>
+      <form className="surface organizer-card bento-card--wide" onSubmit={handleCreateEvent} noValidate>
         <h2>{o.createEventTitle}</h2>
         <div className="form-fields">
           <label className="field">
@@ -394,29 +424,39 @@ export function OrganizerCabinet({
           </label>
           <label className="field">
             <span>{o.timeZoneLabel}</span>
-            <input
+            <select
               name="eventTimeZone"
-              maxLength={64}
               value={newTimeZone}
               disabled={creatingEvent}
               onChange={event => setNewTimeZone(event.target.value)}
-            />
+            >
+              {TIMEZONE_OPTIONS.map(tz => (
+                <option key={tz.value} value={tz.value}>{tz.label}</option>
+              ))}
+            </select>
           </label>
           <label className="field">
             <span>{o.startsAtLabel}</span>
             <input
+              type="datetime-local"
+              step={900}
               name="eventStartsAt"
               value={newStartsAt}
               disabled={creatingEvent}
+              onClick={openPicker}
               onChange={event => setNewStartsAt(event.target.value)}
             />
           </label>
           <label className="field">
             <span>{o.endsAtLabel}</span>
             <input
+              type="datetime-local"
+              step={900}
               name="eventEndsAt"
+              min={newStartsAt || undefined}
               value={newEndsAt}
               disabled={creatingEvent}
+              onClick={openPicker}
               onChange={event => setNewEndsAt(event.target.value)}
             />
           </label>
@@ -429,9 +469,9 @@ export function OrganizerCabinet({
       </form>
 
       {activeEvent && isOrganizerOfActive && (
-        <>
+        <div className="bento-grid organizer-bento-grid">
           {/* 2. Edit / close active event */}
-          <form className="surface organizer-card" onSubmit={handleSaveEvent}>
+          <form className="surface organizer-card bento-card" onSubmit={handleSaveEvent}>
             <h2>{o.editEventTitle}</h2>
             <div className="contact-row">
               <input
@@ -453,7 +493,7 @@ export function OrganizerCabinet({
           </form>
 
           {/* 3. Invites */}
-          <div className="surface organizer-card">
+          <div className="surface organizer-card bento-card">
             <div className="social-card__header">
               <h2>{o.invitesTitle}</h2>
               <button
@@ -505,7 +545,7 @@ export function OrganizerCabinet({
           </div>
 
           {/* 4. Event members (permitted fields only, no emails or contacts) */}
-          <div className="surface organizer-card">
+          <div className="surface organizer-card bento-card">
             <h2>{o.membersTitle}</h2>
             {loadingData ? (
               <p className="social-card__hint">{messages.account.loadingEvent}</p>
@@ -572,7 +612,7 @@ export function OrganizerCabinet({
           />
 
           {/* 6. Managed partner booths (#14 connected to event booths, zero demo booths) */}
-          <div className="surface organizer-card">
+          <div className="surface organizer-card bento-card--wide">
             <h2>{o.boothsTitle}</h2>
 
             <form className="booth-manage-form" onSubmit={handleSubmitBooth} noValidate>
@@ -672,7 +712,7 @@ export function OrganizerCabinet({
           </div>
 
           {/* 7. Closed moderation & reports queue (#56) */}
-          <div className="surface organizer-card" aria-labelledby="moderation-queue-title">
+          <div className="surface organizer-card bento-card--wide" aria-labelledby="moderation-queue-title">
             <div>
               <h2 id="moderation-queue-title">{messages.moderation.queueTitle}</h2>
               <p className="social-card__role">{messages.moderation.queueSubtitle}</p>
@@ -732,7 +772,7 @@ export function OrganizerCabinet({
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
 
       {activeEvent && qrInviteId && (() => {

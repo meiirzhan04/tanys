@@ -49,7 +49,13 @@ export function parseInviteLocation(pathname: string, search: string): InviteTar
   return null
 }
 
+export function isAdminRoute(pathname: string, search: string): boolean {
+  if (/^\/admin\/?$/.test(pathname)) return true
+  return new URLSearchParams(search).get('mode') === 'admin'
+}
+
 export function isAccountRoute(pathname: string, search: string, storage?: StorageLike | null): boolean {
+  if (isAdminRoute(pathname, search)) return false
   if (parseInviteLocation(pathname, search)) return true
   if (/^\/(login|account|events)\/?$/.test(pathname)) return true
   const params = new URLSearchParams(search)

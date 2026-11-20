@@ -119,6 +119,92 @@ export interface SubmitReportPayload {
   details?: string
 }
 
+export interface AdminUserItem {
+  id: string
+  username: string | null
+  canCreateEvents: boolean
+  createdAt: string
+  eventsCount: number
+  profilesCount: number
+}
+
+export interface AdminEventItem {
+  id: string
+  name: string
+  timeZone: string
+  startsAt: string
+  endsAt: string
+  status: EventStatus
+  memberCount: number
+  profileCount: number
+}
+
+export interface AdminParticipantItem {
+  eventId: string
+  eventName: string
+  userId: string
+  username: string | null
+  name: string
+  role: string
+  goal: Goal
+  skills: string[]
+  interests: string[]
+  experienceYears: number
+  visible: boolean
+}
+
+export interface AdminIntroductionItem {
+  id: string
+  eventId: string
+  eventName: string
+  status: IntroductionStatus
+  createdAt: string
+  senderName: string
+  recipientName: string
+}
+
+export interface AdminMeetingItem {
+  id: string
+  eventId: string
+  eventName: string
+  startsAt: string
+  endsAt: string
+  status: ServerMeetingStatus
+  proposerName: string
+  peerName: string | null
+}
+
+export interface AdminReportItem {
+  id: string
+  eventId: string
+  eventName: string
+  reason: ReportReason
+  details: string
+  status: 'open' | 'resolved'
+  action: ModerationAction | null
+  createdAt: string
+  reporterName: string
+  subjectName: string
+}
+
+export interface AdminOverview {
+  stats: {
+    usersCount: number
+    organizersCount: number
+    eventsCount: number
+    profilesCount: number
+    introductionsCount: number
+    meetingsCount: number
+    reportsCount: number
+  }
+  users: AdminUserItem[]
+  events: AdminEventItem[]
+  participants: AdminParticipantItem[]
+  introductions: AdminIntroductionItem[]
+  meetings: AdminMeetingItem[]
+  reports: AdminReportItem[]
+}
+
 export interface AuthUser {
   id: string
   username?: string
@@ -252,6 +338,8 @@ export interface TanysApiClient {
   submitReport(eventId: string, payload: SubmitReportPayload): Promise<{ id: string; status: 'open' }>
   listEventReports(eventId: string): Promise<EventReportItem[]>
   resolveEventReport(eventId: string, reportId: string, action: ModerationAction): Promise<EventReportItem>
+  getAdminOverview(): Promise<AdminOverview>
+  setUserOrganizerRole(userId: string, canCreateEvents: boolean): Promise<{ id: string; username: string | null; canCreateEvents: boolean }>
 }
 
 type FetchLike = typeof fetch
@@ -625,6 +713,20 @@ export function createTanysApiClient(
         {
           method: 'PATCH',
           body: JSON.stringify({ status: 'resolved', action }),
+        },
+      )
+    },
+
+    getAdminOverview() {
+      return request<AdminOverview>('/admin/overview')
+    },
+
+    setUserOrganizerRole(userId, canCreateEvents) {
+      return request<{ id: string; username: string | null; canCreateEvents: boolean }>(
+        `/admin/users/${encodeURIComponent(userId)}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ canCreateEvents }),
         },
       )
     },
