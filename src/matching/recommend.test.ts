@@ -31,6 +31,7 @@ for (const [goal, reciprocal] of pairs) {
     const results = recommend({ ...input, goal }, candidates)
     assert.deepEqual(results.map(result => result.candidate.goal), [reciprocal])
     assert.ok(results[0].explanation.length > 0)
+    assert.match(results[0].icebreaker ?? '', /Python.*\?$/)
   })
 }
 
@@ -75,4 +76,14 @@ test('returns up to five unique results with deterministic ties', () => {
   assert.deepEqual(ids([...candidates].reverse()), ['a', 'b', 'c', 'd', 'e'])
   assert.deepEqual(ids([candidates[0], candidates[7]]), ['g'])
   assert.deepEqual(ids([]), [])
+})
+
+test('uses a searched-for skill in the icebreaker and falls back to a fact from the profile', () => {
+  const results = recommend(input, [
+    candidate('a', 'hire', { name: 'Данияр', role: 'Рекрутер', skills: [], lookingFor: ['FastAPI'], interests: [] }),
+    candidate('b', 'hire', { name: 'Алия', role: 'Продакт-менеджер', skills: [], interests: [] }),
+  ])
+
+  assert.match(results[0].icebreaker ?? '', /Данияр.*FastAPI.*задачи/)
+  assert.match(results[1].icebreaker ?? '', /Алия.*Продакт-менеджер.*задачи/)
 })
