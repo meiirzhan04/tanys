@@ -24,4 +24,5 @@ export interface Candidate extends ProfileInput {
 export interface Recommendation {
   candidate: Candidate
   explanation: string
+  icebreaker?: string
 }
