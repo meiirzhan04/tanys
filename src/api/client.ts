@@ -96,6 +96,28 @@ export interface UpdateBoothPayload {
   published?: boolean
 }
 
+export type ReportReason = 'spam' | 'harassment' | 'fake_profile' | 'other'
+export type ModerationAction = 'dismiss' | 'warn' | 'restrict'
+
+export interface EventReportItem {
+  id: string
+  subjectId: string
+  subjectName?: string
+  reason: ReportReason
+  details?: string
+  status: 'open' | 'resolved'
+  action?: ModerationAction | null
+  resolvedBy?: string | null
+  resolvedAt?: string | null
+  createdAt?: string
+}
+
+export interface SubmitReportPayload {
+  subjectId: string
+  reason: ReportReason
+  details?: string
+}
+
 export interface AuthUser {
   id: string
 }
@@ -173,6 +195,13 @@ export function isSlotConflictError(error: unknown): boolean {
   return isApiError(error) && (error.status === 409 || error.code === 'slot_conflict')
 }
 
+export function isBlockedOrRestrictedError(error: unknown): boolean {
+  return (
+    isApiError(error) &&
+    (error.status === 403 || error.code === 'blocked' || error.code === 'user_restricted' || error.code === 'interaction_blocked')
+  )
+}
+
 export interface TanysApiClient {
   requestAuthChallenge(email: string, purpose: AuthPurpose): Promise<{ challengeId: string }>
   verifyAuthChallenge(challengeId: string, code: string): Promise<AuthUser>
@@ -213,6 +242,10 @@ export interface TanysApiClient {
   listEventBooths(eventId: string): Promise<EventBooth[]>
   createEventBooth(eventId: string, payload: CreateBoothPayload): Promise<EventBooth>
   updateEventBooth(eventId: string, boothId: string, payload: UpdateBoothPayload): Promise<EventBooth>
+  blockParticipant(eventId: string, targetUserId: string): Promise<void>
+  submitReport(eventId: string, payload: SubmitReportPayload): Promise<{ id: string; status: 'open' }>
+  listEventReports(eventId: string): Promise<EventReportItem[]>
+  resolveEventReport(eventId: string, reportId: string, action: ModerationAction): Promise<EventReportItem>
 }
 
 type FetchLike = typeof fetch
@@ -509,6 +542,40 @@ export function createTanysApiClient(
         {
           method: 'PATCH',
           body: JSON.stringify(payload),
+        },
+      )
+    },
+
+    async blockParticipant(eventId, targetUserId) {
+      await request<null>(
+        `/events/${encodeURIComponent(eventId)}/blocks/${encodeURIComponent(targetUserId)}`,
+        { method: 'PUT' },
+      )
+    },
+
+    submitReport(eventId, payload) {
+      return request<{ id: string; status: 'open' }>(
+        `/events/${encodeURIComponent(eventId)}/reports`,
+        {
+          method: 'POST',
+          body: JSON.stringify(payload),
+        },
+      )
+    },
+
+    async listEventReports(eventId) {
+      const data = await request<{ items?: EventReportItem[] }>(
+        `/events/${encodeURIComponent(eventId)}/reports`,
+      )
+      return Array.isArray(data?.items) ? data.items : []
+    },
+
+    resolveEventReport(eventId, reportId, action) {
+      return request<EventReportItem>(
+        `/events/${encodeURIComponent(eventId)}/reports/${encodeURIComponent(reportId)}`,
+        {
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'resolved', action }),
         },
       )
     },

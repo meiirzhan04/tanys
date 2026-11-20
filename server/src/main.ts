@@ -1,4 +1,5 @@
 import { eventRoute } from './events.js'
+import { moderationRoute } from './moderation.js'
 import { organizerRoute } from './organizer.js'
 import { authRoute, appOrigin } from './auth.js'
 import { HttpError, json } from './http.js'
@@ -17,6 +18,7 @@ const server = createServer(async (request, response) => {
       if (await authRoute(request, response, path)) return
       if (await eventRoute(request, response, path)) return
       if (await organizerRoute(request, response, path)) return
+      if (await moderationRoute(request, response, path)) return
       throw new HttpError(404, 'not_found')
     } catch (error) {
       const known = error instanceof HttpError

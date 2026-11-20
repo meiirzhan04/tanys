@@ -272,6 +272,34 @@ export interface Messages {
     invalidEventFields: string
     invalidBoothFields: string
   }
+  moderation: {
+    blockButton: string
+    reportButton: string
+    reportReasonLabel: string
+    reportDetailsLabel: string
+    reportDetailsPlaceholder: string
+    submitReport: string
+    cancelReport: string
+    blockedNotice: string
+    reportedNotice: string
+    interactionBlockedError: string
+    reasons: {
+      spam: string
+      harassment: string
+      fake_profile: string
+      other: string
+    }
+    queueTitle: string
+    queueSubtitle: string
+    queueEmpty: string
+    statusOpen: string
+    statusResolved: string
+    actionRestrict: string
+    actionWarn: string
+    actionDismiss: string
+    resolvedWithAction: (action: string) => string
+    supportNotice: string
+  }
 }
 
 export const messagesByLocale: Record<Locale, Messages> = {
@@ -548,6 +576,34 @@ export const messagesByLocale: Record<Locale, Messages> = {
       invalidEventFields: 'Укажите название события и корректный интервал времени.',
       invalidBoothFields: 'Укажите название стенда и хотя бы одну тему.',
     },
+    moderation: {
+      blockButton: 'Заблокировать',
+      reportButton: 'Пожаловаться',
+      reportReasonLabel: 'Причина обращения',
+      reportDetailsLabel: 'Комментарий (необязательно)',
+      reportDetailsPlaceholder: 'Опишите ситуацию для организатора',
+      submitReport: 'Отправить жалобу',
+      cancelReport: 'Отмена',
+      blockedNotice: 'Участник заблокирован и скрыт из вашего подбора. Новые запросы и встречи между вами отключены.',
+      reportedNotice: 'Жалоба отправлена организатору мероприятия. Ваше имя скрыто от второй стороны.',
+      interactionBlockedError: 'Взаимодействие с этим участником недоступно из-за блокировки или ограничения организатора.',
+      reasons: {
+        spam: 'Спам или навязчивая реклама',
+        harassment: 'Некорректное поведение',
+        fake_profile: 'Ложная анкета',
+        other: 'Другое',
+      },
+      queueTitle: 'Очередь жалоб и модерация',
+      queueSubtitle: 'Закрытая очередь обращений этого события. Действия модератора фиксируются с временем и исполнителем.',
+      queueEmpty: 'Открытых жалоб в этом событии нет.',
+      statusOpen: 'На рассмотрении',
+      statusResolved: 'Рассмотрено',
+      actionRestrict: 'Ограничить в событии',
+      actionWarn: 'Предупредить',
+      actionDismiss: 'Отклонить жалобу',
+      resolvedWithAction: action => `Решение: ${action}`,
+      supportNotice: 'Поддержка и обращения по безопасности: напишите организатору события или на support@tanys.kz (ответ до 5 рабочих дней).',
+    },
   },
   kk: {
     languageSwitcherLabel: 'Тілді таңдау',
@@ -822,6 +878,34 @@ export const messagesByLocale: Record<Locale, Messages> = {
       invalidEventFields: 'Іс-шара атауын және дұрыс уақыт аралығын көрсетіңіз.',
       invalidBoothFields: 'Стенд атауын және кемінде бір тақырыпты көрсетіңіз.',
     },
+    moderation: {
+      blockButton: 'Бұғаттау',
+      reportButton: 'Шағымдану',
+      reportReasonLabel: 'Шағым себебі',
+      reportDetailsLabel: 'Түсініктеме (міндетті емес)',
+      reportDetailsPlaceholder: 'Ұйымдастырушыға жағдайды қысқаша сипаттаңыз',
+      submitReport: 'Шағым жіберу',
+      cancelReport: 'Болдырмау',
+      blockedNotice: 'Қатысушы бұғатталды және ұсыныстардан жасырылды. Жаңа сұраулар мен кездесулер өшірілді.',
+      reportedNotice: 'Шағым іс-шара ұйымдастырушысына жіберілді. Сіздің атыңыз екінші тараптан жасырылады.',
+      interactionBlockedError: 'Бұғаттау немесе ұйымдастырушы шектеуіне байланысты бұл қатысушымен байланыс қолжетімсіз.',
+      reasons: {
+        spam: 'Спам немесе жарнама',
+        harassment: 'Орынсыз мінез-құлық',
+        fake_profile: 'Жалған анкета',
+        other: 'Басқа',
+      },
+      queueTitle: 'Шағымдар кезегі және модерация',
+      queueSubtitle: 'Осы іс-шараның жабық шағымдар кезегі. Модератор әрекеттері уақытымен тіркеледі.',
+      queueEmpty: 'Бұл іс-шарада ашық шағымдар жоқ.',
+      statusOpen: 'Қаралуда',
+      statusResolved: 'Қаралды',
+      actionRestrict: 'Іс-шарада шектеу',
+      actionWarn: 'Ескерту',
+      actionDismiss: 'Шағымды қабылдамау',
+      resolvedWithAction: action => `Шешім: ${action}`,
+      supportNotice: 'Қолдау және қауіпсіздік бойынша: іс-шара ұйымдастырушысына немесе support@tanys.kz поштасына жазыңыз.',
+    },
   },
   en: {
     languageSwitcherLabel: 'Language selector',
@@ -1095,6 +1179,34 @@ export const messagesByLocale: Record<Locale, Messages> = {
       forbiddenCreate: 'Only accounts with the organizer role can create events.',
       invalidEventFields: 'Enter an event name and a valid start/end interval.',
       invalidBoothFields: 'Enter a booth name and at least one topic.',
+    },
+    moderation: {
+      blockButton: 'Block',
+      reportButton: 'Report',
+      reportReasonLabel: 'Reason',
+      reportDetailsLabel: 'Details (optional)',
+      reportDetailsPlaceholder: 'Briefly describe the issue for the organizer',
+      submitReport: 'Submit report',
+      cancelReport: 'Cancel',
+      blockedNotice: 'Participant blocked and removed from your matches. Future requests and meetings are disabled.',
+      reportedNotice: 'Report sent to the event organizer. Your identity stays hidden from the reported participant.',
+      interactionBlockedError: 'Interaction with this participant is unavailable due to a block or organizer restriction.',
+      reasons: {
+        spam: 'Spam or unsolicited promotion',
+        harassment: 'Harassment or misconduct',
+        fake_profile: 'Fake profile',
+        other: 'Other',
+      },
+      queueTitle: 'Moderation & reports queue',
+      queueSubtitle: 'Private queue for this event. Moderator decisions are recorded with actor and timestamp.',
+      queueEmpty: 'No reports in this event.',
+      statusOpen: 'Open',
+      statusResolved: 'Resolved',
+      actionRestrict: 'Restrict in event',
+      actionWarn: 'Warn',
+      actionDismiss: 'Dismiss',
+      resolvedWithAction: action => `Action: ${action}`,
+      supportNotice: 'Safety & support channel: contact the event organizer or email support@tanys.kz (response within 5 business days).',
     },
   },
 }

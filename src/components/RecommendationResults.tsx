@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import type { IntroductionStatus } from '../api/client'
+import type { IntroductionStatus, ReportReason } from '../api/client'
 import { getMessages } from '../i18n/messages'
 import type { Feedback } from '../matching/session'
 import type { Locale, Recommendation } from '../matching/types'
@@ -23,6 +23,8 @@ interface RecommendationCardProps {
   onRequestIntro?: (candidateId: string) => void
   introStatus?: IntroductionStatus
   requestingIntro?: boolean
+  onBlockParticipant?: (candidateId: string) => void
+  onReportParticipant?: (candidateId: string, reason: ReportReason, details: string) => void
   locale: Locale
 }
 
@@ -35,14 +37,20 @@ function RecommendationCard({
   onRequestIntro,
   introStatus,
   requestingIntro = false,
+  onBlockParticipant,
+  onReportParticipant,
   locale,
 }: RecommendationCardProps) {
   const { candidate, icebreaker } = recommendation
   const [copyState, setCopyState] = useState<CopyState>('')
   const [expanded, setExpanded] = useState(false)
+  const [reportOpen, setReportOpen] = useState(false)
+  const [reportReason, setReportReason] = useState<ReportReason>('spam')
+  const [reportDetails, setReportDetails] = useState('')
   const detailsId = useId()
   const t = getMessages(locale).results
   const social = getMessages(locale).social
+  const mod = getMessages(locale).moderation
   const goalLabels = getGoalLabels(locale)
 
   async function copyPhrase() {
@@ -121,6 +129,64 @@ function RecommendationCard({
           </div>
         )}
         <RecommendationFeedback candidateId={candidate.id} candidateName={candidate.name} onFeedback={onFeedback} locale={locale} />
+        {(onBlockParticipant || onReportParticipant) && (
+          <div className="moderation-controls">
+            {onBlockParticipant && (
+              <button
+                type="button"
+                className="meeting-slot-cancel"
+                onClick={() => onBlockParticipant(candidate.id)}
+              >{mod.blockButton}</button>
+            )}
+            {onReportParticipant && (
+              <button
+                type="button"
+                className="text-button"
+                aria-expanded={reportOpen}
+                onClick={() => setReportOpen(current => !current)}
+              >{mod.reportButton}</button>
+            )}
+          </div>
+        )}
+        {reportOpen && onReportParticipant && (
+          <form
+            className="report-form"
+            onSubmit={event => {
+              event.preventDefault()
+              onReportParticipant(candidate.id, reportReason, reportDetails.trim())
+              setReportOpen(false)
+              setReportDetails('')
+            }}
+          >
+            <label className="field">
+              <span>{mod.reportReasonLabel}</span>
+              <select
+                name="reportReason"
+                value={reportReason}
+                onChange={event => setReportReason(event.target.value as ReportReason)}
+              >
+                <option value="spam">{mod.reasons.spam}</option>
+                <option value="harassment">{mod.reasons.harassment}</option>
+                <option value="fake_profile">{mod.reasons.fake_profile}</option>
+                <option value="other">{mod.reasons.other}</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>{mod.reportDetailsLabel}</span>
+              <input
+                name="reportDetails"
+                maxLength={500}
+                placeholder={mod.reportDetailsPlaceholder}
+                value={reportDetails}
+                onChange={event => setReportDetails(event.target.value)}
+              />
+            </label>
+            <div className="social-card__actions">
+              <button type="submit" className="primary-button">{mod.submitReport}</button>
+              <button type="button" className="secondary-button" onClick={() => setReportOpen(false)}>{mod.cancelReport}</button>
+            </div>
+          </form>
+        )}
       </div>
     </article>
   )
@@ -137,6 +203,8 @@ export function RecommendationResults({
   onRequestIntro,
   introStatusByCandidate,
   requestingIntroId,
+  onBlockParticipant,
+  onReportParticipant,
   locale = 'ru',
 }: ResultsProps & {
   onFeedback: FeedbackHandler
@@ -147,6 +215,8 @@ export function RecommendationResults({
   onRequestIntro?: (candidateId: string) => void
   introStatusByCandidate?: Readonly<Record<string, IntroductionStatus>>
   requestingIntroId?: string
+  onBlockParticipant?: (candidateId: string) => void
+  onReportParticipant?: (candidateId: string, reason: ReportReason, details: string) => void
   locale?: Locale
 }) {
   const t = getMessages(locale).results
@@ -195,6 +265,8 @@ export function RecommendationResults({
             onRequestIntro={onRequestIntro}
             introStatus={introStatusByCandidate?.[recommendation.candidate.id]}
             requestingIntro={requestingIntroId === recommendation.candidate.id}
+            onBlockParticipant={onBlockParticipant}
+            onReportParticipant={onReportParticipant}
             locale={locale}
           />
         ))}
