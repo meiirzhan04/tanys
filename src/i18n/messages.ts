@@ -17,6 +17,14 @@ export interface Messages {
     profile: string
     results: string
     schedule: string
+    interests: string
+  }
+  interestMap: {
+    title: string
+    profileCount: string
+    topic: string
+    participants: string
+    empty: string
   }
   goals: Record<Goal, string>
   form: {
@@ -98,6 +106,14 @@ export const messagesByLocale: Record<Locale, Messages> = {
       profile: 'Анкета',
       results: 'Рекомендации',
       schedule: 'Встречи',
+      interests: 'Организатору',
+    },
+    interestMap: {
+      title: 'Карта интересов',
+      profileCount: 'Учтено анкет',
+      topic: 'Тема',
+      participants: 'Участники',
+      empty: 'В анкетах пока нет указанных интересов.',
     },
     goals: {
       find_job: 'Найти работу',
@@ -184,6 +200,14 @@ export const messagesByLocale: Record<Locale, Messages> = {
       profile: 'Анкета',
       results: 'Ұсыныстар',
       schedule: 'Кездесулер',
+      interests: 'Ұйымдастырушыға',
+    },
+    interestMap: {
+      title: 'Қызығушылықтар картасы',
+      profileCount: 'Есепке алынған анкеталар',
+      topic: 'Тақырып',
+      participants: 'Қатысушылар',
+      empty: 'Анкеталарда қызығушылықтар әлі көрсетілмеген.',
     },
     goals: {
       find_job: 'Жұмыс табу',
@@ -270,6 +294,14 @@ export const messagesByLocale: Record<Locale, Messages> = {
       profile: 'Profile',
       results: 'Matches',
       schedule: 'Meetings',
+      interests: 'Organizer',
+    },
+    interestMap: {
+      title: 'Interest map',
+      profileCount: 'Profiles counted',
+      topic: 'Topic',
+      participants: 'Participants',
+      empty: 'The profiles do not list any interests yet.',
     },
     goals: {
       find_job: 'Find a job',

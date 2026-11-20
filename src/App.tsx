@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { InterestMap } from './components/InterestMap'
 import { SchedulePanel } from './components/MeetingSlots'
 import { ProfileForm } from './components/ProfileForm'
 import { RecommendationResults } from './components/RecommendationResults'
 import profiles from './data/profiles.json'
-import { resolveAppCandidates } from './data/loadCandidates'
+import { summarizeInterests } from './data/interestSummary'
+import { parseCandidates, resolveAppCandidates } from './data/loadCandidates'
 import { previewProfiles, sampleProfile } from './data/previewProfiles'
 import { getMessages, SUPPORTED_LOCALES } from './i18n/messages'
 import {
@@ -18,7 +20,8 @@ import type { MeetingBooking } from './scheduling/slots'
 import './styles.css'
 
 const candidates: readonly Candidate[] = resolveAppCandidates(profiles, previewProfiles)
-type View = 'profile' | 'results' | 'schedule'
+const interestSummary = summarizeInterests(parseCandidates(profiles))
+type View = 'profile' | 'results' | 'schedule' | 'interests'
 
 function getResultsMessage(session: RecommendationSession, locale: Locale): string {
   const t = getMessages(locale).results
@@ -45,6 +48,7 @@ export default function App() {
 
   useEffect(() => {
     if (view === 'results') document.getElementById('results-title')?.focus()
+    if (view === 'interests') document.getElementById('interest-map-title')?.focus()
   }, [session?.input, view])
 
   function handleLocaleChange(nextLocale: Locale) {
@@ -116,6 +120,9 @@ export default function App() {
           <button type="button" aria-current={view === 'schedule' ? 'page' : undefined} onClick={() => setView('schedule')}>
             {messages.nav.schedule} <span className="nav-count">{bookings.length}</span>
           </button>
+          <button type="button" aria-current={view === 'interests' ? 'page' : undefined} onClick={() => setView('interests')}>
+            {messages.nav.interests}
+          </button>
         </nav>
 
         <main className="main-content">
@@ -136,6 +143,7 @@ export default function App() {
             <div className="page-heading"><h1>{messages.meetings.pageTitle}</h1></div>
             <SchedulePanel bookings={bookings} onCancel={handleCancelSlot} locale={locale} />
           </>}
+          {view === 'interests' && <InterestMap summary={interestSummary} locale={locale} />}
         </main>
       </div>
     </>
