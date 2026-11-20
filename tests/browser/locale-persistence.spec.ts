@@ -71,3 +71,65 @@ test('opens kk-KZ and en-US contexts in matching locale, including direct /invit
     await deCtx.close()
   }
 })
+
+test('closes language menu after pointer/touch and keyboard selection while keeping focus and form input (#163)', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await expect(page.locator('#profile-title')).toHaveText('Анкета участника')
+
+  const roleInput = page.locator('input[name="role"]')
+  const skillsInput = page.locator('input[name="skills"]')
+  await roleInput.fill('Backend Engineer')
+  await skillsInput.fill('Go, PostgreSQL')
+
+  const switcher = page.locator('.lang-switcher')
+  const trigger = page.locator('.lang-switcher__trigger')
+  const menu = page.locator('.lang-switcher__menu')
+
+  // 1. Open via click/tap and select English -> closes cleanly without covering content
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  await trigger.click()
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+  await expect(switcher).toHaveClass(/lang-switcher--open/)
+
+  await page.locator('.lang-switcher button[lang="en"]').click()
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en')
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  await expect(switcher).not.toHaveClass(/lang-switcher--open/)
+  const closedBox = await menu.boundingBox()
+  expect(closedBox?.height ?? 0).toBeLessThanOrEqual(2)
+
+  // Reopen works and form input is preserved
+  await trigger.click()
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+  await expect(roleInput).toHaveValue('Backend Engineer')
+  await expect(skillsInput).toHaveValue('Go, PostgreSQL')
+
+  // Escape closes and returns focus to trigger
+  await page.keyboard.press('Escape')
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  await expect(trigger).toBeFocused()
+
+  // 2. Keyboard open (Enter) -> ArrowUp to Kazakh -> Enter selects, closes, returns focus to trigger
+  await page.keyboard.press('Enter')
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.locator('.lang-switcher button[lang="en"]')).toBeFocused()
+
+  await page.keyboard.press('ArrowDown')
+  await expect(page.locator('.lang-switcher button[lang="kk"]')).toBeFocused()
+
+  await page.keyboard.press('Enter')
+  await expect(page.locator('html')).toHaveAttribute('lang', 'kk')
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  await expect(switcher).not.toHaveClass(/lang-switcher--open/)
+  await expect(trigger).toBeFocused()
+
+  // Reopening via keyboard still works and form input stays intact
+  await page.keyboard.press('Enter')
+  await expect(trigger).toHaveAttribute('aria-expanded', 'true')
+  await page.keyboard.press('Escape')
+  await expect(trigger).toHaveAttribute('aria-expanded', 'false')
+  await expect(roleInput).toHaveValue('Backend Engineer')
+  await expect(skillsInput).toHaveValue('Go, PostgreSQL')
+})
