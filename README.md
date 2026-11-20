@@ -65,3 +65,5 @@ npm run dev
 Для локальной проверки входа письма попадают в [тестовый почтовый ящик](http://localhost:8025). После запуска Compose выполните `node --test server/tests/auth.test.mjs`. В рабочем окружении задайте HTTPS-адрес приложения в APP_ORIGIN, защищённое SMTP-подключение в SMTP_URL и адрес отправителя в MAIL_FROM.
 
 После первого подтверждённого входа оператор может выдать право создавать мероприятия командой `docker compose -f compose.api.yaml exec api node dist/grant-organizer.js user@example.org`. Подставьте адрес организатора. Право управления конкретным событием получает его создатель.
+
+Для серверного входа на Vercel настройте [PostgreSQL, SMTP и миграции](docs/deployment-release.md#api-на-vercel).
