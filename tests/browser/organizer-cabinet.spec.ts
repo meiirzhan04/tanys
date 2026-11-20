@@ -46,7 +46,7 @@ function createOrganizerBackend() {
       }
       const viewerId = authByContext.get(context)
       if (!viewerId) return respond(401, { error: { code: 'session_required' } })
-      if (method === 'GET' && path === '/me') return respond(200, { id: viewerId })
+      if (method === 'GET' && path === '/me') return respond(200, { id: viewerId, canCreateEvents: viewerId === 'org-1' })
 
       if (method === 'POST' && path === '/events') {
         if (viewerId !== 'org-1') return respond(403, { error: { code: 'organizer_required' } })
@@ -214,6 +214,8 @@ test('organizer creates events without JSON, isolates second empty event, manage
     await guestPage.locator('input[name="password"]').fill('browser-test-password')
     await guestPage.locator('.auth-form button[type="submit"]').click()
     await expect(guestPage.locator('#event-profile-title')).toBeVisible()
+    // A participant never sees the organizer cabinet
+    await expect(guestPage.locator('.workspace-nav button', { hasText: 'Организатор' })).toHaveCount(0)
     await guestPage.locator('.workspace-nav button').nth(1).click()
     await expect(guestPage.locator('[data-booth-id]')).toHaveCount(1)
     await expect(guestPage.locator('[data-booth-id]').first()).toContainText('Сообщество Go')
@@ -241,6 +243,12 @@ test('organizer creates events without JSON, isolates second empty event, manage
     await expect(orgPage.locator('[data-member-id]')).toHaveCount(1)
     await expect(orgPage.locator('.interest-map .empty-state')).toBeVisible()
     await expect(orgPage.locator('.interest-map button', { hasText: 'Скачать CSV' })).toBeDisabled()
+    await expect(orgPage.locator('input[name="editEventName"]')).toHaveValue('Astana Design Meetup')
+
+    // Switching back through the event picker reloads that event's settings and members
+    await orgPage.locator('.event-picker select').selectOption('evt-1')
+    await expect(orgPage.locator('input[name="editEventName"]')).toHaveValue('Almaty Go Conf')
+    await expect(orgPage.locator('[data-member-id]')).toHaveCount(2)
   } finally {
     await orgCtx.close()
     await guestCtx.close()

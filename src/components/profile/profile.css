@@ -205,6 +205,9 @@
 .profile-danger__actions { display: grid; gap: 8px; }
 .profile-danger__actions button { width: 100%; justify-content: center; }
 .danger-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 44px;
   padding: 9px 16px;
   border-radius: 999px;

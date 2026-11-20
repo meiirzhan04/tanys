@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { getMessages } from '../i18n/messages'
 import type { Locale } from '../matching/types'
 
@@ -24,7 +25,8 @@ export function UnsavedChangesDialog({ locale, onStay, onDiscard }: UnsavedChang
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [onStay])
 
-  return (
+  // Render at <body> level so page animations or stacking contexts never clip the overlay.
+  return createPortal(
     <div
       className="qr-modal-backdrop"
       role="presentation"
@@ -50,6 +52,7 @@ export function UnsavedChangesDialog({ locale, onStay, onDiscard }: UnsavedChang
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

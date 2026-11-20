@@ -141,12 +141,12 @@ test('warns on unsaved edits to saved event profile, supports stay/discard/Escap
 
     await page.locator('.error-banner button').click()
     await expect(page.locator('#results-title')).toBeVisible()
-    const cleanBeforeUnloadCancelled = await page.evaluate(() => {
+    // The beforeunload guard is removed by an effect after the save settles; WebKit can need one more tick.
+    await expect.poll(() => page.evaluate(() => {
       const ev = new Event('beforeunload', { cancelable: true })
       window.dispatchEvent(ev)
       return ev.defaultPrevented
-    })
-    expect(cleanBeforeUnloadCancelled).toBe(false)
+    })).toBe(false)
   } finally {
     await context.close()
   }

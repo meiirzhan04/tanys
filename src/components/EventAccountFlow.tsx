@@ -35,6 +35,7 @@ import { getGoalLabels } from './goalLabels'
 import { TanysMark } from './brand/TanysLogo'
 import { AccountProfilePanel } from './profile/AccountProfilePanel'
 import { profileCopy } from './profile/profileCopy'
+import { accountDialogCopy } from './profile/accountDialogCopy'
 import { PartnerBooths } from './PartnerBooths'
 
 const OrganizerCabinet = lazy(() =>
@@ -263,7 +264,7 @@ export function EventAccountFlow({
     }
   }, [api, locale])
 
-  const loadEventWorkspace = useCallback(async (eventId: string, preserveDraft = false) => {
+  const loadEventWorkspace = useCallback(async (eventId: string, preserveDraft = false, nextTab: EventTab = 'profile') => {
     setEventLoading(true)
     setEventError('')
     setSaveError('')
@@ -292,7 +293,7 @@ export function EventAccountFlow({
       setRecommendations(null)
       setEventBooths([])
       setRecsMessage('')
-      setTab('profile')
+      setTab(nextTab)
       await refreshSocialState(eventId, false)
       try {
         setEventBooths(await api.listEventBooths(eventId))
@@ -498,7 +499,9 @@ export function EventAccountFlow({
       const me = registering
         ? await api.registerWithPassword(login, password)
         : await api.signInWithPassword(login, password)
-      setUser(me)
+      // The sign-in response carries only the id; /me adds the username and organizer permission.
+      const current = await api.getMe().catch(() => null)
+      setUser(current ? { ...me, ...current } : me)
       setPassword('')
       const preserveDraft = Boolean(draft.name || draft.role || draft.skills || draft.about)
       await enterAuthenticated(pendingInvite ?? (activeEventId ? { eventId: activeEventId } : null), preserveDraft)
@@ -543,8 +546,8 @@ export function EventAccountFlow({
     }
   }
 
-  async function handleLeaveEvent() {
-    if (!activeEventId) return
+  async function handleLeaveEvent(): Promise<string> {
+    if (!activeEventId) return ''
     setLeavingEvent(true)
     setEventError('')
     try {
@@ -561,15 +564,15 @@ export function EventAccountFlow({
         setSavedBaseline(null)
         setHasSavedProfile(false)
       }
+      return ''
     } catch (error) {
-      setEventError(formatApiError(error, locale, 'general'))
+      return formatApiError(error, locale, 'general')
     } finally {
       setLeavingEvent(false)
     }
   }
 
-  async function handleDeleteAccount() {
-    if (!window.confirm(t.deleteAccountConfirm)) return
+  async function handleDeleteAccount(): Promise<string> {
     setDeletingAccount(true)
     setEventError('')
     try {
@@ -582,8 +585,10 @@ export function EventAccountFlow({
       setDraft(emptyDraft())
       setHasSavedProfile(false)
       onExitToDemo()
+      return ''
     } catch (error) {
-      setEventError(formatApiError(error, locale, 'general'))
+      if (isApiError(error) && error.code === 'organizer_owns_events') return accountDialogCopy[locale].deleteBlockedOrganizer
+      return formatApiError(error, locale, 'general')
     } finally {
       setDeletingAccount(false)
     }
@@ -867,6 +872,8 @@ export function EventAccountFlow({
   const eventTimeZone = activeEvent?.timeZone || 'Asia/Almaty'
   const activeEventSummary = events.find(item => item.id === activeEventId)
   const isOrganizerOfActive = activeEventSummary?.role === 'organizer'
+  // The organizer cabinet is a separate view for people who may create or already run events, never for plain participants.
+  const canOrganize = Boolean(user?.canCreateEvents) || events.some(item => item.role === 'organizer')
 
   const matchedEventBooths = useMemo(() => {
     const published: PartnerBooth[] = eventBooths
@@ -1158,13 +1165,16 @@ export function EventAccountFlow({
         >
           {messages.social.navMeetings} <span className="nav-count">{activeMeetingsCount}</span>
         </button>
-        <button
-          type="button"
-          aria-current={tab === 'organizer' ? 'page' : undefined}
-          onClick={event => guardNavigation(() => setTab('organizer'), event.currentTarget)}
-        >
-          {messages.organizer.navLabel}
-        </button>
+        {canOrganize && (
+          <button
+            type="button"
+            className="nav-organizer-btn"
+            aria-current={tab === 'organizer' ? 'page' : undefined}
+            onClick={event => guardNavigation(() => setTab('organizer'), event.currentTarget)}
+          >
+            {messages.organizer.navLabel}
+          </button>
+        )}
         <button
           type="button"
           className="nav-profile-btn"
@@ -1186,23 +1196,26 @@ export function EventAccountFlow({
         />
         <div className="event-toolbar surface">
           {events.length > 0 ? (
-            <label className="event-picker">
-              <span>{t.eventSelectorLabel}</span>
-              <select
+            <div className="event-picker">
+              <span id={`${id}-event-picker`}>{t.eventSelectorLabel}</span>
+              <CustomSelect
+                name="activeEvent"
+                aria-labelledby={`${id}-event-picker`}
                 value={activeEventId}
                 disabled={eventLoading || saving}
-                onChange={event => {
-                  const nextId = event.target.value
-                  guardNavigation(() => void loadEventWorkspace(nextId), event.currentTarget)
+                options={events.map(item => ({
+                  value: item.id,
+                  label: item.name || item.id,
+                  badge: item.role === 'organizer' ? messages.organizer.navLabel : undefined,
+                }))}
+                onChange={nextId => {
+                  if (nextId === activeEventId) return
+                  // Stay in the organizer cabinet or profile screen; its settings and members reload for the new event.
+                  const nextTab = tab === 'organizer' || tab === 'me' ? tab : 'profile'
+                  guardNavigation(() => void loadEventWorkspace(nextId, false, nextTab))
                 }}
-              >
-                {events.map(item => (
-                  <option key={item.id} value={item.id}>
-                    {item.name || item.id}
-                  </option>
-                ))}
-              </select>
-            </label>
+              />
+            </div>
           ) : (
             <span className="event-picker-empty">{t.noEventsTitle}</span>
           )}
@@ -1215,7 +1228,7 @@ export function EventAccountFlow({
           <div className="surface status-panel" role="status" aria-live="polite" aria-busy="true">
             <p>{t.loadingEvent}</p>
           </div>
-        ) : tab === 'organizer' ? (
+        ) : tab === 'organizer' && canOrganize ? (
           <Suspense fallback={<div className="surface status-panel" role="status" aria-live="polite" aria-busy="true"><p>{t.loadingEvent}</p></div>}>
             <OrganizerCabinet
               api={api}
@@ -1245,6 +1258,7 @@ export function EventAccountFlow({
             username={user.username}
             eventName={activeEvent?.name || activeEventSummary?.name}
             isOrganizer={isOrganizerOfActive}
+            organizesAnyEvent={events.some(item => item.role === 'organizer')}
             hasEvent={Boolean(activeEventId)}
             recommendationsCount={recommendations?.length ?? 0}
             introductionsCount={introductions.length}
@@ -1258,9 +1272,9 @@ export function EventAccountFlow({
               requestAnimationFrame(() => document.getElementById('event-profile-title')?.focus({ preventScroll: true }))
             }}
             onShowMatches={activeEventId && hasSavedProfile ? () => void loadRecommendations(activeEventId) : undefined}
-            onLogout={() => void handleLogout()}
-            onLeaveEvent={() => void handleLeaveEvent()}
-            onDeleteAccount={() => void handleDeleteAccount()}
+            onLogout={handleLogout}
+            onLeaveEvent={handleLeaveEvent}
+            onDeleteAccount={handleDeleteAccount}
             loggingOut={loggingOut}
             leavingEvent={leavingEvent}
             deletingAccount={deletingAccount}

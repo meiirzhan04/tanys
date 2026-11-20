@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import type { ChangeEvent, MouseEvent, SelectHTMLAttributes } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { ChangeEvent, KeyboardEvent, MouseEvent, SelectHTMLAttributes } from 'react'
 
 export interface CustomSelectOption {
   value: string
@@ -12,8 +12,16 @@ interface CustomSelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement>
   placeholder?: string
   value: string
   onChange: (value: string) => void
+  /** Option to highlight when nothing is selected yet, e.g. 09:00 in a long time list. */
+  initialHighlight?: string
 }
 
+const MENU_MAX_HEIGHT = 280
+
+/**
+ * A native <select> (kept for forms, tests and assistive tech) with an app-styled popover instead of the
+ * OS dropdown. Mouse, touch and keyboard (Enter/Space/Alt+ArrowDown to open, arrows, Home/End, Enter, Escape) work.
+ */
 export function CustomSelect({
   options,
   placeholder,
@@ -21,35 +29,93 @@ export function CustomSelect({
   onChange,
   disabled,
   className = '',
+  initialHighlight,
   ...selectProps
 }: CustomSelectProps) {
   const [open, setOpen] = useState(false)
+  const [openUp, setOpenUp] = useState(false)
+  const [highlight, setHighlight] = useState(-1)
   const rootRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const selectRef = useRef<HTMLSelectElement>(null)
 
   useEffect(() => {
     if (!open) return
-    function handleOutside(event: globalThis.MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
-        setOpen(false)
-      }
-    }
-    function handleKey(event: KeyboardEvent) {
-      if (event.key === 'Escape') setOpen(false)
+    function handleOutside(event: globalThis.MouseEvent | TouchEvent) {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false)
     }
     document.addEventListener('mousedown', handleOutside)
-    document.addEventListener('keydown', handleKey)
+    document.addEventListener('touchstart', handleOutside)
     return () => {
       document.removeEventListener('mousedown', handleOutside)
-      document.removeEventListener('keydown', handleKey)
+      document.removeEventListener('touchstart', handleOutside)
     }
   }, [open])
 
+  // Flip above the control when there is not enough room below (e.g. near the bottom of a phone screen).
+  useLayoutEffect(() => {
+    if (!open || !rootRef.current) return
+    const rect = rootRef.current.getBoundingClientRect()
+    const below = window.innerHeight - rect.bottom
+    setOpenUp(below < Math.min(MENU_MAX_HEIGHT, options.length * 47) + 12 && rect.top > below)
+  }, [open, options.length])
+
+  useEffect(() => {
+    if (!open || highlight < 0) return
+    const menu = menuRef.current
+    const item = menu?.children[highlight] as HTMLElement | undefined
+    // Scroll only the list (never the page) so the highlighted option sits in the middle.
+    if (menu && item) menu.scrollTop = item.offsetTop - (menu.clientHeight - item.offsetHeight) / 2
+  }, [open, highlight])
+
+  function openMenu() {
+    if (disabled) return
+    const selected = options.findIndex(opt => opt.value === value)
+    const fallback = initialHighlight ? options.findIndex(opt => opt.value === initialHighlight) : -1
+    setHighlight(Math.max(0, selected >= 0 ? selected : fallback))
+    setOpen(true)
+  }
+
+  function choose(index: number) {
+    const option = options[index]
+    if (option) onChange(option.value)
+    setOpen(false)
+    selectRef.current?.focus()
+  }
+
   function handleMouseDown(event: MouseEvent<HTMLSelectElement>) {
     if (disabled) return
-    // Prevent native OS Win32 dropdown popup and open custom Gcore popover instead
+    // Keep the OS dropdown closed and toggle the app popover instead.
     event.preventDefault()
     event.currentTarget.focus()
-    setOpen(current => !current)
+    if (open) setOpen(false)
+    else openMenu()
+  }
+
+  function handleKeyDown(event: KeyboardEvent<HTMLSelectElement>) {
+    if (disabled) return
+    const { key } = event
+    if (!open) {
+      if (key === 'Enter' || key === ' ' || (key === 'ArrowDown' && event.altKey) || key === 'F4') {
+        event.preventDefault()
+        openMenu()
+      }
+      return
+    }
+    if (key === 'Escape' || key === 'Tab') {
+      if (key === 'Escape') event.preventDefault()
+      setOpen(false)
+    } else if (key === 'ArrowDown' || key === 'ArrowUp') {
+      event.preventDefault()
+      const step = key === 'ArrowDown' ? 1 : -1
+      setHighlight(current => Math.min(options.length - 1, Math.max(0, current + step)))
+    } else if (key === 'Home' || key === 'End') {
+      event.preventDefault()
+      setHighlight(key === 'Home' ? 0 : options.length - 1)
+    } else if (key === 'Enter' || key === ' ') {
+      event.preventDefault()
+      choose(highlight)
+    }
   }
 
   function handleNativeChange(event: ChangeEvent<HTMLSelectElement>) {
@@ -60,14 +126,17 @@ export function CustomSelect({
   return (
     <div
       ref={rootRef}
-      className={`custom-select ${open ? 'custom-select--open' : ''} ${disabled ? 'custom-select--disabled' : ''} ${className}`.trim()}
+      className={`custom-select ${open ? 'custom-select--open' : ''} ${openUp ? 'custom-select--up' : ''} ${disabled ? 'custom-select--disabled' : ''} ${className}`.trim()}
     >
       <div className="custom-select__control">
         <select
           {...selectProps}
+          ref={selectRef}
           value={value}
           disabled={disabled}
+          aria-expanded={open}
           onMouseDown={handleMouseDown}
+          onKeyDown={handleKeyDown}
           onChange={handleNativeChange}
         >
           {placeholder !== undefined && (
@@ -95,17 +164,17 @@ export function CustomSelect({
       </div>
 
       {open && !disabled && (
-        <div className="custom-select__menu" aria-hidden="true">
-          {options.map(opt => {
+        <div ref={menuRef} className="custom-select__menu" aria-hidden="true">
+          {options.map((opt, index) => {
             const active = opt.value === value
             return (
               <div
                 key={opt.value}
-                className={`custom-select__option ${active ? 'custom-select__option--active' : ''}`}
+                className={`custom-select__option ${active ? 'custom-select__option--active' : ''} ${index === highlight ? 'custom-select__option--highlight' : ''}`}
+                onMouseEnter={() => setHighlight(index)}
                 onMouseDown={event => {
                   event.preventDefault()
-                  onChange(opt.value)
-                  setOpen(false)
+                  choose(index)
                 }}
               >
                 <span className="custom-select__dot" />

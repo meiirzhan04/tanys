@@ -32,7 +32,7 @@ test('организаторы управляют своими событиям�
   const first = account(true)
   const second = account(true)
   const guest = account(false)
-  const iso = offset => new Date(Date.now()+offset).toISOString()
+  const iso = offset => new Date(Math.ceil((Date.now()+offset)/900000)*900000).toISOString()
   const event = { name:'Pilot ' + fixture,timeZone:'Asia/Almaty',startsAt:iso(1000),endsAt:iso(86400000) }
   const a = await request(first,'POST','',201,event)
   const b = await request(second,'POST','',201,event)

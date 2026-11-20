@@ -2,6 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import type pg from 'pg'
 import { viewer } from './auth.js'
 import { HttpError, json, readBody, transaction, uuid } from './http.js'
+import { isQuarterHour } from './time-step.js'
 import { allowedPair } from './introductions.js'
 
 const missing = () => new HttpError(404, 'not_found')
@@ -69,6 +70,8 @@ export async function meetingRoute(req: IncomingMessage, res: ServerResponse, pa
       if (method !== 'PUT') throw missing()
       if (!Array.isArray(body.slots) || body.slots.length > 32) throw new HttpError(400, 'invalid_slots')
       await client.query('SELECT id FROM users WHERE id=$1 FOR NO KEY UPDATE', [user])
+      const stored = await client.query('SELECT starts_at,ends_at FROM availability WHERE event_id=$1 AND user_id=$2', [event, user])
+      const kept = new Set(stored.rows.map(row => `${+new Date(row.starts_at)}-${+new Date(row.ends_at)}`))
       await client.query('DELETE FROM availability WHERE event_id=$1 AND user_id=$2', [event, user])
       let last = 0
       const slots = body.slots
@@ -83,6 +86,10 @@ export async function meetingRoute(req: IncomingMessage, res: ServerResponse, pa
           end > eventRow.ends_at
         )
           throw new HttpError(400, 'invalid_slot')
+        // Previously saved off-grid slots may stay; any new or edited slot must use 15-minute steps.
+        if (!kept.has(`${+start}-${+end}`) && (!isQuarterHour(start) || !isQuarterHour(end))) {
+          throw new HttpError(400, 'invalid_time_step')
+        }
         await client.query('INSERT INTO availability VALUES($1,$2,$3,$4)', [event, user, start, end])
         last = +end
       }

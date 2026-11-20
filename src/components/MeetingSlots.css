@@ -40,7 +40,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-family: var(--font-mono, ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
   font-size: 11.5px;
   font-weight: 650;
   color: var(--accent-text, var(--accent));
@@ -75,7 +75,7 @@
 .meeting-slot-btn,
 .meeting-slot-cancel {
   font: inherit;
-  font-family: var(--font-mono, inherit);
+  font-variant-numeric: tabular-nums;
   font-size: 12px;
   font-weight: 650;
   line-height: 1.25;
@@ -182,6 +182,6 @@
   color: var(--ink);
 }
 .schedule-panel__meta strong {
-  font-family: var(--font-mono, inherit);
+  font-variant-numeric: tabular-nums;
   color: var(--accent-text, var(--accent));
 }

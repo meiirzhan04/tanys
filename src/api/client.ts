@@ -208,6 +208,8 @@ export interface AdminOverview {
 export interface AuthUser {
   id: string
   username?: string
+  /** Whether this account may create events (organizer permission granted by an administrator). */
+  canCreateEvents?: boolean
 }
 
 export interface EventSummary {

@@ -117,6 +117,10 @@ async function deleteAccountHandler(req: IncomingMessage, res: ServerResponse) {
     }
   }
 
+  // Deleting an organizer would orphan their events: ownership transfer is not implemented yet.
+  const owned = await pool.query("SELECT 1 FROM memberships WHERE user_id=$1 AND role='organizer' LIMIT 1", [userId])
+  if (owned.rowCount) throw new HttpError(409, 'organizer_owns_events')
+
   await transaction(client => deleteUserAccount(userId, client))
   res.setHeader('Set-Cookie', cookie('', 0))
   json(res, 204)
@@ -194,9 +198,11 @@ export async function authRoute(req: IncomingMessage, res: ServerResponse, path:
   else if (req.method === 'POST' && path === '/auth/sessions') await signIn(req,res)
   else if (req.method === 'GET' && path === '/me') {
     const id = await viewer(req)
-    const row = await pool.query<{ username: string | null }>('SELECT username FROM users WHERE id=$1', [id])
+    const row = await pool.query<{ username: string | null; can_create_events: boolean | null }>(
+      'SELECT username,can_create_events FROM users WHERE id=$1', [id])
     const username = row.rows[0]?.username
-    json(res, 200, username ? { id, username } : { id })
+    const canCreateEvents = row.rows[0]?.can_create_events === true
+    json(res, 200, username ? { id, username, canCreateEvents } : { id, canCreateEvents })
   }
   else if (req.method === 'DELETE' && path === '/auth/session') {
     await pool.query('DELETE FROM sessions WHERE digest=$1', [sha(token(req) || '')])

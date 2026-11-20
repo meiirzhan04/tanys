@@ -3,6 +3,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { pool } from './db.js'
 import { viewer } from './auth.js'
 import { HttpError, json, readBody, transaction, uuid } from './http.js'
+import { isQuarterHour } from './time-step.js'
 
 const columns = 'e.id,e.name,e.time_zone AS "timeZone",e.starts_at AS "startsAt",e.ends_at AS "endsAt",e.status'
 const digest = (token: string) => createHash('sha256').update(token).digest('hex')
@@ -16,7 +17,7 @@ function timestamp(value: unknown): Date {
   return new Date(value)
 }
 
-function fields(input: Record<string,unknown>) {
+function fields(input: Record<string,unknown>, saved?: Record<string,unknown>) {
   if (typeof input.name !== 'string' || !input.name.trim() || input.name.trim().length > 160) throw new HttpError(400, 'invalid_name')
   if (typeof input.timeZone !== 'string') throw new HttpError(400, 'invalid_timezone')
   try { new Intl.DateTimeFormat('en', { timeZone: input.timeZone }) }
@@ -24,15 +25,21 @@ function fields(input: Record<string,unknown>) {
   const start = timestamp(input.startsAt)
   const end = timestamp(input.endsAt)
   if (end <= start) throw new HttpError(400, 'invalid_interval')
+  // New times must sit on the 15-minute grid; unchanged legacy times are kept as stored, never rounded.
+  const unchanged = (value: Date, previous: unknown) => previous instanceof Date && +previous === +value
+  if ((!unchanged(start, saved?.startsAt) && !isQuarterHour(start)) || (!unchanged(end, saved?.endsAt) && !isQuarterHour(end))) {
+    throw new HttpError(400, 'invalid_time_step')
+  }
   return [input.name.trim(),input.timeZone,start,end]
 }
 
 async function collection(req: IncomingMessage, res: ServerResponse, user: string) {
   if (req.method === 'POST') {
-    const args = fields(await readBody(req))
+    const body = await readBody(req)
     const event = await transaction(async client => {
       const owner = await client.query('SELECT can_create_events FROM users WHERE id=$1', [user])
       if (!owner.rows[0]?.can_create_events) throw new HttpError(403, 'organizer_required')
+      const args = fields(body)
       const result = await client.query(`INSERT INTO events AS e(name,time_zone,starts_at,ends_at)
         VALUES($1,$2,$3,$4) RETURNING ${columns}`, args)
       await client.query("INSERT INTO memberships VALUES($1,$2,'organizer')", [result.rows[0].id,user])
@@ -93,10 +100,13 @@ export async function eventRoute(req: IncomingMessage, res: ServerResponse, path
       }
       if (body.status !== undefined && !['active','closed'].includes(String(body.status))) throw new HttpError(400,'invalid_status')
       if (Object.keys(body).some(key=>!['name','timeZone','startsAt','endsAt','status'].includes(key))) throw new HttpError(400,'unknown_field')
-      const args = fields({ ...row,...body })
-      const updated = await client.query(`UPDATE events AS e SET name=$1,time_zone=$2,starts_at=$3,ends_at=$4,status=$5,
+      const [name,timeZone,start,end] = fields({ ...row,...body }, row)
+      // Times that were not sent keep their stored value exactly (no re-serialisation of legacy timestamps).
+      const updated = await client.query(`UPDATE events AS e SET name=$1,time_zone=$2,starts_at=COALESCE($3,e.starts_at),
+        ends_at=COALESCE($4,e.ends_at),status=$5,
         closed_at=CASE WHEN $5='closed' AND e.closed_at IS NULL THEN now() ELSE e.closed_at END
-        WHERE id=$6 RETURNING ${columns}`, [...args,body.status ?? row.status,event])
+        WHERE id=$6 RETURNING ${columns}`, [name,timeZone,body.startsAt === undefined ? null : start,
+        body.endsAt === undefined ? null : end,body.status ?? row.status,event])
       return { status:200,data:updated.rows[0] }
     }
     if (action === 'invites' && req.method === 'POST') {

@@ -109,7 +109,14 @@ test('account profile tab: hidden warning, contact save and logout back to sign-
     await expect(page.locator('.profile-card').nth(1)).toContainText('@aliya_dev')
     expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false)
 
-    await page.locator('.profile-danger .secondary-button').click()
+    // Cancel keeps the session; confirming signs out to the sign-in screen
+    await page.locator('[data-action="logout"]').click()
+    await expect(page.getByRole('alertdialog')).toContainText('Вы уверены, что хотите выйти?')
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена' }).click()
+    await expect(page.getByRole('alertdialog')).toHaveCount(0)
+    await expect(page.locator('#me-title')).toBeVisible()
+    await page.locator('[data-action="logout"]').click()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Выйти', exact: true }).click()
     await expect(page.locator('#auth-title')).toBeVisible()
   } finally {
     await context.close()
