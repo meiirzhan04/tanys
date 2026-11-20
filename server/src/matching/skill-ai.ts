@@ -12,7 +12,8 @@ const maxLabels = 12
 const maxCached = 512
 const minSimilarity = 0.72
 const minMargin = 0.06
-const requestTimeoutMs = 2200
+const requestTimeoutMs = 800
+const failureCooldownMs = 10_000
 
 type Options = {
   baseUrl?: string
@@ -52,6 +53,7 @@ export function createAiSkillResolver({
 }: Options) {
   const cache = new Map<string, string | null>()
   let busy = false
+  let retryAt = 0
 
   async function post(path: string, body: object, signal: AbortSignal) {
     const response = await fetcher(new URL(path, baseUrl), {
@@ -82,14 +84,17 @@ export function createAiSkillResolver({
       const key = normalize(value)
       return cache.get(key) ?? key
     }
-    if (!unknown.length || busy) return lookup
+    if (!unknown.length || busy || Date.now() < retryAt) return lookup
 
     busy = true
     try {
       const signal = AbortSignal.timeout(requestTimeoutMs)
       const input = [...roles.map(([, description]) => description), ...unknown]
       const { embeddings } = await post('/api/embed', { model: embeddingModel, input, truncate: false }, signal)
-      if (!Array.isArray(embeddings) || embeddings.length !== input.length || !embeddings.every(vector)) return lookup
+      if (!Array.isArray(embeddings) || embeddings.length !== input.length || !embeddings.every(vector) ||
+          embeddings.some(item => item.length !== embeddings[0].length)) {
+        throw new Error('Invalid skill embeddings')
+      }
 
       const nominations = unknown.flatMap((label, i) => {
         const scores = roles.map(([role, description], j) => ({
@@ -120,14 +125,17 @@ export function createAiSkillResolver({
           { role: 'user', content: JSON.stringify(nominations.map(({ id, label, description }) => ({ id, label, description }))) },
         ],
       }, signal)
-      if (typeof message?.content !== 'string') return lookup
+      if (typeof message?.content !== 'string') throw new Error('Invalid skill verification response')
       const { approved } = JSON.parse(message.content)
-      if (!Array.isArray(approved) || !approved.every(Number.isInteger)) return lookup
+      if (!Array.isArray(approved) || !approved.every(Number.isInteger)) {
+        throw new Error('Invalid skill verification response')
+      }
 
       const ids = new Set<number>(approved)
       remember(unknown, new Map(nominations.filter(({ id }) => ids.has(id)).map(({ label, role }) => [label, role])))
     } catch {
-      // A model outage or malformed response must leave the deterministic match available.
+      // Keep confirmed mappings and retry unknown labels after a short outage.
+      retryAt = Date.now() + failureCooldownMs
     } finally {
       busy = false
     }
