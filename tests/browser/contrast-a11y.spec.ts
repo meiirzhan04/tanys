@@ -82,7 +82,7 @@ test('meets WCAG AA >= 4.5:1 contrast for goals, copy, primary buttons, and book
           return { color: cs.color, bgLayers: layers, outlineColor: cs.outlineColor, outlineStyle: cs.outlineStyle }
         }, selector)
 
-      for (const selector of ['form button[type="submit"]', '.header-link-btn', '.gcore-pill', '.gcore-hero__cta']) {
+      for (const selector of ['form button[type="submit"]', '.header-link-btn', '.hero-pill', '.hero-cta']) {
         const sample = await measure(selector)
         expect(sample, `missing ${selector} in ${theme}`).not.toBeNull()
         const bg = compositeBg(sample!.bgLayers, theme)

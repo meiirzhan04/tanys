@@ -7,8 +7,12 @@ import {
   savePendingInvite,
   syncAccountLocationUrl,
 } from './api/inviteRoute'
+import { TanysWordmark } from './components/brand/TanysLogo'
 import { EventAccountFlow } from './components/EventAccountFlow'
 import { InterestMap } from './components/InterestMap'
+import { Landing } from './components/landing/Landing'
+import { ProfileOverview } from './components/profile/ProfileOverview'
+import { profileCopy } from './components/profile/profileCopy'
 import { SchedulePanel } from './components/MeetingSlots'
 import { PartnerBooths } from './components/PartnerBooths'
 import { ProfileForm } from './components/ProfileForm'
@@ -26,7 +30,7 @@ import {
   startRecommendationSession,
 } from './matching/session'
 import type { Feedback, RecommendationSession } from './matching/session'
-import type { Candidate, Locale, ProfileInput } from './matching/types'
+import type { Candidate, Goal, Locale, ProfileInput } from './matching/types'
 import { bookSlot, cancelSlotBooking, loadBookings, saveBookings } from './scheduling/slots'
 import type { MeetingBooking } from './scheduling/slots'
 import { resolveInitialTheme, saveThemePreference, subscribeSystemTheme } from './theme/themeStorage'
@@ -39,7 +43,8 @@ const AdminDashboard = lazy(() =>
 
 const candidates: readonly Candidate[] = resolveAppCandidates(profiles, previewProfiles)
 const interestSummary = summarizeInterests(parseCandidates(profiles))
-type View = 'profile' | 'results' | 'schedule' | 'interests'
+type View = 'profile' | 'results' | 'schedule' | 'interests' | 'me'
+const LANDING_TOP_TOPICS = interestSummary.topics.slice(0, 5)
 
 const HEADER_EXTRA = {
   ru: { toDark: 'Тёмная тема', toLight: 'Светлая тема' },
@@ -83,101 +88,6 @@ function FlagSvg({ locale }: { locale: Locale }) {
   )
 }
 
-function TanysLogoMark({ size = 30 }: { size?: number }) {
-  return (
-    <svg
-      className="tanys-logo-svg"
-      width={size}
-      height={size}
-      viewBox="0 0 40 40"
-      fill="none"
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id="tanysFlame" x1="4" y1="4" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#FF7A2F" />
-          <stop offset="55%" stopColor="#FF5500" />
-          <stop offset="100%" stopColor="#C83800" />
-        </linearGradient>
-      </defs>
-      <rect x="2" y="2" width="36" height="36" rx="10" fill="url(#tanysFlame)" />
-      <path
-        d="M11.5 13.5H28.5M20 13.5V28.5M13.5 23.5L20 18.5L26.5 23.5"
-        stroke="#FFFFFF"
-        strokeWidth="2.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <circle cx="11.5" cy="13.5" r="2.1" fill="#FFFFFF" />
-      <circle cx="28.5" cy="13.5" r="2.1" fill="#FFFFFF" />
-      <circle cx="20" cy="28.5" r="2.1" fill="#FFFFFF" />
-    </svg>
-  )
-}
-
-const GCORE_HERO_COPY = {
-  ru: {
-    pill: '✦ Добро пожаловать в Tanys',
-    headline: 'Умный 1:1 нетворкинг для живых IT-митапов',
-    subhead: 'Алгоритм соединяет инженеров, тимлидов, менторов и фаундеров по целям, стеку и 20-минутным слотам.',
-    moreLabel: 'Как устроен подбор 1:1',
-    ctaForm: 'Заполнить анкету ↓',
-    nodes: [
-      { code: '1:1', label: 'Слоты 20 мин' },
-      { code: 'QR', label: 'Инвайт-пропуск' },
-      { code: 'API', label: 'Стек и навыки' },
-      { code: '6×', label: 'Цели встреч' },
-      { code: 'TG', label: 'Обмен контактом' },
-      { code: 'EXP', label: 'Стенды и темы' },
-    ],
-    pillars: [
-      { step: '01', title: 'Точный подбор по целям', desc: 'Поиск работы, найм, менторство, поиск кофаундера или обмен опытом без случайных анкет.' },
-      { step: '02', title: 'Слоты встреч по 20 минут', desc: 'Бронирование общих свободных окон в один клик с защитой от пересечений в расписании.' },
-      { step: '03', title: 'QR-пропуск и приватность', desc: 'Мгновенный вход в событие по QR-коду организатора; личный контакт открывается только взаимно.' },
-    ],
-  },
-  kk: {
-    pill: '✦ Tanys платформасына қош келдіңіз',
-    headline: 'IT-митаптар мен конференцияларға арналған 1:1 нетворкинг',
-    subhead: 'Алгоритм инженерлерді, тимлидтерді, менторлар мен фаундерлерді мақсат, стек және 20 минуттық слоттар бойынша байланыстырады.',
-    moreLabel: '1:1 іріктеу қалай жұмыс істейді',
-    ctaForm: 'Анкетаны толтыру ↓',
-    nodes: [
-      { code: '1:1', label: '20 мин слоттар' },
-      { code: 'QR', label: 'Шақыру рұқсаты' },
-      { code: 'API', label: 'Стек пен дағды' },
-      { code: '6×', label: 'Кездесу мақсаты' },
-      { code: 'TG', label: 'Контакт алмасу' },
-      { code: 'EXP', label: 'Стендтер картасы' },
-    ],
-    pillars: [
-      { step: '01', title: 'Мақсат бойынша дәл сәйкестік', desc: 'Жұмыс табу, маман жалдау, менторлық, кофаундер іздеу және тәжірибе алмасу.' },
-      { step: '02', title: '20 минуттық дайын слоттар', desc: 'Ортақ бос уақытты бір батырмамен брондау және кесте қақтығыстарын болдырмау.' },
-      { step: '03', title: 'QR-рұқсат және құпиялылық', desc: 'Ұйымдастырушы QR-кодымен жылдам кіру; жеке контакт тек өзара келісіммен ашылады.' },
-    ],
-  },
-  en: {
-    pill: '✦ Welcome to Tanys',
-    headline: 'Precision 1:1 Networking for Live Tech Events',
-    subhead: 'Algorithmic matching connecting engineers, hiring leads, mentors, and founders by goals, stack, and 20-minute slots.',
-    moreLabel: 'How 1:1 matching works',
-    ctaForm: 'Fill profile ↓',
-    nodes: [
-      { code: '1:1', label: '20-min slots' },
-      { code: 'QR', label: 'Instant pass' },
-      { code: 'API', label: 'Stack matching' },
-      { code: '6×', label: 'Goal alignment' },
-      { code: 'TG', label: 'Contact reveal' },
-      { code: 'EXP', label: 'Partner booths' },
-    ],
-    pillars: [
-      { step: '01', title: 'Goal-aligned matching', desc: 'Job search, hiring, mentorship, cofounder discovery, and peer engineering exchange.' },
-      { step: '02', title: '20-minute conflict-free slots', desc: 'One-click booking across shared open time windows with automatic conflict prevention.' },
-      { step: '03', title: 'QR event pass & mutual privacy', desc: 'Scan an organizer QR pass to join; personal contacts unlock only on mutual acceptance.' },
-    ],
-  },
-} as const
-
 function getResultsMessage(session: RecommendationSession, locale: Locale): string {
   const t = getMessages(locale).results
   const count = session.recommendations.length
@@ -217,6 +127,7 @@ export default function App() {
   const [view, setView] = useState<View>('profile')
   const [session, setSession] = useState<RecommendationSession>()
   const [bookings, setBookings] = useState<MeetingBooking[]>(() => loadBookings())
+  const [goalRequest, setGoalRequest] = useState<{ goal: Goal; seq: number } | null>(null)
   const messages = getMessages(locale)
 
   useEffect(() => {
@@ -266,9 +177,12 @@ export default function App() {
 
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
-      if (view === 'results' || view === 'interests' || view === 'schedule') {
+      if (view === 'results' || view === 'interests' || view === 'schedule' || view === 'me') {
         window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
       }
+    }
+    if (view === 'me') {
+      requestAnimationFrame(() => document.getElementById('me-title')?.focus({ preventScroll: true }))
     }
     if (view === 'results') {
       requestAnimationFrame(() => document.getElementById('results-title')?.focus({ preventScroll: true }))
@@ -304,12 +218,38 @@ export default function App() {
     }
   }
 
+  function scrollToProfileForm(smooth: boolean) {
+    requestAnimationFrame(() => {
+      const title = document.getElementById('profile-title')
+      if (!title) return
+      const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+      title.scrollIntoView({ block: 'start', behavior: smooth && !reduceMotion ? 'smooth' : 'instant' })
+      title.focus({ preventScroll: true })
+    })
+  }
+
   function handleEditProfile() {
+    setView('profile')
+    scrollToProfileForm(false)
+  }
+
+  function handleStartFromLanding(goal?: Goal) {
+    if (goal) setGoalRequest(current => ({ goal, seq: (current?.seq ?? 0) + 1 }))
+    setView('profile')
+    scrollToProfileForm(true)
+  }
+
+  function handleGoHome() {
     setView('profile')
     if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
       window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
     }
-    requestAnimationFrame(() => document.getElementById('profile-title')?.focus({ preventScroll: true }))
+  }
+
+  function openAccountMode() {
+    saveAccountModePreference(true)
+    syncAccountLocationUrl(true)
+    setMode('account')
   }
 
   function submit(profile: ProfileInput) {
@@ -339,7 +279,8 @@ export default function App() {
   }
 
   const extra = HEADER_EXTRA[locale]
-  const hero = GCORE_HERO_COPY[locale]
+  const me = profileCopy[locale]
+  const metCount = session ? Array.from(session.feedback.values()).filter(value => value === 'met').length : 0
   const activeLocaleMeta = LOCALE_META[locale]
 
   function exitToDemoHome() {
@@ -354,14 +295,18 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <div className="gcore-flare" aria-hidden="true" />
+      <div className="ambient-flare" aria-hidden="true" />
       <header className="site-header">
         <div className="site-width header-inner">
-          <span className="brand">
-            <TanysLogoMark size={30} />
-            <span className="brand-word">Tanys</span>
-            <span className="brand-tag" aria-hidden="true">1:1</span>
-          </span>
+          {mode === 'demo' ? (
+            <button type="button" className="brand" aria-label="Tanys" onClick={handleGoHome}>
+              <TanysWordmark size={32} />
+            </button>
+          ) : (
+            <span className="brand">
+              <TanysWordmark size={32} />
+            </span>
+          )}
 
           <div className="header-actions">
             <button
@@ -486,9 +431,7 @@ export default function App() {
                 if (mode === 'account') {
                   setExitRequestSeq(current => current + 1)
                 } else {
-                  saveAccountModePreference(true)
-                  syncAccountLocationUrl(true)
-                  setMode('account')
+                  openAccountMode()
                 }
               }}
             >{mode === 'account' ? messages.account.backToDemo : messages.account.openAccount}</button>
@@ -501,11 +444,7 @@ export default function App() {
           <AdminDashboard
             locale={locale}
             onBack={exitToDemoHome}
-            onOpenAccount={() => {
-              saveAccountModePreference(true)
-              syncAccountLocationUrl(true)
-              setMode('account')
-            }}
+            onOpenAccount={openAccountMode}
           />
         </Suspense>
       ) : mode === 'account' ? (
@@ -516,9 +455,20 @@ export default function App() {
           onExitToDemo={exitToDemoHome}
         />
       ) : (
+        <>
+        {view === 'profile' && (
+          <Landing
+            locale={locale}
+            topTopics={LANDING_TOP_TOPICS}
+            profileCount={interestSummary.profileCount}
+            onStart={() => handleStartFromLanding()}
+            onPickGoal={goal => handleStartFromLanding(goal)}
+            onOpenAccount={openAccountMode}
+          />
+        )}
         <div className="site-width workspace">
           <nav className="workspace-nav" aria-label={messages.nav.label}>
-            <button type="button" aria-current={view === 'profile' ? 'page' : undefined} onClick={() => setView('profile')}>{messages.nav.profile}</button>
+            <button type="button" aria-current={view === 'profile' ? 'page' : undefined} onClick={handleEditProfile}>{messages.nav.profile}</button>
             <button type="button" disabled={!session} aria-current={view === 'results' ? 'page' : undefined} onClick={() => setView('results')}>
               {messages.nav.results} {session && <span className="nav-count">{session.recommendations.length}</span>}
             </button>
@@ -528,85 +478,14 @@ export default function App() {
             <button type="button" aria-current={view === 'interests' ? 'page' : undefined} onClick={() => setView('interests')}>
               {messages.nav.interests}
             </button>
+            <button type="button" className="nav-profile-btn" aria-current={view === 'me' ? 'page' : undefined} onClick={() => setView('me')}>
+              {me.navLabel}
+            </button>
           </nav>
 
           <main className="main-content">
             <div hidden={view !== 'profile'}>
-              <div className="gcore-hero surface" aria-hidden="true">
-                <div className="gcore-hero__compact">
-                  <div className="welcome-emblem">
-                    <span className="welcome-emblem__ring" />
-                    <TanysLogoMark size={38} />
-                  </div>
-                  <div className="gcore-hero__copy">
-                    <div className="gcore-hero__badges">
-                      <span className="gcore-pill">{hero.pill}</span>
-                    </div>
-                    <strong className="gcore-hero__title">{hero.headline}</strong>
-                    <p className="gcore-hero__sub">{hero.subhead}</p>
-                  </div>
-                  <span
-                    className="gcore-hero__cta"
-                    onClick={() => {
-                      const el = document.querySelector<HTMLElement>('.profile-form select, .profile-form input')
-                      el?.focus()
-                    }}
-                  >
-                    {hero.ctaForm}
-                  </span>
-                </div>
-
-                <details className="gcore-hero__details">
-                  <summary className="gcore-hero__summary">{hero.moreLabel}</summary>
-                  <div className="gcore-circuit">
-                    <svg className="gcore-circuit__svg" viewBox="0 0 760 210" fill="none" preserveAspectRatio="none">
-                      <path className="trace-base" d="M120 42 H270 L320 92 H380" />
-                      <path className="trace-pulse" d="M120 42 H270 L320 92 H380" />
-                      <path className="trace-base" d="M84 105 H380" />
-                      <path className="trace-pulse trace-pulse--d2" d="M84 105 H380" />
-                      <path className="trace-base" d="M120 168 H270 L320 118 H380" />
-                      <path className="trace-pulse trace-pulse--d3" d="M120 168 H270 L320 118 H380" />
-                      <path className="trace-base" d="M640 42 H490 L440 92 H380" />
-                      <path className="trace-pulse trace-pulse--d2" d="M640 42 H490 L440 92 H380" />
-                      <path className="trace-base" d="M676 105 H380" />
-                      <path className="trace-pulse trace-pulse--d3" d="M676 105 H380" />
-                      <path className="trace-base" d="M640 168 H490 L440 118 H380" />
-                      <path className="trace-pulse" d="M640 168 H490 L440 118 H380" />
-                    </svg>
-                    <div className="gcore-nodes-col">
-                      {hero.nodes.slice(0, 3).map(n => (
-                        <div key={n.code} className="gcore-node">
-                          <span className="gcore-node__code">{n.code}</span>
-                          <span className="gcore-node__label">{n.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="gcore-chip">
-                      <TanysLogoMark size={30} />
-                      <span className="gcore-chip__sub">TANYS</span>
-                    </div>
-                    <div className="gcore-nodes-col gcore-nodes-col--right">
-                      {hero.nodes.slice(3, 6).map(n => (
-                        <div key={n.code} className="gcore-node">
-                          <span className="gcore-node__code">{n.code}</span>
-                          <span className="gcore-node__label">{n.label}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="welcome-pillars">
-                    {hero.pillars.map(p => (
-                      <div key={p.step} className="welcome-pillar">
-                        <span className="welcome-pillar__step">{p.step}</span>
-                        <strong>{p.title}</strong>
-                        <p>{p.desc}</p>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              </div>
-              <ProfileForm onSubmit={submit} example={sampleProfile} locale={locale} />
+              <ProfileForm onSubmit={submit} example={sampleProfile} locale={locale} goalRequest={goalRequest} />
             </div>
             {view === 'results' && session && <>
               <RecommendationResults
@@ -629,9 +508,38 @@ export default function App() {
               <SchedulePanel bookings={bookings} onCancel={handleCancelSlot} locale={locale} />
             </>}
             {view === 'interests' && <InterestMap summary={interestSummary} locale={locale} />}
+            {view === 'me' && (
+              <ProfileOverview
+                locale={locale}
+                profile={session ? {
+                  goal: session.input.goal,
+                  role: session.input.role,
+                  experienceYears: session.input.experienceYears,
+                  skills: session.input.skills,
+                  interests: session.input.interests,
+                  about: session.input.about,
+                  lookingFor: session.input.lookingFor ?? [],
+                } : null}
+                stats={[
+                  { value: session?.recommendations.length ?? 0, label: me.statRecommendations },
+                  { value: metCount, label: me.statMet },
+                  { value: bookings.length, label: me.statBookings },
+                ]}
+                onEdit={handleEditProfile}
+                onShowMatches={session ? () => setView('results') : undefined}
+                footnote={me.demoNote}
+              />
+            )}
           </main>
         </div>
+        </>
       )}
+      <footer className="site-footer">
+        <div className="site-width site-footer__inner">
+          <TanysWordmark size={22} />
+          <p>{me.footer}</p>
+        </div>
+      </footer>
     </div>
   )
 }
