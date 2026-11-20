@@ -19,6 +19,7 @@ import { getGoalLabels } from './goalLabels'
 import { InterestMap } from './InterestMap'
 import { buildInviteUrl, getInviteState } from './inviteQr'
 import { InviteQrModal } from './InviteQrModal'
+import { filterEventMembers } from './memberSearch'
 
 export interface OrganizerCabinetProps {
   api: TanysApiClient
@@ -81,6 +82,7 @@ export function OrganizerCabinet({
   const [qrInviteId, setQrInviteId] = useState<string | null>(null)
   const qrTriggerRef = useRef<HTMLButtonElement | null>(null)
   const [members, setMembers] = useState<EventMemberItem[]>([])
+  const [memberSearch, setMemberSearch] = useState('')
   const [interests, setInterests] = useState<EventInterestsPayload | null>(null)
   const [booths, setBooths] = useState<EventBooth[]>([])
   const [reports, setReports] = useState<EventReportItem[]>([])
@@ -103,6 +105,7 @@ export function OrganizerCabinet({
     setInvites([])
     setQrInviteId(null)
     setMembers([])
+    setMemberSearch('')
     setInterests(null)
     setBooths([])
     setReports([])
@@ -338,6 +341,7 @@ export function OrganizerCabinet({
 
   const isClosed = activeEvent?.status === 'closed'
   const interestSummary = toInterestSummary(interests, members.length)
+  const filteredMembers = filterEventMembers(members, memberSearch)
 
   function handleExportInterestsCsv() {
     if (!activeEvent || interestSummary.topics.length === 0) return
@@ -508,32 +512,55 @@ export function OrganizerCabinet({
             ) : members.length === 0 ? (
               <p className="social-card__hint">{o.noMembers}</p>
             ) : (
-              <table className="interest-table members-table">
-                <thead>
-                  <tr>
-                    <th scope="col">{o.memberNameCol}</th>
-                    <th scope="col">{o.memberRoleCol}</th>
-                    <th scope="col">{o.memberGoalCol}</th>
-                    <th scope="col">{o.memberVisibilityCol}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {members.map(member => (
-                    <tr key={member.userId} data-member-id={member.userId}>
-                      <th scope="row">{member.name || member.userId}</th>
-                      <td>{member.profileRole || (member.role === 'organizer' ? o.roleOrganizer : o.roleParticipant)}</td>
-                      <td>{member.goal ? goalLabels[member.goal] : '—'}</td>
-                      <td>
-                        {member.visible === true
-                          ? o.profileVisible
-                          : member.visible === false
-                            ? o.profileHidden
-                            : o.profileIncomplete}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <>
+                <div className="contact-row">
+                  <input
+                    type="search"
+                    name="memberSearch"
+                    aria-label={o.memberSearchLabel}
+                    placeholder={o.memberSearchPlaceholder}
+                    value={memberSearch}
+                    onChange={event => setMemberSearch(event.target.value)}
+                  />
+                  {memberSearch.trim() && (
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => setMemberSearch('')}
+                    >{o.clearMemberSearch}</button>
+                  )}
+                </div>
+                {filteredMembers.length === 0 ? (
+                  <p className="social-card__hint">{o.noMemberMatches}</p>
+                ) : (
+                  <table className="interest-table members-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">{o.memberNameCol}</th>
+                        <th scope="col">{o.memberRoleCol}</th>
+                        <th scope="col">{o.memberGoalCol}</th>
+                        <th scope="col">{o.memberVisibilityCol}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredMembers.map(member => (
+                        <tr key={member.userId} data-member-id={member.userId}>
+                          <th scope="row">{member.name || member.userId}</th>
+                          <td>{member.profileRole || (member.role === 'organizer' ? o.roleOrganizer : o.roleParticipant)}</td>
+                          <td>{member.goal ? goalLabels[member.goal] : '—'}</td>
+                          <td>
+                            {member.visible === true
+                              ? o.profileVisible
+                              : member.visible === false
+                                ? o.profileHidden
+                                : o.profileIncomplete}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </>
             )}
           </div>
 

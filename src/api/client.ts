@@ -508,10 +508,31 @@ export function createTanysApiClient(
     },
 
     async listEventMembers(eventId) {
-      const data = await request<{ items?: EventMemberItem[] }>(
-        `/events/${encodeURIComponent(eventId)}/members`,
-      )
-      return Array.isArray(data?.items) ? data.items : []
+      const all: EventMemberItem[] = []
+      const seenUsers = new Set<string>()
+      const seenCursors = new Set<string>()
+      let cursor: string | null = null
+
+      while (true) {
+        const suffix: string = cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''
+        const data: { items?: EventMemberItem[]; nextCursor?: string | null } = await request<{
+          items?: EventMemberItem[]
+          nextCursor?: string | null
+        }>(`/events/${encodeURIComponent(eventId)}/members${suffix}`)
+        const items = Array.isArray(data?.items) ? data.items : []
+        for (const member of items) {
+          if (seenUsers.has(member.userId)) continue
+          seenUsers.add(member.userId)
+          all.push(member)
+        }
+        const next: string | null =
+          typeof data?.nextCursor === 'string' && data.nextCursor.trim() ? data.nextCursor : null
+        if (!next || seenCursors.has(next)) break
+        seenCursors.add(next)
+        cursor = next
+      }
+
+      return all
     },
 
     async getEventInterests(eventId) {
