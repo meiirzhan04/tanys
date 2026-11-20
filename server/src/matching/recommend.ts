@@ -103,22 +103,46 @@ const templatesByLocale: Record<Locale, RecommendationTemplates> = {
   },
 }
 
+const skillAliases: Readonly<Record<string, string>> = {
+  js: 'javascript',
+  javascript: 'javascript',
+  ts: 'typescript',
+  typescript: 'typescript',
+  postgres: 'postgresql',
+  postgresql: 'postgresql',
+  'node.js': 'nodejs',
+  nodejs: 'nodejs',
+}
+
+function normalizeTopic(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+function normalizeSkill(value: string): string {
+  const key = normalizeTopic(value)
+  return skillAliases[key] ?? key
+}
+
 function makeIcebreaker(goal: Goal, candidate: Candidate, locale: Locale, topic?: string): string {
   const templates = templatesByLocale[locale]
   const profileDetail = topic ?? candidate.skills.find(skill => skill.trim()) ?? candidate.role
   return templates.formatIcebreaker(candidate.name, profileDetail.trim(), templates.icebreakerQuestions[goal])
 }
 
-function matchingTopics(values: readonly string[], targets: readonly string[]): string[] {
-  const pending = new Set(targets.map(value => value.trim().toLowerCase()).filter(Boolean))
+function matchingTopics(
+  values: readonly string[],
+  targets: readonly string[],
+  normalize: (value: string) => string = normalizeTopic,
+): string[] {
+  const pending = new Set(targets.map(normalize).filter(Boolean))
 
-  return values.map(value => value.trim()).filter(value => pending.delete(value.toLowerCase()))
+  return values.map(value => value.trim()).filter(value => pending.delete(normalize(value)))
 }
 
 function scoreCandidate(input: ProfileInput, candidate: Candidate, templates: RecommendationTemplates) {
-  const candidateNeeds = matchingTopics(input.skills, candidate.lookingFor ?? [])
-  const participantNeeds = matchingTopics(candidate.skills, input.lookingFor ?? [])
-  const sharedSkills = matchingTopics(candidate.skills, input.skills)
+  const candidateNeeds = matchingTopics(input.skills, candidate.lookingFor ?? [], normalizeSkill)
+  const participantNeeds = matchingTopics(candidate.skills, input.lookingFor ?? [], normalizeSkill)
+  const sharedSkills = matchingTopics(candidate.skills, input.skills, normalizeSkill)
   const sharedInterests = matchingTopics(candidate.interests, input.interests)
   const isMoreExperienced = input.goal === 'find_mentor' && candidate.experienceYears > input.experienceYears
   const isLessExperienced = input.goal === 'be_mentor' && candidate.experienceYears < input.experienceYears
