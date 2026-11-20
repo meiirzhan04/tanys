@@ -60,28 +60,40 @@ export async function organizerRoute(req: IncomingMessage, res: ServerResponse, 
 
   if (action === 'members' && req.method === 'GET') {
     if (role !== 'organizer') throw new HttpError(403, 'organizer_required')
+    const query = new URL(req.url!, 'http://localhost').searchParams
+    const limit = Number(query.get('limit') ?? 50)
+    const cursor = query.get('cursor')
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100 || (cursor !== null && !uuid(cursor))) {
+      throw new HttpError(400, 'invalid_page')
+    }
     const profilesExist = await hasProfilesTable()
     if (profilesExist) {
       const result = await pool.query(
         `SELECT m.user_id AS "userId", m.role, p.name, p.role AS "profileRole", p.goal, p.visible
          FROM memberships m
          LEFT JOIN event_profiles p ON p.event_id = m.event_id AND p.user_id = m.user_id AND p.visible
-         WHERE m.event_id = $1
-         ORDER BY m.role DESC, m.user_id ASC`,
-        [eventId],
+         WHERE m.event_id = $1 AND ($2::uuid IS NULL OR m.user_id > $2)
+         ORDER BY m.user_id ASC
+         LIMIT $3`,
+        [eventId, cursor, limit + 1],
       )
-      json(res, 200, { items: result.rows, nextCursor: null })
+      const items = result.rows.slice(0, limit)
+      const nextCursor = result.rows.length > limit ? items[items.length - 1].userId : null
+      json(res, 200, { items, nextCursor })
       return true
     }
 
     const result = await pool.query(
       `SELECT m.user_id AS "userId", m.role
        FROM memberships m
-       WHERE m.event_id = $1
-       ORDER BY m.role DESC, m.user_id ASC`,
-      [eventId],
+       WHERE m.event_id = $1 AND ($2::uuid IS NULL OR m.user_id > $2)
+       ORDER BY m.user_id ASC
+       LIMIT $3`,
+      [eventId, cursor, limit + 1],
     )
-    json(res, 200, { items: result.rows, nextCursor: null })
+    const items = result.rows.slice(0, limit)
+    const nextCursor = result.rows.length > limit ? items[items.length - 1].userId : null
+    json(res, 200, { items, nextCursor })
     return true
   }
 
