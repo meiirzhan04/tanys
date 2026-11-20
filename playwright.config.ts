@@ -1,12 +1,33 @@
-import { defineConfig } from '@playwright/test'
+import { defineConfig, devices } from '@playwright/test'
 
-const baseURL = 'http://127.0.0.1:5187'
+const externalBaseURL = process.env.TANYS_BASE_URL
+const baseURL = externalBaseURL || 'http://127.0.0.1:5187'
 
 export default defineConfig({
   testDir: './tests/browser',
+  timeout: 30_000,
   use: { baseURL },
-  webServer: {
-    command: 'npm run dev -- --host 127.0.0.1 --port 5187 --strictPort',
-    url: baseURL,
-  },
+  projects: [
+    {
+      name: 'desktop-chrome',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 860 } },
+    },
+    {
+      name: 'mobile-chrome',
+      use: { ...devices['Pixel 7'], viewport: { width: 360, height: 800 } },
+    },
+    {
+      name: 'mobile-safari',
+      use: { ...devices['iPhone 13'] },
+    },
+  ],
+  ...(externalBaseURL
+    ? {}
+    : {
+        webServer: {
+          command: 'npm run dev -- --host 127.0.0.1 --port 5187 --strictPort',
+          url: baseURL,
+          reuseExistingServer: !process.env.CI,
+        },
+      }),
 })
