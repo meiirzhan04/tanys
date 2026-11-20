@@ -426,7 +426,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
     },
     account: {
       openAccount: 'Войти',
-      backToDemo: 'К демо',
+      backToDemo: 'На главную',
       loadingSession: 'Проверяем сессию…',
       loadingEvent: 'Загружаем данные мероприятия…',
       joiningInvite: 'Присоединяемся к мероприятию по приглашению…',
@@ -748,7 +748,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
     },
     account: {
       openAccount: 'Кіру',
-      backToDemo: 'Демоға оралу',
+      backToDemo: 'Басты бетке',
       loadingSession: 'Сессия тексерілуде…',
       loadingEvent: 'Іс-шара деректері жүктелуде…',
       joiningInvite: 'Шақыру сілтемесі арқылы іс-шараға қосылуда…',
@@ -1070,7 +1070,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
     },
     account: {
       openAccount: 'Sign in',
-      backToDemo: 'Demo mode',
+      backToDemo: 'Home',
       loadingSession: 'Checking session…',
       loadingEvent: 'Loading event…',
       joiningInvite: 'Joining event via invite…',
