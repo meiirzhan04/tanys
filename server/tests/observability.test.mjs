@@ -3,6 +3,7 @@ import { createServer } from 'node:http'
 import { test } from 'node:test'
 import {
   createMetricsTracker,
+  createObservedRequestHandler,
   evaluateAlertThresholds,
   formatSafeLog,
   redactPii,
@@ -111,5 +112,121 @@ test('simulated failure and 503 readiness deliver PII-free alert to responsible 
   } finally {
     await new Promise(resolve => webhookServer.close(resolve))
     await new Promise(resolve => apiServer.close(resolve))
+  }
+})
+
+test('observed request handler emits PII-safe logs, 5xx support requestId, and metrics/alerts', async () => {
+  const logs = []
+  const metrics = createMetricsTracker()
+  let ready = true
+  let challengeShouldFail = false
+
+  const stubRoute = async (req, res, path) => {
+    if (req.method === 'POST' && path === '/auth/challenges') {
+      if (challengeShouldFail) {
+        const err = new Error('mail_unavailable')
+        err.status = 503
+        err.code = 'mail_unavailable'
+        throw err
+      }
+      res.writeHead(202, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ challengeId: 'c1' }))
+      return true
+    }
+    if (req.method === 'GET' && path === '/events/11111111-1111-4111-8111-111111111111/recommendations') {
+      res.writeHead(200, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ items: [] }))
+      return true
+    }
+    if (req.method === 'GET' && path === '/explode') {
+      throw new Error('Unexpected failure for participant@example.kz')
+    }
+    return false
+  }
+
+  const handler = createObservedRequestHandler({
+    appOrigin: 'https://tanys.example.kz',
+    routes: [stubRoute],
+    checkReady: async () => ready,
+    metrics,
+    log: line => logs.push(line),
+  })
+
+  const server = createServer(handler)
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve))
+  const baseUrl = `http://127.0.0.1:${server.address().port}`
+
+  try {
+    // 1) Successful OTP challenge records emailSent
+    const okChallenge = await fetch(`${baseUrl}/api/v1/auth/challenges`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Origin: 'https://tanys.example.kz',
+        Cookie: 'tanys_session=topsecretcookie',
+      },
+      body: JSON.stringify({ email: 'secret@example.kz', purpose: 'login' }),
+    })
+    assert.equal(okChallenge.status, 202)
+
+    // 2) Failed SMTP challenge returns 503 + requestId and records emailFailed + authErrors
+    challengeShouldFail = true
+    const failChallenge = await fetch(`${baseUrl}/api/v1/auth/challenges`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Origin: 'https://tanys.example.kz' },
+      body: JSON.stringify({ email: 'secret@example.kz', purpose: 'login' }),
+    })
+    assert.equal(failChallenge.status, 503)
+    const failBody = await failChallenge.json()
+    assert.equal(failBody.error.code, 'mail_unavailable')
+    assert.match(failBody.error.requestId, /^[0-9a-f-]{36}$/i)
+
+    // 3) Matching route tracks latency and strips query string from logs
+    const recRes = await fetch(
+      `${baseUrl}/api/v1/events/11111111-1111-4111-8111-111111111111/recommendations?email=leak@example.kz`,
+    )
+    assert.equal(recRes.status, 200)
+
+    // 4) Unhandled 500 error returns internal_error + requestId without leaking error text/PII
+    const boomRes = await fetch(`${baseUrl}/api/v1/explode`)
+    assert.equal(boomRes.status, 500)
+    const boomBody = await boomRes.json()
+    assert.equal(boomBody.error.code, 'internal_error')
+    assert.match(boomBody.error.requestId, /^[0-9a-f-]{36}$/i)
+
+    // 5) Cross-origin POST rejected with 403 invalid_origin (no requestId needed on 4xx)
+    const badOrigin = await fetch(`${baseUrl}/api/v1/auth/challenges`, {
+      method: 'POST',
+      headers: { Origin: 'https://evil.example' },
+    })
+    assert.equal(badOrigin.status, 403)
+    assert.deepEqual(await badOrigin.json(), { error: { code: 'invalid_origin' } })
+
+    // 6) Readiness outage returns 503 and emits readiness_down alert
+    ready = false
+    const readyRes = await fetch(`${baseUrl}/ready`)
+    assert.equal(readyRes.status, 503)
+
+    const snapshot = metrics.snapshot()
+    assert.equal(snapshot.emailSent, 1)
+    assert.equal(snapshot.emailFailed, 1)
+    assert.equal(snapshot.status5xx, 2)
+    assert.equal(snapshot.authErrors, 2)
+    assert.equal(snapshot.matchingSamples, 1)
+    assert.equal(snapshot.ready, false)
+
+    const joinedLogs = logs.join('\n')
+    assert.doesNotMatch(joinedLogs, /secret@example\.kz|leak@example\.kz|participant@example\.kz|topsecretcookie/)
+    const parsedLogs = logs.map(line => JSON.parse(line))
+    assert.ok(parsedLogs.some(entry => entry.requestId === boomBody.error.requestId && entry.status === 500))
+    assert.ok(
+      parsedLogs.some(
+        entry =>
+          entry.event === 'alert_threshold_triggered' &&
+          entry.alerts.some(alert => alert.alertCode === 'readiness_down'),
+      ),
+    )
+  } finally {
+    await new Promise(resolve => server.close(resolve))
   }
 })
