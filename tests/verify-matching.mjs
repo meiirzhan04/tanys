@@ -65,7 +65,7 @@ export function normalizeFixtures(raw, fallbackId) {
     const id = item?.id ?? (items.length === 1 ? fallbackId : `${fallbackId}-${idx + 1}`)
     return {
       id,
-      label: item?.label ?? item?.title ?? item?.description ?? id,
+      label: item?.label ?? item?.title ?? item?.scenario ?? item?.description ?? id,
       input,
       expected: item?.expected ?? null,
     }
@@ -98,6 +98,34 @@ export function evaluateRecommendation(input, recommendation, expected) {
   }
   if (!recommendation.explanation || !String(recommendation.explanation).trim()) {
     return { ok: false, reason: 'empty explanation' }
+  }
+
+  if (expected?.goal && candidate.goal !== expected.goal) {
+    return { ok: false, reason: `expected goal ${expected.goal}` }
+  }
+  if (candidate.experienceYears < (expected?.minExperienceYears ?? -Infinity)) {
+    return { ok: false, reason: `experience below ${expected.minExperienceYears} years` }
+  }
+  if (candidate.experienceYears > (expected?.maxExperienceYears ?? Infinity)) {
+    return { ok: false, reason: `experience above ${expected.maxExperienceYears} years` }
+  }
+
+  for (const field of ['skills', 'lookingFor', 'interests']) {
+    const values = new Set(normalizeTerms(candidate[field]))
+    const required = normalizeTerms(expected?.[`${field}All`])
+    const alternatives = normalizeTerms(expected?.[`${field}Any`])
+    if (!required.every(term => values.has(term))) {
+      return { ok: false, reason: `missing required ${field} (${required.join(', ')})` }
+    }
+    if (alternatives.length && !alternatives.some(term => values.has(term))) {
+      return { ok: false, reason: `missing any ${field} (${alternatives.join(', ')})` }
+    }
+  }
+
+  const aboutTerms = normalizeTerms(expected?.aboutIncludesAny)
+  const about = String(candidate.about ?? '').toLowerCase()
+  if (aboutTerms.length && !aboutTerms.some(term => about.includes(term))) {
+    return { ok: false, reason: `missing expected profile text (${aboutTerms.join(', ')})` }
   }
 
   const expectedTerms = normalizeTerms(
@@ -191,8 +219,10 @@ async function main() {
   const requireFullFiveCheck = candidates.length >= 100
   for (const scenario of allScenarios) {
     const report = runScenario(recommend, candidates, scenario)
-    const minExpected = requireFullFiveCheck ? 3 : Math.min(3, report.total)
-    const passed = report.withinSla && report.relevantCount >= minExpected && report.total <= 5
+    const target = scenario.expected?.minRelevantInTopFive ?? 3
+    const minExpected = requireFullFiveCheck ? target : Math.min(target, report.total)
+    const validCount = requireFullFiveCheck ? report.total === 5 : report.total <= 5
+    const passed = report.withinSla && report.relevantCount >= minExpected && validCount
     if (!passed) hasFailures = true
     console.log(
       `[${passed ? 'PASS' : 'FAIL'}] ${report.id} (${report.goal}): ${report.relevantCount}/${report.total} relevant in ${report.durationMs}ms${

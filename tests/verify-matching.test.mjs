@@ -50,3 +50,39 @@ test('runScenario flags incompatible goals and checks SLA under 3000ms', () => {
   )
   assert.equal(incompatible.ok, false)
 })
+
+test('checks the strict criteria recorded in independent fixtures', () => {
+  const input = { goal: 'find_job' }
+  const candidate = {
+    goal: 'hire',
+    skills: [' Python ', 'FastAPI'],
+    lookingFor: ['Python', 'PostgreSQL'],
+    interests: ['API'],
+    experienceYears: 3,
+    about: 'Ищем начинающего разработчика.',
+  }
+  const result = { candidate, explanation: 'Взаимные цели и общий стек.' }
+  assert.deepEqual(evaluateRecommendation(input, result, {
+    goal: 'hire',
+    skillsAll: ['python', 'fastapi'],
+    lookingForAny: ['Flask', 'PostgreSQL'],
+    interestsAny: ['API'],
+    minExperienceYears: 2,
+    maxExperienceYears: 4,
+    aboutIncludesAny: ['стажёр', 'Начинающ'],
+  }), { ok: true })
+
+  for (const [criteria, reason] of [
+    [{ skillsAll: ['Python', 'Flask'] }, /required skills/],
+    [{ lookingForAll: ['Python', 'FastAPI'] }, /required lookingFor/],
+    [{ lookingForAny: ['React'] }, /any lookingFor/],
+    [{ interestsAny: ['React'] }, /any interests/],
+    [{ minExperienceYears: 4 }, /experience below/],
+    [{ maxExperienceYears: 2 }, /experience above/],
+    [{ aboutIncludesAny: ['senior'] }, /profile text/],
+  ]) {
+    const check = evaluateRecommendation(input, result, criteria)
+    assert.equal(check.ok, false)
+    assert.match(check.reason, reason)
+  }
+})
