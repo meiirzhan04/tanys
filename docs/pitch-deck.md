@@ -2,7 +2,7 @@
 
 Кейс: **Qazaq IT Community — AI-сервис умного нетворкинга** (AI in Engineering Hackathon 2026, METU).
 
-Готовый PDF (10 слайдов): [`docs/tanys-presentation.pdf`](tanys-presentation.pdf)
+Готовый PDF (10 слайдов): [`docs/tanys-presentation.pdf`](tanys-presentation.pdf) · Живое демо: [https://tanys-new.vercel.app/](https://tanys-new.vercel.app/)
 
 ## Слайды (10)
 
@@ -80,6 +80,7 @@
 ## Ссылки сдачи (заполнить в #7 до 09:00 21 ноября)
 
 - Публичный репозиторий: `https://github.com/meiirzhan04/tanys` *(открыть доступ в #42)*
-- Датасет анкет: [`src/data/profiles.json`](../src/data/profiles.json)
+- Живое демо (Vercel, проверено без входа): `https://tanys-new.vercel.app/`
+- Датасет анкет (150 профилей): [`src/data/profiles.json`](../src/data/profiles.json)
 - Презентация PDF (10 слайдов): [`docs/tanys-presentation.pdf`](tanys-presentation.pdf)
-- Демо / видео (≤ 3 мин): `[добавить ссылку после #39]`
+- Видео демо (≤ 3 мин, при необходимости в дополнение к ссылке): `[добавить ссылку после #39]`
