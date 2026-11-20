@@ -266,6 +266,7 @@ export interface Messages {
     profileHidden: string
     profileIncomplete: string
     noMembers: string
+    exportInterestsCsv: string
     boothsTitle: string
     boothNameLabel: string
     boothNamePlaceholder: string
@@ -585,6 +586,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       profileHidden: 'Скрыт',
       profileIncomplete: 'Анкета не заполнена',
       noMembers: 'В этом событии пока нет участников.',
+      exportInterestsCsv: 'Скачать CSV',
       boothsTitle: 'Стенды партнёров события',
       boothNameLabel: 'Название стенда',
       boothNamePlaceholder: 'Например, Сообщество Go',
@@ -902,6 +904,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       profileHidden: 'Жасырын',
       profileIncomplete: 'Анкета толтырылмаған',
       noMembers: 'Бұл іс-шарада әлі қатысушылар жоқ.',
+      exportInterestsCsv: 'CSV жүктеу',
       boothsTitle: 'Іс-шара серіктес стендтері',
       boothNameLabel: 'Стенд атауы',
       boothNamePlaceholder: 'Мысалы, Go қауымдастығы',
@@ -1219,6 +1222,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       profileHidden: 'Hidden',
       profileIncomplete: 'Profile not filled',
       noMembers: 'No participants in this event yet.',
+      exportInterestsCsv: 'Export CSV',
       boothsTitle: 'Partner booths',
       boothNameLabel: 'Booth name',
       boothNamePlaceholder: 'e.g. Go Community',

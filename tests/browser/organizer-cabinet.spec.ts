@@ -196,9 +196,10 @@ test('organizer creates events without JSON, isolates second empty event, manage
     await orgPage.locator('input[name="eventName"]').fill('Almaty Go Conf')
     await orgPage.locator('button', { hasText: 'Создать событие' }).click()
 
-    // Empty event 1 initially has zero synthetic booths & zero synthetic topics!
+    // Empty event 1 initially has zero synthetic booths & zero synthetic topics; CSV export is disabled
     await expect(orgPage.locator('text=В этом событии пока нет стендов.')).toBeVisible()
     await expect(orgPage.locator('.interest-map .empty-state')).toBeVisible()
+    await expect(orgPage.locator('.interest-map button', { hasText: 'Скачать CSV' })).toBeDisabled()
 
     // Issue invite link & create a published booth in Event 1
     await orgPage.locator('button', { hasText: 'Выпустить приглашение' }).click()
@@ -238,6 +239,7 @@ test('organizer creates events without JSON, isolates second empty event, manage
     await expect(orgPage.locator('text=В этом событии пока нет стендов.')).toBeVisible()
     await expect(orgPage.locator('[data-member-id]')).toHaveCount(1)
     await expect(orgPage.locator('.interest-map .empty-state')).toBeVisible()
+    await expect(orgPage.locator('.interest-map button', { hasText: 'Скачать CSV' })).toBeDisabled()
   } finally {
     await orgCtx.close()
     await guestCtx.close()
