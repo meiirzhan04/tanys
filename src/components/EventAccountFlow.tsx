@@ -718,8 +718,10 @@ export function EventAccountFlow({
       await api.saveContact(value)
       setContactValue(value)
       setContactSaved(true)
+      return true
     } catch (error) {
       setSocialError(formatApiError(error, locale, 'general'))
+      return false
     } finally {
       setSavingContact(false)
     }
@@ -1163,7 +1165,7 @@ export function EventAccountFlow({
             contactSaved={contactSaved}
             socialError={socialError}
             socialNotice={socialNotice}
-            onSaveContact={value => void handleSaveContact(value)}
+            onSaveContact={handleSaveContact}
             onUpdateIntro={(introId, status) => void handleUpdateIntro(introId, status)}
             onToggleSlots={introId => void handleToggleSlots(introId)}
             onProposeMeeting={(introId, slotId) => void handleProposeMeeting(introId, slotId)}
