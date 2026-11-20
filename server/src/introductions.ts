@@ -3,6 +3,8 @@ import { viewer } from './auth.js'
 import { HttpError, json, readBody, transaction, uuid } from './http.js'
 import { pool } from './db.js'
 import { consumeRequest } from './rate-limit.js'
+import { recommend } from './matching/recommend.js'
+import type { Candidate } from './matching/types.js'
 
 export const allowedPair = `NOT EXISTS (SELECT 1 FROM event_blocks b WHERE b.event_id=i.event_id AND
     (b.blocker_id,b.blocked_id) IN ((i.sender,i.recipient),(i.recipient,i.sender)))
@@ -19,11 +21,11 @@ function cleanContact(value: unknown): string {
   return trimmed
 }
 
-function cleanMessage(value: unknown): string | null {
+function cleanMessage(value: unknown, maxLength = 280): string | null {
   if (value === undefined || value === null) return null
   if (typeof value !== 'string') throw new HttpError(400, 'invalid_message')
   const trimmed = value.replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').trim()
-  if (trimmed.length > 280) throw new HttpError(400, 'invalid_message')
+  if (trimmed.length > maxLength) throw new HttpError(400, 'invalid_message')
   return trimmed || null
 }
 
@@ -31,12 +33,28 @@ const selection = `SELECT i.id,i.status,i.created_at AS "createdAt",i.updated_at
   CASE WHEN i.sender=$2 THEN 'outgoing' ELSE 'incoming' END AS direction,
   p.user_id AS "participantId",COALESCE(NULLIF(btrim(p.name),''),u.handle) AS "participantName",p.role AS "participantRole",
   u.handle AS "participantHandle",
-  CASE WHEN i.status='accepted' THEN c.value END AS contact
+  CASE WHEN i.status='accepted' THEN c.value END AS contact,
+  CASE WHEN i.status='accepted' THEN i.icebreaker END AS icebreaker,
+  to_jsonb(mine) AS "ownProfile",
+  CASE WHEN mine.user_id IS NOT NULL THEN to_jsonb(p) END AS "peerProfile"
   FROM introductions i JOIN event_profiles p ON p.event_id=i.event_id AND p.visible
     AND p.user_id=CASE WHEN i.sender=$2 THEN i.recipient ELSE i.sender END
+  LEFT JOIN event_profiles mine ON mine.event_id=i.event_id AND mine.user_id=$2 AND mine.visible
+    AND i.status='accepted' AND i.icebreaker IS NULL
   LEFT JOIN users u ON u.id=p.user_id
   LEFT JOIN user_contacts c ON c.user_id=p.user_id
   WHERE i.event_id=$1 AND $2 IN (i.recipient,i.sender) AND ${allowedPair}`
+
+type ProfileRow = Omit<Candidate, 'id' | 'experienceYears' | 'lookingFor'> & {
+  user_id: string
+  experience_years: number
+  looking_for: string[]
+}
+
+function recommendationProfile(row: ProfileRow): Candidate {
+  const { user_id, experience_years, looking_for, ...fields } = row
+  return { ...fields, id: user_id, experienceYears: experience_years, lookingFor: looking_for }
+}
 
 export async function introductionRoute(req: IncomingMessage,res: ServerResponse,path: string) {
   if (path === '/me/contact' && req.method === 'GET') {
@@ -58,6 +76,8 @@ export async function introductionRoute(req: IncomingMessage,res: ServerResponse
   if (!parts || !uuid(parts[1]) || (parts[2] && !uuid(parts[2]))) return false
   const [,event,id] = parts
   const user = await viewer(req)
+  const language = new URL(req.url!, 'http://localhost').searchParams.get('locale')
+  const locale = language === 'kk' || language === 'en' ? language : 'ru'
   const body = req.method === 'GET' ? null : await readBody(req)
   if (req.method === 'POST' && !id) await consumeRequest(`introductions:${user}`, 30, 600, res)
   const result = await transaction(async client => {
@@ -71,12 +91,13 @@ export async function introductionRoute(req: IncomingMessage,res: ServerResponse
         const peer = body.recipientId
         if (!uuid(peer) || peer === user) throw new HttpError(400,'invalid_recipient')
         const message = cleanMessage(body.message)
+        const icebreaker = cleanMessage(body.icebreaker, 1000)
         const found = await client.query(`SELECT 1 FROM event_profiles mine JOIN event_profiles other ON mine.event_id=other.event_id
           CROSS JOIN (SELECT $1::uuid AS event_id,$2::uuid AS sender,$3::uuid AS recipient) i
           WHERE mine.event_id=$1 AND mine.user_id=$2 AND other.user_id=$3 AND mine.visible AND other.visible AND ${allowedPair}`,[event,user,peer])
         if (!found.rowCount) throw new HttpError(404,'not_found')
-        const created = await client.query(`INSERT INTO introductions(event_id,sender,recipient,message) VALUES($1,$2,$3,$4)
-          ON CONFLICT DO NOTHING RETURNING id`,[event,user,peer,message])
+        const created = await client.query(`INSERT INTO introductions(event_id,sender,recipient,message,icebreaker) VALUES($1,$2,$3,$4,$5)
+          ON CONFLICT DO NOTHING RETURNING id`,[event,user,peer,message,icebreaker])
         if (created.rowCount) { target=created.rows[0].id; status=201 }
         else {
           // One introduction per pair and event: a reverse pending request is returned as the existing
@@ -85,7 +106,7 @@ export async function introductionRoute(req: IncomingMessage,res: ServerResponse
           target=old.rows[0]?.id
           if (!target) throw new HttpError(409,'pair_changed')
           if (old.rows[0].status === 'withdrawn' && old.rows[0].sender === user) {
-            await client.query("UPDATE introductions SET status='pending',message=$2,updated_at=now() WHERE id=$1",[target,message])
+            await client.query("UPDATE introductions SET status='pending',message=$2,icebreaker=$3,updated_at=now() WHERE id=$1",[target,message,icebreaker])
           }
         }
       } else if (id && req.method === 'PATCH') {
@@ -103,7 +124,14 @@ export async function introductionRoute(req: IncomingMessage,res: ServerResponse
     }
     const rows=await client.query(selection+(target?' AND i.id=$3':' ORDER BY i.created_at DESC'),target?[event,user,target]:[event,user])
     if (target && !rows.rowCount) throw new HttpError(404,'not_found')
-    return {status,data:target?rows.rows[0]:{items:rows.rows,nextCursor:null}}
+    const items = rows.rows.map(({ ownProfile, peerProfile, ...item }) => {
+      if (ownProfile && peerProfile) {
+        const [sender, recipient] = item.direction === 'outgoing' ? [ownProfile, peerProfile] : [peerProfile, ownProfile]
+        item.icebreaker = recommend(recommendationProfile(sender), [recommendationProfile(recipient)], locale)[0]?.icebreaker ?? null
+      }
+      return item
+    })
+    return {status,data:target?items[0]:{items,nextCursor:null}}
   })
   json(res,result.status,result.data)
   return true

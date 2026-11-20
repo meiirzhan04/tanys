@@ -41,7 +41,7 @@ function createMockReleaseBackend(options: { emptyRecommendations?: boolean } = 
     ['user-a', new Set()],
     ['user-b', new Set()],
   ])
-  const introductions: MockIntro[] = []
+  const introductions: (MockIntro & { icebreaker?: string })[] = []
   const meetings: MockMeeting[] = []
   const commonSlots = [
     { id: 'slot-busy', start: '2027-02-01T09:00:00Z', end: '2027-02-01T09:20:00Z', busy: true },
@@ -193,7 +193,10 @@ function createMockReleaseBackend(options: { emptyRecommendations?: boolean } = 
             (item.senderId === recipientId && item.recipientId === viewerId),
         )
         if (!intro) {
-          intro = { id: `intro-${introductions.length + 1}`, senderId: viewerId, recipientId, status: 'pending' }
+          intro = {
+            id: `intro-${introductions.length + 1}`, senderId: viewerId, recipientId, status: 'pending',
+            icebreaker: typeof body.icebreaker === 'string' ? body.icebreaker : undefined,
+          }
           introductions.push(intro)
         }
         const other = users.get(intro.senderId === viewerId ? intro.recipientId : intro.senderId)!
@@ -215,6 +218,7 @@ function createMockReleaseBackend(options: { emptyRecommendations?: boolean } = 
             return {
               id: item.id,
               status: item.status,
+              icebreaker: item.status === 'accepted' ? item.icebreaker : null,
               direction: item.senderId === viewerId ? 'outgoing' : 'incoming',
               participantId: other.id,
               participantName: String(other.profile?.name ?? other.id),
@@ -240,6 +244,7 @@ function createMockReleaseBackend(options: { emptyRecommendations?: boolean } = 
           participantName: String(other.profile?.name ?? other.id),
           participantRole: String(other.profile?.role ?? ''),
           contact: intro.status === 'accepted' ? other.contact : null,
+          icebreaker: intro.status === 'accepted' ? intro.icebreaker : null,
         })
       }
 
@@ -375,6 +380,7 @@ test('full 2-participant server journey: invite, network retry, intro, contact e
 
     // 3. Participant A requests introduction with Participant B
     await pageA.locator('.row-toggle').first().click()
+    const suggestedPhrase = await pageA.locator('.icebreaker p').innerText()
     await pageA.locator('.intro-action-row button').click()
     await expect(pageA.locator('.intro-action-row .status-badge')).toBeVisible()
 
@@ -383,8 +389,10 @@ test('full 2-participant server journey: invite, network retry, intro, contact e
     await expect(pageB.locator('.notification-banner')).toBeVisible()
     await pageB.locator('.workspace-nav button').nth(2).click()
     await expect(pageB.locator('.social-card')).toBeVisible()
+    await expect(pageB.locator('.request-card__message')).toHaveCount(0)
     await pageB.locator('.social-card .primary-button').click()
     await expect(pageB.locator('.contact-reveal')).toContainText('@aliya_dev')
+    await expect(pageB.locator('.request-card__message')).toContainText(suggestedPhrase)
     await assertNoHorizontalOverflow(pageB)
 
     // 5. Participant A returns to tab -> sees accepted contact @daniyar_lead -> handles 409 slot_conflict -> proposes open slot
@@ -392,6 +400,7 @@ test('full 2-participant server journey: invite, network retry, intro, contact e
     await expect(pageA.locator('.notification-banner')).toBeVisible()
     await pageA.locator('.workspace-nav button').nth(2).click()
     await expect(pageA.locator('.contact-reveal')).toContainText('@daniyar_lead')
+    await expect(pageA.locator('.request-card__message')).toContainText(suggestedPhrase)
     await pageA.locator('.social-card__accepted .secondary-button').click()
     await expect(pageA.locator('.meeting-slot-btn')).toHaveCount(2)
     // Taken slot returns 409 slot_conflict
