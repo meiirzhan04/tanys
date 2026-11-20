@@ -38,6 +38,8 @@ test('provides complete, distinct translations for ru, kk, and en', () => {
     assert.ok(messages.form.hireLookingForHint.trim())
     assert.ok(messages.results.refresh.trim())
     assert.ok(messages.results.refreshing.trim())
+    assert.ok(messages.results.originalProfileBadge('ru').trim())
+    assert.ok(messages.results.originalProfileNote.trim())
     assert.ok(messages.account.hiddenProfileWarning.trim())
     assert.equal(
       /измените цель|мақсатын өзгертіп|changing your networking goal/i.test(messages.results.emptyBody),

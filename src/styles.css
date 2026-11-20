@@ -1033,7 +1033,34 @@ p { text-wrap: pretty; }
 .candidate-name { min-width: 0; }
 .candidate-name h2 { font-size: 15px; line-height: 1.25; }
 .candidate-name p { margin-top: 3px; color: var(--muted); font-size: 12px; }
+.candidate-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-top: 3px;
+}
+.candidate-meta .goal-label { margin-top: 0; }
 .candidate-name .goal-label { color: var(--accent-text); font-weight: 680; }
+.profile-origin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 7px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: var(--paper-subtle);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 640;
+  line-height: 1.4;
+}
+.results-language-note {
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
 .explanation, .icebreaker p { font-size: 13px; line-height: 1.55; }
 .row-toggle { justify-self: end; }
 .result-details { padding: 0 20px 18px; }
