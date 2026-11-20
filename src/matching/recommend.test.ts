@@ -67,6 +67,25 @@ test('uses shared skills for older hiring profiles without requested skills', ()
   assert.deepEqual(recommend(ios, [candidate('employer', 'hire', employer)]), [])
 })
 
+test('recognizes role aliases in both hiring directions without treating related stacks as equivalents', () => {
+  const employer = candidate('employer', 'hire', { lookingFor: ['Backend Developer'] })
+  const backend = candidate('backend', 'find_job', { skills: ['BackDev'] })
+  const ios = candidate('ios', 'find_job', { skills: ['iOS Developer', 'Swift'] })
+  const frontend = candidate('frontend', 'find_job', { skills: ['FrontDev'] })
+  const other = candidate('generalist', 'find_job', { skills: ['Full Stack Developer', 'Python'] })
+  const candidates = [ios, frontend, other, backend]
+
+  const results = recommend(employer, candidates, 'kk')
+  assert.deepEqual(results.map(result => result.candidate.id), ['backend'])
+  assert.match(results[0].icebreaker ?? '', /«BackDev»/)
+  assert.deepEqual(recommend(backend, [employer]).map(result => result.candidate.id), ['employer'])
+  assert.deepEqual(recommend(ios, [employer]), [])
+
+  for (const alias of ['back-end dev', 'BACK-END   ENGINEER', 'бэкенд-разработчик', 'бекенд әзірлеуші']) {
+    assert.deepEqual(recommend({ ...employer, lookingFor: [alias] }, candidates).map(result => result.candidate.id), ['backend'])
+  }
+})
+
 test('prefers complementary skills when seeking a cofounder', () => {
   const results = recommend({ ...input, goal: 'find_cofounder', lookingFor: ['Продажи'] }, [
     candidate('developer', 'find_cofounder'),
