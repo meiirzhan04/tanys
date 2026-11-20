@@ -1,0 +1,590 @@
+import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
+import { isApiError } from '../api/client'
+import type {
+  EventBooth,
+  EventDetails,
+  EventInterestsPayload,
+  EventInvite,
+  EventMemberItem,
+  TanysApiClient,
+} from '../api/client'
+import type { InterestSummary } from '../data/interestSummary'
+import { getMessages } from '../i18n/messages'
+import type { Locale } from '../matching/types'
+import { getGoalLabels } from './goalLabels'
+import { InterestMap } from './InterestMap'
+
+export interface OrganizerCabinetProps {
+  api: TanysApiClient
+  locale: Locale
+  activeEvent: EventDetails | null
+  isOrganizerOfActive: boolean
+  onEventCreated: (event: EventDetails) => Promise<void>
+  onEventUpdated: (event: EventDetails) => void
+  onBoothsChanged: (booths: EventBooth[]) => void
+}
+
+function defaultStartsAt(): string {
+  return new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 19) + 'Z'
+}
+
+function defaultEndsAt(): string {
+  return new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString().slice(0, 19) + 'Z'
+}
+
+function parseTopicList(value: string): string[] {
+  return value.split(/[,\n]/).map(item => item.trim()).filter(Boolean)
+}
+
+function toInterestSummary(payload: EventInterestsPayload | null, memberCount: number): InterestSummary {
+  if (!payload) return { profileCount: 0, topics: [] }
+  return {
+    profileCount: payload.profileCount ?? memberCount,
+    topics: payload.topics.map(item => ({ topic: item.name, count: item.count })),
+  }
+}
+
+export function OrganizerCabinet({
+  api,
+  locale,
+  activeEvent,
+  isOrganizerOfActive,
+  onEventCreated,
+  onEventUpdated,
+  onBoothsChanged,
+}: OrganizerCabinetProps) {
+  const messages = getMessages(locale)
+  const o = messages.organizer
+  const goalLabels = getGoalLabels(locale)
+
+  // New event form state
+  const [newName, setNewName] = useState('')
+  const [newTimeZone, setNewTimeZone] = useState('Asia/Almaty')
+  const [newStartsAt, setNewStartsAt] = useState(() => defaultStartsAt())
+  const [newEndsAt, setNewEndsAt] = useState(() => defaultEndsAt())
+  const [creatingEvent, setCreatingEvent] = useState(false)
+
+  // Edit active event state
+  const [editName, setEditName] = useState(activeEvent?.name ?? '')
+  const [savingEvent, setSavingEvent] = useState(false)
+
+  // Event-scoped real data (strictly reset when switching activeEvent!)
+  const [invites, setInvites] = useState<EventInvite[]>([])
+  const [issuingInvite, setIssuingInvite] = useState(false)
+  const [copiedInviteId, setCopiedInviteId] = useState('')
+  const [members, setMembers] = useState<EventMemberItem[]>([])
+  const [interests, setInterests] = useState<EventInterestsPayload | null>(null)
+  const [booths, setBooths] = useState<EventBooth[]>([])
+  const [loadingData, setLoadingData] = useState(false)
+
+  // Booth create/edit form state
+  const [editingBoothId, setEditingBoothId] = useState<string | null>(null)
+  const [boothName, setBoothName] = useState('')
+  const [boothTopics, setBoothTopics] = useState('')
+  const [boothDescription, setBoothDescription] = useState('')
+  const [boothPublished, setBoothPublished] = useState(true)
+  const [savingBooth, setSavingBooth] = useState(false)
+
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+
+  useEffect(() => {
+    setEditName(activeEvent?.name ?? '')
+    setInvites([])
+    setMembers([])
+    setInterests(null)
+    setBooths([])
+    setEditingBoothId(null)
+    setBoothName('')
+    setBoothTopics('')
+    setBoothDescription('')
+    setBoothPublished(true)
+    setError('')
+    setNotice('')
+
+    if (!activeEvent || !isOrganizerOfActive) return
+
+    let cancelled = false
+    async function loadOrganizerData(eventId: string) {
+      setLoadingData(true)
+      try {
+        const [memberList, interestData, boothList] = await Promise.all([
+          api.listEventMembers(eventId),
+          api.getEventInterests(eventId),
+          api.listEventBooths(eventId),
+        ])
+        if (cancelled) return
+        setMembers(memberList)
+        setInterests(interestData)
+        setBooths(boothList)
+        onBoothsChanged(boothList)
+      } catch (err) {
+        if (!cancelled) {
+          setError(isApiError(err) && err.status === 403 ? o.forbiddenCreate : messages.account.errors.genericRequest)
+        }
+      } finally {
+        if (!cancelled) setLoadingData(false)
+      }
+    }
+    void loadOrganizerData(activeEvent.id)
+    return () => { cancelled = true }
+    // Reload strictly when active event or organizer role changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeEvent?.id, isOrganizerOfActive])
+
+  async function handleCreateEvent(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!newName.trim() || !newStartsAt.trim() || !newEndsAt.trim()) {
+      setError(o.invalidEventFields)
+      return
+    }
+    setCreatingEvent(true)
+    setError('')
+    setNotice('')
+    try {
+      const created = await api.createEvent({
+        name: newName.trim(),
+        timeZone: newTimeZone.trim() || 'Asia/Almaty',
+        startsAt: newStartsAt.trim(),
+        endsAt: newEndsAt.trim(),
+      })
+      setNewName('')
+      await onEventCreated(created)
+      setNotice(o.eventSaved)
+    } catch (err) {
+      if (isApiError(err) && err.status === 403) {
+        setError(o.forbiddenCreate)
+      } else if (isApiError(err) && err.status === 400) {
+        setError(o.invalidEventFields)
+      } else {
+        setError(messages.account.errors.genericRequest)
+      }
+    } finally {
+      setCreatingEvent(false)
+    }
+  }
+
+  async function handleSaveEvent(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!activeEvent || !editName.trim()) {
+      setError(o.invalidEventFields)
+      return
+    }
+    setSavingEvent(true)
+    setError('')
+    setNotice('')
+    try {
+      const updated = await api.updateEvent(activeEvent.id, { name: editName.trim() })
+      onEventUpdated(updated)
+      setNotice(o.eventSaved)
+    } catch {
+      setError(messages.account.errors.genericRequest)
+    } finally {
+      setSavingEvent(false)
+    }
+  }
+
+  async function handleCloseEvent() {
+    if (!activeEvent) return
+    setSavingEvent(true)
+    setError('')
+    setNotice('')
+    try {
+      const updated = await api.updateEvent(activeEvent.id, { status: 'closed' })
+      onEventUpdated(updated)
+      setNotice(o.eventSaved)
+    } catch {
+      setError(messages.account.errors.genericRequest)
+    } finally {
+      setSavingEvent(false)
+    }
+  }
+
+  async function handleCreateInvite() {
+    if (!activeEvent) return
+    setIssuingInvite(true)
+    setError('')
+    try {
+      const expiresAt = activeEvent.endsAt || defaultEndsAt()
+      const invite = await api.createInvite(activeEvent.id, expiresAt)
+      setInvites(current => [invite, ...current])
+    } catch {
+      setError(messages.account.errors.genericRequest)
+    } finally {
+      setIssuingInvite(false)
+    }
+  }
+
+  async function handleRevokeInvite(inviteId: string) {
+    if (!activeEvent) return
+    setError('')
+    try {
+      await api.revokeInvite(activeEvent.id, inviteId)
+      setInvites(current => current.map(item => (item.id === inviteId ? { ...item, revoked: true } : item)))
+    } catch {
+      setError(messages.account.errors.genericRequest)
+    }
+  }
+
+  async function handleCopyInvite(invite: EventInvite) {
+    if (!activeEvent) return
+    const url = `${window.location.origin}/invite/${encodeURIComponent(activeEvent.id)}/${encodeURIComponent(invite.token)}`
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedInviteId(invite.id)
+    } catch {
+      setCopiedInviteId(invite.id)
+    }
+  }
+
+  function startEditBooth(booth: EventBooth) {
+    setEditingBoothId(booth.id)
+    setBoothName(booth.name)
+    setBoothTopics(booth.topics.join(', '))
+    setBoothDescription(booth.description ?? '')
+    setBoothPublished(booth.published)
+  }
+
+  function resetBoothForm() {
+    setEditingBoothId(null)
+    setBoothName('')
+    setBoothTopics('')
+    setBoothDescription('')
+    setBoothPublished(true)
+  }
+
+  async function handleSubmitBooth(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!activeEvent) return
+    const topics = parseTopicList(boothTopics)
+    if (!boothName.trim() || !topics.length) {
+      setError(o.invalidBoothFields)
+      return
+    }
+    setSavingBooth(true)
+    setError('')
+    try {
+      if (editingBoothId) {
+        const updated = await api.updateEventBooth(activeEvent.id, editingBoothId, {
+          name: boothName.trim(),
+          topics,
+          description: boothDescription.trim(),
+          published: boothPublished,
+        })
+        const next = booths.map(item => (item.id === updated.id ? updated : item))
+        setBooths(next)
+        onBoothsChanged(next)
+      } else {
+        const created = await api.createEventBooth(activeEvent.id, {
+          name: boothName.trim(),
+          topics,
+          description: boothDescription.trim(),
+          published: boothPublished,
+        })
+        const next = [...booths, created]
+        setBooths(next)
+        onBoothsChanged(next)
+      }
+      resetBoothForm()
+    } catch {
+      setError(messages.account.errors.genericRequest)
+    } finally {
+      setSavingBooth(false)
+    }
+  }
+
+  async function handleToggleBoothPublished(booth: EventBooth) {
+    if (!activeEvent) return
+    setError('')
+    try {
+      const updated = await api.updateEventBooth(activeEvent.id, booth.id, {
+        published: !booth.published,
+      })
+      const next = booths.map(item => (item.id === updated.id ? updated : item))
+      setBooths(next)
+      onBoothsChanged(next)
+    } catch {
+      setError(messages.account.errors.genericRequest)
+    }
+  }
+
+  const isClosed = activeEvent?.status === 'closed'
+
+  return (
+    <section className="organizer-section" aria-labelledby="organizer-title">
+      <div className="page-heading">
+        <div>
+          <h1 id="organizer-title" tabIndex={-1}>{o.title}</h1>
+          <p>{o.subtitle}</p>
+        </div>
+        {activeEvent && (
+          <span className={`status-badge ${isClosed ? 'status-badge--cancelled' : 'status-badge--accepted'}`}>
+            {isClosed ? o.eventClosedBadge : o.eventActiveBadge}
+          </span>
+        )}
+      </div>
+
+      {error && <div className="error-banner" role="alert">{error}</div>}
+      {notice && <div className="info-banner" role="status">{notice}</div>}
+
+      {/* 1. Create new event form (without touching JSON!) */}
+      <form className="surface organizer-card" onSubmit={handleCreateEvent} noValidate>
+        <h2>{o.createEventTitle}</h2>
+        <div className="form-fields">
+          <label className="field">
+            <span>{o.eventNameLabel}</span>
+            <input
+              name="eventName"
+              maxLength={160}
+              placeholder={o.eventNamePlaceholder}
+              value={newName}
+              disabled={creatingEvent}
+              onChange={event => setNewName(event.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span>{o.timeZoneLabel}</span>
+            <input
+              name="eventTimeZone"
+              maxLength={64}
+              value={newTimeZone}
+              disabled={creatingEvent}
+              onChange={event => setNewTimeZone(event.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span>{o.startsAtLabel}</span>
+            <input
+              name="eventStartsAt"
+              value={newStartsAt}
+              disabled={creatingEvent}
+              onChange={event => setNewStartsAt(event.target.value)}
+            />
+          </label>
+          <label className="field">
+            <span>{o.endsAtLabel}</span>
+            <input
+              name="eventEndsAt"
+              value={newEndsAt}
+              disabled={creatingEvent}
+              onChange={event => setNewEndsAt(event.target.value)}
+            />
+          </label>
+        </div>
+        <div className="social-card__actions">
+          <button type="submit" className="primary-button" disabled={creatingEvent}>
+            {creatingEvent ? o.creatingEvent : o.createEventButton}
+          </button>
+        </div>
+      </form>
+
+      {activeEvent && isOrganizerOfActive && (
+        <>
+          {/* 2. Edit / close active event */}
+          <form className="surface organizer-card" onSubmit={handleSaveEvent}>
+            <h2>{o.editEventTitle}</h2>
+            <div className="contact-row">
+              <input
+                name="editEventName"
+                maxLength={160}
+                value={editName}
+                disabled={savingEvent || isClosed}
+                onChange={event => setEditName(event.target.value)}
+              />
+              <button type="submit" className="secondary-button" disabled={savingEvent || isClosed}>
+                {o.saveEventButton}
+              </button>
+              {!isClosed && (
+                <button type="button" className="meeting-slot-cancel" disabled={savingEvent} onClick={() => void handleCloseEvent()}>
+                  {o.closeEventButton}
+                </button>
+              )}
+            </div>
+          </form>
+
+          {/* 3. Invites */}
+          <div className="surface organizer-card">
+            <div className="social-card__header">
+              <h2>{o.invitesTitle}</h2>
+              <button
+                type="button"
+                className="primary-button"
+                disabled={issuingInvite || isClosed}
+                onClick={() => void handleCreateInvite()}
+              >{issuingInvite ? o.creatingInvite : o.createInviteButton}</button>
+            </div>
+            {invites.length === 0 ? (
+              <p className="social-card__hint">{o.noInvites}</p>
+            ) : (
+              <ul className="invite-list">
+                {invites.map(invite => {
+                  const fullUrl = `${window.location.origin}/invite/${encodeURIComponent(activeEvent.id)}/${encodeURIComponent(invite.token)}`
+                  return (
+                    <li key={invite.id} className="invite-row" data-invite-id={invite.id}>
+                      <code className="invite-url">{fullUrl}</code>
+                      <div className="social-card__actions">
+                        {invite.revoked ? (
+                          <span className="status-badge status-badge--cancelled">{o.inviteRevoked}</span>
+                        ) : (
+                          <>
+                            <button type="button" className="secondary-button" onClick={() => void handleCopyInvite(invite)}>
+                              {copiedInviteId === invite.id ? o.inviteCopied : o.copyInvite}
+                            </button>
+                            <button type="button" className="meeting-slot-cancel" onClick={() => void handleRevokeInvite(invite.id)}>
+                              {o.revokeInvite}
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+
+          {/* 4. Event members (permitted fields only, no emails or contacts) */}
+          <div className="surface organizer-card">
+            <h2>{o.membersTitle}</h2>
+            {loadingData ? (
+              <p className="social-card__hint">{messages.account.loadingEvent}</p>
+            ) : members.length === 0 ? (
+              <p className="social-card__hint">{o.noMembers}</p>
+            ) : (
+              <table className="interest-table members-table">
+                <thead>
+                  <tr>
+                    <th scope="col">{o.memberNameCol}</th>
+                    <th scope="col">{o.memberRoleCol}</th>
+                    <th scope="col">{o.memberGoalCol}</th>
+                    <th scope="col">{o.memberVisibilityCol}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {members.map(member => (
+                    <tr key={member.userId} data-member-id={member.userId}>
+                      <th scope="row">{member.name || member.userId}</th>
+                      <td>{member.profileRole || (member.role === 'organizer' ? o.roleOrganizer : o.roleParticipant)}</td>
+                      <td>{member.goal ? goalLabels[member.goal] : '—'}</td>
+                      <td>
+                        {member.visible === true
+                          ? o.profileVisible
+                          : member.visible === false
+                            ? o.profileHidden
+                            : o.profileIncomplete}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* 5. Real event interest map (#12 connected to event aggregates, zero demo profiles) */}
+          <InterestMap summary={toInterestSummary(interests, members.length)} locale={locale} />
+
+          {/* 6. Managed partner booths (#14 connected to event booths, zero demo booths) */}
+          <div className="surface organizer-card">
+            <h2>{o.boothsTitle}</h2>
+
+            <form className="booth-manage-form" onSubmit={handleSubmitBooth} noValidate>
+              <div className="form-fields">
+                <label className="field">
+                  <span>{o.boothNameLabel}</span>
+                  <input
+                    name="boothName"
+                    maxLength={160}
+                    placeholder={o.boothNamePlaceholder}
+                    value={boothName}
+                    disabled={savingBooth || isClosed}
+                    onChange={event => setBoothName(event.target.value)}
+                  />
+                </label>
+                <label className="field">
+                  <span>{o.boothTopicsLabel}</span>
+                  <input
+                    name="boothTopics"
+                    maxLength={240}
+                    placeholder={o.boothTopicsPlaceholder}
+                    value={boothTopics}
+                    disabled={savingBooth || isClosed}
+                    onChange={event => setBoothTopics(event.target.value)}
+                  />
+                </label>
+                <label className="field field-full">
+                  <span>{o.boothDescLabel}</span>
+                  <input
+                    name="boothDescription"
+                    maxLength={400}
+                    placeholder={o.boothDescPlaceholder}
+                    value={boothDescription}
+                    disabled={savingBooth || isClosed}
+                    onChange={event => setBoothDescription(event.target.value)}
+                  />
+                </label>
+                <label className="checkbox-row field-full">
+                  <input
+                    type="checkbox"
+                    name="boothPublished"
+                    checked={boothPublished}
+                    disabled={savingBooth || isClosed}
+                    onChange={event => setBoothPublished(event.target.checked)}
+                  />
+                  <span>{o.boothPublishedLabel}</span>
+                </label>
+              </div>
+              <div className="social-card__actions">
+                <button type="submit" className="primary-button" disabled={savingBooth || isClosed}>
+                  {editingBoothId ? o.saveBoothButton : o.addBoothButton}
+                </button>
+                {editingBoothId && (
+                  <button type="button" className="secondary-button" onClick={resetBoothForm}>
+                    {o.cancelEditButton}
+                  </button>
+                )}
+              </div>
+            </form>
+
+            {booths.length === 0 ? (
+              <p className="social-card__hint">{o.noBooths}</p>
+            ) : (
+              <div className="social-list">
+                {booths.map(booth => (
+                  <article key={booth.id} className="social-card surface" data-managed-booth-id={booth.id}>
+                    <div className="social-card__header">
+                      <div>
+                        <h3>{booth.name}</h3>
+                        {booth.description && <p className="social-card__role">{booth.description}</p>}
+                      </div>
+                      <span className={`status-badge ${booth.published ? 'status-badge--accepted' : 'status-badge--cancelled'}`}>
+                        {booth.published ? o.statusPublished : o.statusHidden}
+                      </span>
+                    </div>
+                    <ul className="skill-list">
+                      {booth.topics.map(topic => <li key={topic}>{topic}</li>)}
+                    </ul>
+                    <div className="social-card__actions">
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        disabled={isClosed}
+                        onClick={() => startEditBooth(booth)}
+                      >{o.editBoothButton}</button>
+                      <button
+                        type="button"
+                        className={booth.published ? 'meeting-slot-cancel' : 'secondary-button'}
+                        disabled={isClosed}
+                        onClick={() => void handleToggleBoothPublished(booth)}
+                      >{booth.published ? o.unpublishButton : o.publishButton}</button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </section>
+  )
+}
