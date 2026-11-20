@@ -18,12 +18,8 @@ function createInviteQrBackend() {
       const respond = (status: number, data?: unknown) =>
         route.fulfill({ status, contentType: 'application/json', body: status === 204 ? '' : JSON.stringify(data ?? {}) })
 
-      if (method === 'POST' && path === '/auth/challenges') {
-        const uid = String(body.email ?? '').toLowerCase().startsWith('org@') ? 'org-1' : 'guest-1'
-        return respond(202, { challengeId: `chg-${uid}` })
-      }
-      if (method === 'POST' && path === '/auth/sessions') {
-        const uid = String(body.challengeId ?? '').replace(/^chg-/, '')
+      if (method === 'POST' && path === '/auth/password') {
+        const uid = String(body.username ?? '').toLowerCase() === 'org' ? 'org-1' : 'guest-1'
         authByContext.set(context, uid)
         return respond(200, { id: uid })
       }
@@ -100,9 +96,8 @@ test('generates invite QR locally without external requests, closes with Escape,
     })
 
     await orgPage.goto('/?mode=account')
-    await orgPage.locator('input[name="email"]').fill('org@example.org')
-    await orgPage.locator('.auth-form button[type="submit"]').click()
-    await orgPage.locator('input[name="code"]').fill('a1b2c3d4e5f6')
+    await orgPage.locator('input[name="username"]').fill('org')
+    await orgPage.locator('input[name="password"]').fill('browser-test-password')
     await orgPage.locator('.auth-form button[type="submit"]').click()
 
     await orgPage.locator('.workspace-nav button', { hasText: 'Организатор' }).click()
@@ -150,9 +145,8 @@ test('generates invite QR locally without external requests, closes with Escape,
 
     const guestPage = await guestCtx.newPage()
     await guestPage.goto(new URL(inviteUrl).pathname)
-    await guestPage.locator('input[name="email"]').fill('guest@example.org')
-    await guestPage.locator('.auth-form button[type="submit"]').click()
-    await guestPage.locator('input[name="code"]').fill('a1b2c3d4e5f6')
+    await guestPage.locator('input[name="username"]').fill('guest')
+    await guestPage.locator('input[name="password"]').fill('browser-test-password')
     await guestPage.locator('.auth-form button[type="submit"]').click()
     await expect(guestPage.locator('#expired-invite-title')).toBeVisible()
   } finally {

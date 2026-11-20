@@ -10,7 +10,6 @@ import {
   isSlotConflictError,
 } from '../api/client'
 import type {
-  AuthPurpose,
   AuthUser,
   CommonSlot,
   EventBooth,
@@ -110,13 +109,15 @@ function formatApiError(error: unknown, locale: Locale, context: 'authService' |
     return context === 'save' ? err.networkSavePreserved : err.networkGeneral
   }
   if (isApiError(error)) {
-    if (context === 'authService' && [404, 503].includes(error.status)) return err.authUnavailable
+    if ((context === 'authService' || context === 'auth') && [404, 503].includes(error.status)) return err.authUnavailable
     if (error.status === 401) {
-      return context === 'auth' ? err.invalidCode : err.sessionExpired
+      return context === 'auth' ? err.invalidCredentials : err.sessionExpired
     }
     if (error.status === 429) return err.rateLimited
-    if (context === 'auth' && (error.code === 'invalid_code' || error.code === 'code_expired' || error.status === 400)) {
-      return err.invalidCode
+    if (context === 'auth') {
+      if (error.code === 'invalid_username') return err.usernameInvalid
+      if (error.code === 'invalid_password') return err.passwordTooShort
+      if (error.code === 'username_unavailable') return err.usernameUnavailable
     }
   }
   return context === 'save' ? err.genericSave : err.genericRequest
@@ -152,10 +153,9 @@ export function EventAccountFlow({
   const [phase, setPhase] = useState<'checking' | 'auth' | 'joining' | 'expired' | 'ready'>('checking')
 
   // Auth form state
-  const [purpose, setPurpose] = useState<AuthPurpose>('login')
-  const [email, setEmail] = useState('')
-  const [challengeId, setChallengeId] = useState('')
-  const [code, setCode] = useState('')
+  const [registering, setRegistering] = useState(false)
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
   const [authBusy, setAuthBusy] = useState(false)
   const [authError, setAuthError] = useState('')
 
@@ -427,39 +427,31 @@ export function EventAccountFlow({
     }
   }, [activeEventId, phase, refreshSocialState])
 
-  async function handleRequestCode(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const trimmed = email.trim()
-    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setAuthError(t.errors.emailInvalid)
-      return
-    }
-    setAuthBusy(true)
+  function chooseAuthMode(createAccount: boolean) {
+    setRegistering(createAccount)
+    setPassword('')
     setAuthError('')
-    try {
-      const result = await api.requestAuthChallenge(trimmed, purpose)
-      setChallengeId(result.challengeId)
-      setCode('')
-    } catch (error) {
-      setAuthError(formatApiError(error, locale, 'authService'))
-    } finally {
-      setAuthBusy(false)
-    }
   }
 
-  async function handleVerifyCode(event: FormEvent<HTMLFormElement>) {
+  async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!code.trim()) {
-      setAuthError(t.errors.codeInvalid)
+    const login = username.trim().toLowerCase()
+    if (!/^[a-z0-9_-]{3,32}$/.test(login)) {
+      setAuthError(t.errors.usernameInvalid)
+      return
+    }
+    if (!password || (registering && Array.from(password).length < 15)) {
+      setAuthError(registering ? t.errors.passwordTooShort : t.errors.passwordRequired)
       return
     }
     setAuthBusy(true)
     setAuthError('')
     try {
-      const me = await api.verifyAuthChallenge(challengeId, code)
+      const me = registering
+        ? await api.registerWithPassword(login, password)
+        : await api.signInWithPassword(login, password)
       setUser(me)
-      setChallengeId('')
-      setCode('')
+      setPassword('')
       const preserveDraft = Boolean(draft.name || draft.role || draft.skills || draft.about)
       await enterAuthenticated(pendingInvite ?? (activeEventId ? { eventId: activeEventId } : null), preserveDraft)
     } catch (error) {
@@ -952,88 +944,64 @@ export function EventAccountFlow({
             </div>
           )}
 
-          {!challengeId ? (
-            <form noValidate onSubmit={handleRequestCode} className="auth-form">
-              <div className="purpose-toggle" role="group" aria-label={t.signInTitle}>
-                <button
-                  type="button"
-                  aria-pressed={purpose === 'login'}
-                  onClick={() => setPurpose('login')}
-                >{t.purposeLogin}</button>
-                <button
-                  type="button"
-                  aria-pressed={purpose === 'recover'}
-                  onClick={() => setPurpose('recover')}
-                >{t.purposeRecover}</button>
-              </div>
+          <form noValidate onSubmit={handlePasswordSubmit} className="auth-form">
+            <div className="purpose-toggle" role="group" aria-label={t.signInTitle}>
+              <button type="button" aria-pressed={!registering} disabled={authBusy} onClick={() => chooseAuthMode(false)}>
+                {t.purposeLogin}
+              </button>
+              <button type="button" aria-pressed={registering} disabled={authBusy} onClick={() => chooseAuthMode(true)}>
+                {t.purposeRegister}
+              </button>
+            </div>
 
-              <div className="field">
-                <label htmlFor={`${id}-email`}>{t.emailLabel}</label>
-                <input
-                  id={`${id}-email`}
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  placeholder={t.emailPlaceholder}
-                  value={email}
-                  disabled={authBusy}
-                  onChange={event => {
-                    setEmail(event.target.value)
-                    if (authError) setAuthError('')
-                  }}
-                />
-              </div>
+            <div className="field">
+              <label htmlFor={`${id}-username`}>{t.usernameLabel}</label>
+              <input
+                id={`${id}-username`}
+                name="username"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                maxLength={32}
+                required
+                value={username}
+                disabled={authBusy}
+                onChange={event => {
+                  setUsername(event.target.value)
+                  setAuthError('')
+                }}
+              />
+            </div>
 
-              <div className="auth-actions">
-                <button type="submit" className="primary-button" disabled={authBusy}>
-                  {authBusy ? t.sendingCode : t.sendCode}
-                </button>
-                <button type="button" className="secondary-button" onClick={onExitToDemo}>
-                  {t.backToDemo}
-                </button>
-              </div>
-            </form>
-          ) : (
-            <form noValidate onSubmit={handleVerifyCode} className="auth-form">
-              <p className="auth-hint" role="status">{t.codeSentHint(email.trim())}</p>
+            <div className="field">
+              <label htmlFor={`${id}-password`}>{t.passwordLabel}</label>
+              <input
+                id={`${id}-password`}
+                name="password"
+                type="password"
+                autoComplete={registering ? 'new-password' : 'current-password'}
+                aria-describedby={registering ? `${id}-password-hint` : undefined}
+                maxLength={512}
+                required
+                value={password}
+                disabled={authBusy}
+                onChange={event => {
+                  setPassword(event.target.value)
+                  setAuthError('')
+                }}
+              />
+              {registering && <p id={`${id}-password-hint`} className="auth-hint">{t.passwordHint}</p>}
+            </div>
 
-              <div className="field">
-                <label htmlFor={`${id}-code`}>{t.codeLabel}</label>
-                <input
-                  id={`${id}-code`}
-                  name="code"
-                  type="text"
-                  autoComplete="one-time-code"
-                  maxLength={128}
-                  required
-                  placeholder={t.codePlaceholder}
-                  value={code}
-                  disabled={authBusy}
-                  onChange={event => {
-                    setCode(event.target.value)
-                    if (authError) setAuthError('')
-                  }}
-                />
-              </div>
-
-              <div className="auth-actions">
-                <button type="submit" className="primary-button" disabled={authBusy}>
-                  {authBusy ? t.verifyingCode : t.verifyCode}
-                </button>
-                <button
-                  type="button"
-                  className="secondary-button"
-                  disabled={authBusy}
-                  onClick={() => {
-                    setChallengeId('')
-                    setCode('')
-                    setAuthError('')
-                  }}
-                >{t.changeEmail}</button>
-              </div>
-            </form>
-          )}
+            <div className="auth-actions">
+              <button type="submit" className="primary-button" disabled={authBusy}>
+                {authBusy ? t.authSubmitting : registering ? t.purposeRegister : t.purposeLogin}
+              </button>
+              <button type="button" className="secondary-button" onClick={onExitToDemo}>
+                {t.backToDemo}
+              </button>
+            </div>
+          </form>
         </section>
       </main>
     )

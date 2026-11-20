@@ -110,18 +110,11 @@ export interface Messages {
     signInSubtitle: string
     inviteNotice: string
     purposeLogin: string
-    purposeRecover: string
-    emailLabel: string
-    emailPlaceholder: string
-    sendCode: string
-    sendingCode: string
-    codeSentHint: (email: string) => string
-    codeLabel: string
-    codePlaceholder: string
-    verifyCode: string
-    verifyingCode: string
-    changeEmail: string
-    resendCode: string
+    purposeRegister: string
+    usernameLabel: string
+    passwordLabel: string
+    passwordHint: string
+    authSubmitting: string
     expiredTitle: string
     expiredBody: string
     openMyEvents: string
@@ -153,15 +146,17 @@ export interface Messages {
     savedNotice: string
     loadingRecommendations: string
     errors: {
-      emailInvalid: string
-      codeInvalid: string
+      usernameInvalid: string
+      passwordRequired: string
+      passwordTooShort: string
+      usernameUnavailable: string
+      invalidCredentials: string
       nameRequired: string
       consentRequired: string
       networkSavePreserved: string
       networkGeneral: string
       sessionExpired: string
       rateLimited: string
-      invalidCode: string
       genericSave: string
       authUnavailable: string
       genericRequest: string
@@ -435,21 +430,14 @@ export const messagesByLocale: Record<Locale, Messages> = {
       loadingEvent: 'Загружаем данные мероприятия…',
       joiningInvite: 'Присоединяемся к мероприятию по приглашению…',
       signInTitle: 'Вход в Tanys',
-      signInSubtitle: 'Введите email, чтобы получить одноразовый код для входа или восстановления доступа.',
+      signInSubtitle: 'Войдите с логином и паролем или создайте аккаунт.',
       inviteNotice: 'После входа вы автоматически вернётесь в мероприятие по вашей ссылке-приглашению.',
-      purposeLogin: 'Вход',
-      purposeRecover: 'Восстановить доступ',
-      emailLabel: 'Email',
-      emailPlaceholder: 'name@example.org',
-      sendCode: 'Получить код',
-      sendingCode: 'Отправляем код…',
-      codeSentHint: email => `Код отправлен на ${email}. Введите его ниже.`,
-      codeLabel: 'Одноразовый код',
-      codePlaceholder: '123456',
-      verifyCode: 'Войти',
-      verifyingCode: 'Проверяем код…',
-      changeEmail: 'Изменить email',
-      resendCode: 'Отправить снова',
+      purposeLogin: 'Войти',
+      purposeRegister: 'Создать аккаунт',
+      usernameLabel: 'Логин',
+      passwordLabel: 'Пароль',
+      passwordHint: 'Минимум 15 символов. Сохраните пароль в менеджере паролей.',
+      authSubmitting: 'Подождите…',
       expiredTitle: 'Ссылка-приглашение недействительна или истекла',
       expiredBody: 'Попросите организатора прислать новое приглашение или откройте одно из ваших мероприятий.',
       openMyEvents: 'Мои мероприятия',
@@ -481,15 +469,17 @@ export const messagesByLocale: Record<Locale, Messages> = {
       savedNotice: 'Анкета сохранена.',
       loadingRecommendations: 'Загружаем рекомендации…',
       errors: {
-        emailInvalid: 'Введите корректный email.',
-        codeInvalid: 'Введите код из письма.',
+        usernameInvalid: 'Логин должен содержать 3–32 латинские буквы, цифры, дефисы или подчёркивания.',
+        passwordRequired: 'Введите пароль.',
+        passwordTooShort: 'Пароль должен содержать минимум 15 символов.',
+        usernameUnavailable: 'Этот логин уже занят.',
+        invalidCredentials: 'Неверный логин или пароль.',
         nameRequired: 'Укажите ваше имя.',
         consentRequired: 'Подтвердите согласие на обработку данных анкеты.',
         networkSavePreserved: 'Не удалось сохранить анкету из-за ошибки сети. Введённые данные сохранены на экране — попробуйте снова.',
         networkGeneral: 'Ошибка сети. Проверьте подключение и попробуйте ещё раз.',
         sessionExpired: 'Сессия истекла. Войдите снова — введённые поля сохранены.',
         rateLimited: 'Слишком много запросов. Подождите немного и повторите попытку.',
-        invalidCode: 'Неверный или истёкший код. Проверьте код или запросите новый.',
         genericSave: 'Не удалось сохранить анкету. Введённые данные сохранены на экране.',
         authUnavailable: 'Сервер входа временно недоступен. Вы можете вернуться в демо и попробовать войти позже.',
         genericRequest: 'Произошла ошибка. Попробуйте повторить действие.',
@@ -761,21 +751,14 @@ export const messagesByLocale: Record<Locale, Messages> = {
       loadingEvent: 'Іс-шара деректері жүктелуде…',
       joiningInvite: 'Шақыру сілтемесі арқылы іс-шараға қосылуда…',
       signInTitle: 'Tanys жүйесіне кіру',
-      signInSubtitle: 'Кіру немесе қолжетімділікті қалпына келтіру үшін бір реттік код алуға email енгізіңіз.',
+      signInSubtitle: 'Логин мен құпиясөзді енгізіңіз немесе аккаунт ашыңыз.',
       inviteNotice: 'Кіргеннен кейін сіз шақыру сілтемесіндегі іс-шараға автоматты түрде ораласыз.',
       purposeLogin: 'Кіру',
-      purposeRecover: 'Қолжетімділікті қалпына келтіру',
-      emailLabel: 'Email',
-      emailPlaceholder: 'name@example.org',
-      sendCode: 'Код алу',
-      sendingCode: 'Код жіберілуде…',
-      codeSentHint: email => `Код ${email} поштасына жіберілді. Төменге енгізіңіз.`,
-      codeLabel: 'Бір реттік код',
-      codePlaceholder: '123456',
-      verifyCode: 'Кіру',
-      verifyingCode: 'Код тексерілуде…',
-      changeEmail: 'Email өзгерту',
-      resendCode: 'Қайта жіберу',
+      purposeRegister: 'Аккаунт ашу',
+      usernameLabel: 'Логин',
+      passwordLabel: 'Құпиясөз',
+      passwordHint: 'Кемінде 15 таңба. Құпиясөзді құпиясөздер менеджеріне сақтаңыз.',
+      authSubmitting: 'Күте тұрыңыз…',
       expiredTitle: 'Шақыру сілтемесі жарамсыз немесе мерзімі өткен',
       expiredBody: 'Ұйымдастырушыдан жаңа сілтеме сұраңыз немесе өз іс-шараларыңыздың бірін ашыңыз.',
       openMyEvents: 'Менің іс-шараларым',
@@ -807,15 +790,17 @@ export const messagesByLocale: Record<Locale, Messages> = {
       savedNotice: 'Анкета сақталды.',
       loadingRecommendations: 'Ұсыныстар жүктелуде…',
       errors: {
-        emailInvalid: 'Дұрыс email енгізіңіз.',
-        codeInvalid: 'Хаттағы кодты енгізіңіз.',
+        usernameInvalid: 'Логинге 3–32 латын әрпін, цифр, дефис немесе астыңғы сызық енгізіңіз.',
+        passwordRequired: 'Құпиясөзді енгізіңіз.',
+        passwordTooShort: 'Құпиясөз кемінде 15 таңбадан тұруы керек.',
+        usernameUnavailable: 'Бұл логин бос емес.',
+        invalidCredentials: 'Логин немесе құпиясөз қате.',
         nameRequired: 'Атыңызды көрсетіңіз.',
         consentRequired: 'Сауалнама деректерін өңдеуге келісімді растаңыз.',
         networkSavePreserved: 'Желі қатесіне байланысты анкетаны сақтау мүмкін болмады. Енгізілген деректер экранда сақталды — қайта көріңіз.',
         networkGeneral: 'Желі қатесі. Қосылымды тексеріп, қайта көріңіз.',
         sessionExpired: 'Сессия мерзімі аяқталды. Қайта кіріңіз — енгізілген өрістер сақталды.',
         rateLimited: 'Сұраулар тым көп. Сәл күтіп, қайта көріңіз.',
-        invalidCode: 'Код қате немесе мерзімі өткен. Кодты тексеріңіз немесе жаңасын сұраңыз.',
         genericSave: 'Анкетаны сақтау мүмкін болмады. Енгізілген деректер экранда сақталды.',
         authUnavailable: 'Кіру сервері уақытша қолжетімсіз. Демоға оралып, кейінірек қайта кіріп көріңіз.',
         genericRequest: 'Қате орын алды. Әрекетті қайталап көріңіз.',
@@ -1087,21 +1072,14 @@ export const messagesByLocale: Record<Locale, Messages> = {
       loadingEvent: 'Loading event…',
       joiningInvite: 'Joining event via invite…',
       signInTitle: 'Sign in to Tanys',
-      signInSubtitle: 'Enter your email to receive a one-time code to sign in or recover access.',
+      signInSubtitle: 'Sign in with your username and password or create an account.',
       inviteNotice: 'After signing in, you will return directly to the event from your invite link.',
       purposeLogin: 'Sign in',
-      purposeRecover: 'Recover access',
-      emailLabel: 'Email',
-      emailPlaceholder: 'name@example.org',
-      sendCode: 'Send code',
-      sendingCode: 'Sending code…',
-      codeSentHint: email => `Code sent to ${email}. Enter it below.`,
-      codeLabel: 'One-time code',
-      codePlaceholder: '123456',
-      verifyCode: 'Sign in',
-      verifyingCode: 'Verifying code…',
-      changeEmail: 'Change email',
-      resendCode: 'Resend code',
+      purposeRegister: 'Create account',
+      usernameLabel: 'Username',
+      passwordLabel: 'Password',
+      passwordHint: 'Use at least 15 characters and save your password in a password manager.',
+      authSubmitting: 'Please wait…',
       expiredTitle: 'Invite link is invalid or expired',
       expiredBody: 'Ask the organizer for a fresh invite link or open one of your events.',
       openMyEvents: 'My events',
@@ -1133,15 +1111,17 @@ export const messagesByLocale: Record<Locale, Messages> = {
       savedNotice: 'Profile saved.',
       loadingRecommendations: 'Loading matches…',
       errors: {
-        emailInvalid: 'Enter a valid email address.',
-        codeInvalid: 'Enter the code from your email.',
+        usernameInvalid: 'Use 3–32 Latin letters, digits, hyphens, or underscores for the username.',
+        passwordRequired: 'Enter your password.',
+        passwordTooShort: 'Use a password with at least 15 characters.',
+        usernameUnavailable: 'This username is already taken.',
+        invalidCredentials: 'Incorrect username or password.',
         nameRequired: 'Enter your name.',
         consentRequired: 'Please accept the profile data processing notice.',
         networkSavePreserved: 'Could not save your profile due to a network error. Your input is preserved on screen — please retry.',
         networkGeneral: 'Network error. Check your connection and try again.',
         sessionExpired: 'Your session expired. Sign in again — your entered fields are preserved.',
         rateLimited: 'Too many requests. Please wait a moment and try again.',
-        invalidCode: 'Invalid or expired code. Check the code or request a new one.',
         genericSave: 'Could not save your profile. Your entered fields are preserved on screen.',
         authUnavailable: 'Sign-in is temporarily unavailable. Return to the demo or try signing in later.',
         genericRequest: 'Something went wrong. Please try again.',

@@ -62,8 +62,8 @@ npm run dev
 
 Для разработки API запустите `docker compose -f compose.api.yaml up --build -d`. Compose поднимает PostgreSQL, применяет миграции и запускает сервер на `127.0.0.1:3000`. Проверки — `GET /health` и `GET /ready`. База изначально пуста. Команда `docker compose -f compose.api.yaml down` сохраняет данные в томе. Для другого локального порта задайте API_PORT. Для внешнего размещения передайте отдельные реквизиты БД через секреты окружения. [Контракт публичного API](docs/service-v1.md)
 
-Для локальной проверки входа письма попадают в [тестовый почтовый ящик](http://localhost:8025). После запуска Compose выполните `node --test server/tests/auth.test.mjs`. В рабочем окружении задайте HTTPS-адрес приложения в APP_ORIGIN, защищённое SMTP-подключение в SMTP_URL и адрес отправителя в MAIL_FROM.
+На экране входа выберите «Создать аккаунт», укажите логин и пароль. Для проверки API на локальном PostgreSQL выполните `node --test server/tests/password-auth.test.mjs`. Тесты прежних почтовых маршрутов используют [тестовый ящик](http://localhost:8025).
 
-После первого подтверждённого входа оператор может выдать право создавать мероприятия командой `docker compose -f compose.api.yaml exec api node dist/grant-organizer.js user@example.org`. Подставьте адрес организатора. Право управления конкретным событием получает его создатель.
+После регистрации оператор может выдать право создавать мероприятия командой `docker compose -f compose.api.yaml exec api node dist/grant-organizer.js organizer_login`. Подставьте логин организатора. После создания события организатор может выпустить приглашение и показать его QR-код.
 
 Для серверного входа на Vercel настройте [PostgreSQL, SMTP и миграции](docs/deployment-release.md#api-на-vercel).
