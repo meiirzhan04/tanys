@@ -36,7 +36,7 @@ const candidates: readonly Candidate[] = resolveAppCandidates(profiles, previewP
 const interestSummary = summarizeInterests(parseCandidates(profiles))
 type View = 'profile' | 'results' | 'schedule' | 'interests'
 type Theme = 'light' | 'dark'
-const THEME_STORAGE_KEY = 'tanys.theme.v1'
+const THEME_STORAGE_KEY = 'tanys.theme.v2'
 
 function resolveInitialTheme(): Theme {
   try {
@@ -45,13 +45,76 @@ function resolveInitialTheme(): Theme {
   } catch {
     // Ignore storage restrictions.
   }
-  return 'dark'
+  return 'light'
 }
 
 const HEADER_EXTRA = {
   ru: { admin: 'Админ', toDark: 'Тёмная', toLight: 'Светлая' },
   kk: { admin: 'Әкімші', toDark: 'Қараңғы', toLight: 'Жарық' },
   en: { admin: 'Admin', toDark: 'Dark', toLight: 'Light' },
+} as const
+
+const PHOTO_SHOWCASE_COPY = {
+  ru: [
+    {
+      src: '/photos/meetup-hall.jpg',
+      badge: 'Qazaq IT Community · Live',
+      title: 'Живые IT-митапы и конференции',
+      caption: 'Подбор собеседников под реальную программу и формат площадки.',
+    },
+    {
+      src: '/photos/networking-talk.jpg',
+      badge: '1:1 Нетворкинг · 20 мин',
+      title: 'Точные слоты без хаоса',
+      caption: 'Назначайте встречи по общим целям, стеку и свободным окнам.',
+    },
+    {
+      src: '/photos/team-session.jpg',
+      badge: 'QR Check-in · Стенды',
+      title: 'Быстрый вход по QR-коду',
+      caption: 'Сканируйте приглашение и сразу открывайте контакты и стенды.',
+    },
+  ],
+  kk: [
+    {
+      src: '/photos/meetup-hall.jpg',
+      badge: 'Qazaq IT Community · Live',
+      title: 'Тікелей IT-митаптар мен конференциялар',
+      caption: 'Нақты бағдарлама мен алаң форматына сай серіктес таңдау.',
+    },
+    {
+      src: '/photos/networking-talk.jpg',
+      badge: '1:1 Нетворкинг · 20 мин',
+      title: 'Артық әуресіз нақты уақыттар',
+      caption: 'Мақсат, стек және бос уақыт бойынша кездесулерді жоспарлаңыз.',
+    },
+    {
+      src: '/photos/team-session.jpg',
+      badge: 'QR Check-in · Стендтер',
+      title: 'QR-код арқылы лезде кіру',
+      caption: 'Шақыруды сканерлеп, байланыс пен серіктес стендтерін ашыңыз.',
+    },
+  ],
+  en: [
+    {
+      src: '/photos/meetup-hall.jpg',
+      badge: 'Qazaq IT Community · Live',
+      title: 'Live IT meetups & tech conferences',
+      caption: 'Curated introductions tailored to the real event schedule.',
+    },
+    {
+      src: '/photos/networking-talk.jpg',
+      badge: '1:1 Networking · 20 min',
+      title: 'Focused 1:1 slots without noise',
+      caption: 'Schedule meetings around shared goals, stack, and open windows.',
+    },
+    {
+      src: '/photos/team-session.jpg',
+      badge: 'QR Check-in · Booths',
+      title: 'Instant QR event pass',
+      caption: 'Scan an organizer invite link to unlock attendees and booths.',
+    },
+  ],
 } as const
 
 function getResultsMessage(session: RecommendationSession, locale: Locale): string {
@@ -103,35 +166,6 @@ export default function App() {
       // Ignore storage restrictions.
     }
   }, [theme])
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    let raf = 0
-    let lastX = 0
-    let lastY = 0
-    const schedule = () => {
-      if (raf) return
-      raf = requestAnimationFrame(() => {
-        raf = 0
-        const style = document.documentElement.style
-        style.setProperty('--parallax-y', `${Math.round(window.scrollY * -0.07)}px`)
-        style.setProperty('--mouse-x', `${Math.round(lastX)}px`)
-        style.setProperty('--mouse-y', `${Math.round(lastY)}px`)
-      })
-    }
-    const onPointerMove = (event: PointerEvent) => {
-      lastX = (event.clientX / Math.max(window.innerWidth, 1) - 0.5) * 24
-      lastY = (event.clientY / Math.max(window.innerHeight, 1) - 0.5) * 24
-      schedule()
-    }
-    window.addEventListener('scroll', schedule, { passive: true })
-    window.addEventListener('pointermove', onPointerMove, { passive: true })
-    return () => {
-      if (raf) cancelAnimationFrame(raf)
-      window.removeEventListener('scroll', schedule)
-      window.removeEventListener('pointermove', onPointerMove)
-    }
-  }, [])
 
   useEffect(() => {
     if (mode !== 'account') return
@@ -200,11 +234,6 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <div className="ambient-bg" aria-hidden="true">
-        <span className="ambient-orb ambient-orb--1" />
-        <span className="ambient-orb ambient-orb--2" />
-        <span className="ambient-orb ambient-orb--3" />
-      </div>
       <header className="site-header">
         <div className="site-width header-inner">
           <span className="brand"><span className="brand-mark" aria-hidden="true">T</span>Tanys</span>
@@ -216,7 +245,7 @@ export default function App() {
               className="header-theme-btn"
               aria-pressed={theme === 'dark'}
               onClick={() => setTheme(current => (current === 'dark' ? 'light' : 'dark'))}
-            >{theme === 'dark' ? `☀️ ${extra.toLight}` : `🌙 ${extra.toDark}`}</button>
+            >{theme === 'dark' ? extra.toLight : extra.toDark}</button>
             <button
               type="button"
               className="header-admin-btn"
@@ -291,6 +320,20 @@ export default function App() {
 
           <main className="main-content">
             <div hidden={view !== 'profile'}>
+              <div className="photo-showcase-grid" aria-hidden="true">
+                {PHOTO_SHOWCASE_COPY[locale].map(card => (
+                  <article key={card.src} className="surface photo-card">
+                    <div className="photo-card__media">
+                      <img src={card.src} alt="" loading="lazy" />
+                      <span className="photo-card__badge">{card.badge}</span>
+                    </div>
+                    <div className="photo-card__body">
+                      <strong>{card.title}</strong>
+                      <p>{card.caption}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
               <ProfileForm onSubmit={submit} example={sampleProfile} locale={locale} />
             </div>
             {view === 'results' && session && <>

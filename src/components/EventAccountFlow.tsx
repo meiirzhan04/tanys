@@ -924,87 +924,128 @@ export function EventAccountFlow({
   }
 
   if (phase === 'auth' || !user) {
+    const authShowcase = locale === 'kk'
+      ? {
+          tag: 'Qazaq IT Community',
+          headline: 'Офлайн және гибрид IT-іс-шараларға арналған нетворкинг',
+          caption: 'QR-шақыру бойынша кіріп, ортақ стек пен мақсатқа сай мамандармен 1:1 кездесулер жоспарлаңыз.',
+          badges: ['Almaty · Astana', '1:1 кездесулер', 'QR-рұқсат'],
+        }
+      : locale === 'en'
+        ? {
+            tag: 'Qazaq IT Community',
+            headline: 'Structured networking for live IT meetups',
+            caption: 'Join with an organizer QR pass, match by engineering goals and stack, and book focused 1:1 meetings.',
+            badges: ['Almaty · Astana', '1:1 meetings', 'QR pass'],
+          }
+        : {
+            tag: 'Qazaq IT Community',
+            headline: 'Нетворкинг для живых IT-митапов и конференций',
+            caption: 'Входите по приглашению организатора, находите собеседников по целям и стеку и бронируйте 1:1 встречи.',
+            badges: ['Almaty · Astana', '1:1 встречи', 'QR-пропуск'],
+          }
     return (
       <main className="site-width account-main">
-        <section className="auth-card surface" aria-labelledby="auth-title">
-          <div className="page-heading">
-            <div>
-              <h1 id="auth-title">{t.signInTitle}</h1>
-              <p>{t.signInSubtitle}</p>
-            </div>
-          </div>
-
-          {pendingInvite && (
-            <div className="info-banner" role="status">
-              {t.inviteNotice}
-            </div>
-          )}
-
-          {authError && (
-            <div className="error-banner" role="alert">
-              {authError}
-            </div>
-          )}
-
-          <form noValidate onSubmit={handlePasswordSubmit} className="auth-form">
-            <div className="purpose-toggle" role="group" aria-label={t.signInTitle}>
-              <button type="button" aria-pressed={!registering} disabled={authBusy} onClick={() => chooseAuthMode(false)}>
-                {t.purposeLogin}
-              </button>
-              <button type="button" aria-pressed={registering} disabled={authBusy} onClick={() => chooseAuthMode(true)}>
-                {t.purposeRegister}
-              </button>
+        <div className="auth-split">
+          <section className="auth-card surface" aria-labelledby="auth-title">
+            <div className="page-heading">
+              <div>
+                <h1 id="auth-title">{t.signInTitle}</h1>
+                <p>{t.signInSubtitle}</p>
+              </div>
             </div>
 
-            <div className="field">
-              <label htmlFor={`${id}-username`}>{t.usernameLabel}</label>
-              <input
-                id={`${id}-username`}
-                name="username"
-                autoComplete="username"
-                autoCapitalize="none"
-                spellCheck={false}
-                maxLength={32}
-                required
-                value={username}
-                disabled={authBusy}
-                onChange={event => {
-                  setUsername(event.target.value)
-                  setAuthError('')
-                }}
-              />
-            </div>
+            {pendingInvite && (
+              <div className="info-banner" role="status">
+                {t.inviteNotice}
+              </div>
+            )}
 
-            <div className="field">
-              <label htmlFor={`${id}-password`}>{t.passwordLabel}</label>
-              <input
-                id={`${id}-password`}
-                name="password"
-                type="password"
-                autoComplete={registering ? 'new-password' : 'current-password'}
-                aria-describedby={registering ? `${id}-password-hint` : undefined}
-                maxLength={512}
-                required
-                value={password}
-                disabled={authBusy}
-                onChange={event => {
-                  setPassword(event.target.value)
-                  setAuthError('')
-                }}
-              />
-              {registering && <p id={`${id}-password-hint`} className="auth-hint">{t.passwordHint}</p>}
-            </div>
+            {authError && (
+              <div className="error-banner" role="alert">
+                {authError}
+              </div>
+            )}
 
-            <div className="auth-actions">
-              <button type="submit" className="primary-button" disabled={authBusy}>
-                {authBusy ? t.authSubmitting : registering ? t.purposeRegister : t.purposeLogin}
-              </button>
-              <button type="button" className="secondary-button" onClick={onExitToDemo}>
-                {t.backToDemo}
-              </button>
+            <form noValidate onSubmit={handlePasswordSubmit} className="auth-form">
+              <div className="purpose-toggle" role="group" aria-label={t.signInTitle}>
+                <button type="button" aria-pressed={!registering} disabled={authBusy} onClick={() => chooseAuthMode(false)}>
+                  {t.purposeLogin}
+                </button>
+                <button type="button" aria-pressed={registering} disabled={authBusy} onClick={() => chooseAuthMode(true)}>
+                  {t.purposeRegister}
+                </button>
+              </div>
+
+              <div className="field">
+                <label htmlFor={`${id}-username`}>{t.usernameLabel}</label>
+                <input
+                  id={`${id}-username`}
+                  name="username"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                  maxLength={32}
+                  required
+                  value={username}
+                  disabled={authBusy}
+                  onChange={event => {
+                    setUsername(event.target.value)
+                    setAuthError('')
+                  }}
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor={`${id}-password`}>{t.passwordLabel}</label>
+                <input
+                  id={`${id}-password`}
+                  name="password"
+                  type="password"
+                  autoComplete={registering ? 'new-password' : 'current-password'}
+                  aria-describedby={registering ? `${id}-password-hint` : undefined}
+                  maxLength={512}
+                  required
+                  value={password}
+                  disabled={authBusy}
+                  onChange={event => {
+                    setPassword(event.target.value)
+                    setAuthError('')
+                  }}
+                />
+                {registering && <p id={`${id}-password-hint`} className="auth-hint">{t.passwordHint}</p>}
+              </div>
+
+              <div className="auth-actions">
+                <button type="submit" className="primary-button" disabled={authBusy}>
+                  {authBusy ? t.authSubmitting : registering ? t.purposeRegister : t.purposeLogin}
+                </button>
+                <button type="button" className="secondary-button" onClick={onExitToDemo}>
+                  {t.backToDemo}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <aside className="surface auth-showcase" aria-hidden="true">
+            <div className="auth-showcase__hero">
+              <img src="/photos/meetup-hall.jpg" alt="" />
+              <span className="photo-card__badge">{authShowcase.tag}</span>
             </div>
-          </form>
-        </section>
+            <div className="auth-showcase__row">
+              <img src="/photos/networking-talk.jpg" alt="" />
+              <div className="auth-showcase__text">
+                <strong>{authShowcase.headline}</strong>
+                <p>{authShowcase.caption}</p>
+              </div>
+            </div>
+            <div className="auth-showcase__pills">
+              {authShowcase.badges.map(badge => (
+                <span key={badge} className="visibility-pill">{badge}</span>
+              ))}
+            </div>
+          </aside>
+        </div>
       </main>
     )
   }
