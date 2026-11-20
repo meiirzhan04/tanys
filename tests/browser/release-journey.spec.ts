@@ -37,7 +37,6 @@ function createMockReleaseBackend(options: { emptyRecommendations?: boolean } = 
     ['user-a', { id: 'user-a', email: 'aliya@example.org', contact: '@aliya_dev', profile: null }],
     ['user-b', { id: 'user-b', email: 'daniyar@example.org', contact: '@daniyar_lead', profile: null }],
   ])
-  const challenges = new Map<string, string>()
   const memberships = new Map<string, Set<string>>([
     ['user-a', new Set()],
     ['user-b', new Set()],
@@ -70,19 +69,9 @@ function createMockReleaseBackend(options: { emptyRecommendations?: boolean } = 
         })
 
       // Auth endpoints
-      if (method === 'POST' && path === '/auth/challenges') {
-        const email = String(body.email ?? '').toLowerCase()
-        const uid = email.includes('aliya') ? 'user-a' : 'user-b'
-        const challengeId = `chg-${uid}-${Date.now()}`
-        challenges.set(challengeId, uid)
-        return respond(202, { challengeId })
-      }
-
-      if (method === 'POST' && path === '/auth/sessions') {
-        const uid = challenges.get(String(body.challengeId ?? ''))
-        if (!uid || String(body.code ?? '').trim().length < 6) {
-          return respond(401, { error: { code: 'invalid_or_expired_code', message: 'Invalid code' } })
-        }
+      if (method === 'POST' && path === '/auth/password') {
+        const login = String(body.username ?? '').toLowerCase()
+        const uid = login === 'aliya' ? 'user-a' : 'user-b'
         authByContext.set(context, uid)
         return respond(200, { id: uid })
       }
@@ -318,14 +307,12 @@ async function assertNoHorizontalOverflow(page: Page) {
   expect(hasOverflow).toBe(false)
 }
 
-async function signInByInvite(page: Page, invitePath: string, email: string) {
+async function signInByInvite(page: Page, invitePath: string, username: string) {
   await page.goto(invitePath)
   await expect(page.locator('#auth-title')).toBeVisible()
   await assertNoHorizontalOverflow(page)
-  await page.locator('input[name="email"]').fill(email)
-  await page.locator('.auth-form button[type="submit"]').click()
-  await expect(page.locator('input[name="code"]')).toBeVisible()
-  await page.locator('input[name="code"]').fill('a1b2c3d4e5f6a1b2c3d4e5f6')
+  await page.locator('input[name="username"]').fill(username)
+  await page.locator('input[name="password"]').fill('browser-test-password')
   await page.locator('.auth-form button[type="submit"]').click()
 }
 
@@ -345,7 +332,7 @@ test('full 2-participant server journey: invite, network retry, intro, contact e
     const pageB = await contextB.newPage()
 
     // 1. Participant A opens organizer invite, signs in, hits network error on save -> input preserved -> retries -> recommendations
-    await signInByInvite(pageA, backend.validInvitePath, 'aliya@example.org')
+    await signInByInvite(pageA, backend.validInvitePath, 'aliya')
     await expect(pageA.locator('#event-profile-title')).toBeVisible()
     await assertNoHorizontalOverflow(pageA)
 
@@ -371,7 +358,7 @@ test('full 2-participant server journey: invite, network retry, intro, contact e
     await assertNoHorizontalOverflow(pageA)
 
     // 2. Participant B enters via invite in a separate browser context and saves profile
-    await signInByInvite(pageB, backend.validInvitePath, 'daniyar@example.org')
+    await signInByInvite(pageB, backend.validInvitePath, 'daniyar')
     await expect(pageB.locator('#event-profile-title')).toBeVisible()
     await pageB.locator('input[name="name"]').fill('Данияр')
     await pageB.locator('select[name="goal"]').selectOption('hire')
@@ -484,7 +471,7 @@ test('kk/ru/en switching, empty recommendations, expired invite, and keyboard fo
     await expect(page.locator('.meeting-slot-btn:not(:disabled)').first()).toBeFocused()
 
     // 2. Expired invite state across languages
-    await signInByInvite(page, backend.expiredInvitePath, 'daniyar@example.org')
+    await signInByInvite(page, backend.expiredInvitePath, 'daniyar')
     await expect(page.locator('#expired-invite-title')).toBeVisible()
     await assertNoHorizontalOverflow(page)
 

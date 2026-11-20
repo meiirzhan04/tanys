@@ -31,13 +31,9 @@ function createModerationBackend() {
       const respond = (status: number, data?: unknown) =>
         route.fulfill({ status, contentType: 'application/json', body: status === 204 ? '' : JSON.stringify(data ?? {}) })
 
-      if (method === 'POST' && path === '/auth/challenges') {
-        const email = String(body.email ?? '').toLowerCase()
-        const uid = email.startsWith('org@') ? 'org-1' : email.startsWith('aliya@') ? 'user-a' : 'user-b'
-        return respond(202, { challengeId: `chg-${uid}` })
-      }
-      if (method === 'POST' && path === '/auth/sessions') {
-        const uid = String(body.challengeId ?? '').replace(/^chg-/, '')
+      if (method === 'POST' && path === '/auth/password') {
+        const login = String(body.username ?? '').toLowerCase()
+        const uid = login === 'org' ? 'org-1' : login === 'aliya' ? 'user-a' : 'user-b'
         authByContext.set(context, uid)
         return respond(200, { id: uid })
       }
@@ -148,11 +144,10 @@ function createModerationBackend() {
   return { attach, eventId, isPairBlocked }
 }
 
-async function signIn(page: import('@playwright/test').Page, email: string) {
+async function signIn(page: import('@playwright/test').Page, username: string) {
   await page.goto('/?mode=account')
-  await page.locator('input[name="email"]').fill(email)
-  await page.locator('.auth-form button[type="submit"]').click()
-  await page.locator('input[name="code"]').fill('a1b2c3d4e5f6')
+  await page.locator('input[name="username"]').fill(username)
+  await page.locator('input[name="password"]').fill('browser-test-password')
   await page.locator('.auth-form button[type="submit"]').click()
   await expect(page.locator('#event-profile-title')).toBeVisible()
 }
@@ -174,9 +169,9 @@ test('block hides pair & rejects requests; report stays hidden from subject and 
     const pageB = await ctxB.newPage()
     const pageOrg = await ctxOrg.newPage()
 
-    await signIn(pageA, 'aliya@example.org')
-    await signIn(pageB, 'spam@example.org')
-    await signIn(pageOrg, 'org@example.org')
+    await signIn(pageA, 'aliya')
+    await signIn(pageB, 'spam')
+    await signIn(pageOrg, 'org')
 
     // Support channel is visible to participants
     await expect(pageA.locator('.support-footer')).toContainText('support@tanys.kz')

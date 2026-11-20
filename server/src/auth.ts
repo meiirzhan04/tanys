@@ -1,8 +1,10 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
+import { isIP } from 'node:net'
 import nodemailer from 'nodemailer'
 import { pool } from './db.js'
 import { HttpError, json, readBody, transaction, uuid } from './http.js'
+import { hashPassword, verifyPassword } from './passwords.js'
 import { deleteUserAccount } from './retention.js'
 
 const sha = (value: string) => createHash('sha256').update(value).digest('hex')
@@ -120,8 +122,74 @@ async function deleteAccountHandler(req: IncomingMessage, res: ServerResponse) {
   json(res, 204)
 }
 
+async function consumePasswordAttempt(key: string, limit: number, res: ServerResponse) {
+  const result = await pool.query(`
+    INSERT INTO password_attempts AS bucket (bucket_key, attempts, expires_at)
+    VALUES ($1, 1, now() + interval '15 minutes')
+    ON CONFLICT (bucket_key) DO UPDATE SET
+      attempts = CASE WHEN bucket.expires_at <= now() THEN 1 ELSE bucket.attempts + 1 END,
+      expires_at = CASE WHEN bucket.expires_at <= now() THEN EXCLUDED.expires_at ELSE bucket.expires_at END
+    WHERE bucket.expires_at <= now() OR bucket.attempts < $2
+    RETURNING bucket_key`, [sha(key), limit])
+  if (!result.rowCount) {
+    res.setHeader('Retry-After', '900')
+    throw new HttpError(429, 'try_later')
+  }
+}
+
+async function authenticatePassword(req: IncomingMessage, res: ServerResponse, registration: boolean) {
+  const body = await readBody(req)
+  const username = typeof body.username === 'string' ? body.username.trim().toLowerCase() : ''
+  const password = body.password
+  if (!/^[a-z0-9_-]{3,32}$/.test(username)) throw new HttpError(400, 'invalid_username')
+  if (typeof password !== 'string' || !password || password.length > 512 ||
+      (registration && Array.from(password).length < 15)) {
+    throw new HttpError(400, 'invalid_password')
+  }
+
+  const forwarded = process.env.VERCEL === '1' ? req.headers['x-vercel-forwarded-for'] : undefined
+  const source = typeof forwarded === 'string' && isIP(forwarded) ? forwarded : req.socket.remoteAddress ?? 'unknown'
+  await pool.query('DELETE FROM password_attempts WHERE expires_at <= now()')
+  await consumePasswordAttempt(`password:source:${source}:${registration ? 'signup' : 'signin'}`, registration ? 12 : 80, res)
+  if (!registration) await consumePasswordAttempt(`password:username:${username}`, 10, res)
+
+  const session = randomBytes(32).toString('hex')
+  const digest = sha(session)
+  let userId: string
+  if (registration) {
+    const passwordHash = await hashPassword(password)
+    userId = await transaction(async client => {
+      const user = await client.query<{ id: string }>(`
+        INSERT INTO users(username, password_hash) VALUES ($1,$2)
+        ON CONFLICT (username) DO NOTHING RETURNING id`, [username, passwordHash])
+      if (!user.rows[0]) throw new HttpError(409, 'username_unavailable')
+      const { id } = user.rows[0]
+      await client.query('INSERT INTO sessions(digest,user_id) VALUES($1,$2)', [digest, id])
+      return id
+    })
+  } else {
+    const result = await pool.query<{ id: string, password_hash: string }>(
+      'SELECT id,password_hash FROM users WHERE username=$1', [username],
+    )
+    const user = result.rows[0]
+    if (!(await verifyPassword(password, user?.password_hash)) || !user) {
+      throw new HttpError(401, 'invalid_credentials')
+    }
+    const inserted = await pool.query(`
+      INSERT INTO sessions(digest,user_id)
+      SELECT $1,id FROM users WHERE id=$2 AND password_hash=$3 RETURNING user_id`,
+    [digest, user.id, user.password_hash])
+    if (!inserted.rowCount) throw new HttpError(401, 'invalid_credentials')
+    userId = user.id
+  }
+  res.setHeader('Set-Cookie', cookie(session, 7 * 86400))
+  json(res, registration ? 201 : 200, { id: userId })
+}
+
 export async function authRoute(req: IncomingMessage, res: ServerResponse, path: string) {
-  if (req.method === 'POST' && path === '/auth/challenges') await challenge(req,res)
+  if (req.method === 'POST' && path === '/auth/register') await authenticatePassword(req, res, true)
+  else if (req.method === 'POST' && path === '/auth/password') await authenticatePassword(req, res, false)
+  else if (req.method === 'POST' && path === '/auth/challenges') await challenge(req,res)
   else if (req.method === 'POST' && path === '/auth/sessions') await signIn(req,res)
   else if (req.method === 'GET' && path === '/me') json(res, 200, { id: await viewer(req) })
   else if (req.method === 'DELETE' && path === '/auth/session') {

@@ -203,6 +203,8 @@ export function isBlockedOrRestrictedError(error: unknown): boolean {
 }
 
 export interface TanysApiClient {
+  registerWithPassword(username: string, password: string): Promise<AuthUser>
+  signInWithPassword(username: string, password: string): Promise<AuthUser>
   requestAuthChallenge(email: string, purpose: AuthPurpose): Promise<{ challengeId: string }>
   verifyAuthChallenge(challengeId: string, code: string): Promise<AuthUser>
   getMe(): Promise<AuthUser | null>
@@ -305,6 +307,13 @@ export function createTanysApiClient(
   }
 
   return {
+    registerWithPassword(username, password) {
+      return request<AuthUser>('/auth/register', { method: 'POST', body: JSON.stringify({ username, password }) })
+    },
+    signInWithPassword(username, password) {
+      return request<AuthUser>('/auth/password', { method: 'POST', body: JSON.stringify({ username, password }) })
+    },
+
     requestAuthChallenge(email, purpose) {
       return request<{ challengeId: string }>('/auth/challenges', {
         method: 'POST',
