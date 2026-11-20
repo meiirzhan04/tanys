@@ -196,6 +196,23 @@ export async function authRoute(req: IncomingMessage, res: ServerResponse, path:
   else if (req.method === 'POST' && path === '/auth/password') await authenticatePassword(req, res, false)
   else if (req.method === 'POST' && path === '/auth/challenges') await challenge(req,res)
   else if (req.method === 'POST' && path === '/auth/sessions') await signIn(req,res)
+  else if (path === '/me/profile' && (req.method === 'GET' || req.method === 'PUT')) {
+    const id = await viewer(req)
+    if (req.method === 'GET') {
+      const result = await pool.query('SELECT name, profession, about FROM account_profiles WHERE user_id=$1', [id])
+      json(res, 200, result.rows[0] ?? { name: '', profession: '', about: '' })
+    } else {
+      const { name, profession, about } = await readBody(req)
+      if (typeof name !== 'string' || !name.trim() || name.length > 80 ||
+          typeof profession !== 'string' || profession.length > 80 ||
+          typeof about !== 'string' || about.length > 400) throw new HttpError(400, 'invalid_profile')
+      const result = await pool.query(
+        `INSERT INTO account_profiles(user_id,name,profession,about) VALUES($1,$2,$3,$4)
+         ON CONFLICT(user_id) DO UPDATE SET name=excluded.name, profession=excluded.profession, about=excluded.about
+         RETURNING name,profession,about`, [id, name.trim(), profession.trim(), about.trim()])
+      json(res, 200, result.rows[0])
+    }
+  }
   else if (req.method === 'GET' && path === '/me') {
     const id = await viewer(req)
     const row = await pool.query<{ username: string | null; can_create_events: boolean | null }>(

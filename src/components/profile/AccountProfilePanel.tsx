@@ -1,33 +1,30 @@
-import { useState } from 'react'
-import type { FormEvent } from 'react'
+import { useEffect, useState } from 'react'
+import type { FormEvent, ReactNode } from 'react'
 import { getMessages } from '../../i18n/messages'
 import type { Locale } from '../../matching/types'
-import { parseProfileTopics } from '../profileDirty'
+import type { AccountProfile } from '../../api/client'
+import { accountLabels } from './accountLabels'
 import type { EventProfileDraft } from '../profileDirty'
 import { profileCopy } from './profileCopy'
 import { accountDialogCopy } from './accountDialogCopy'
 import { ConfirmDialog } from './ConfirmDialog'
-import { ProfileOverview } from './ProfileOverview'
-import type { ProfileSnapshot } from './profileCompleteness'
 
 interface AccountProfilePanelProps {
   locale: Locale
-  savedProfile: EventProfileDraft | null
+  eventToolbar: ReactNode
+  readAccount: () => Promise<AccountProfile>
+  saveAccount: (profile: AccountProfile) => Promise<AccountProfile>
+  source: EventProfileDraft | null
   username?: string
   eventName?: string
   isOrganizer: boolean
   /** True when the user organizes any event: the server refuses to delete such an account. */
   organizesAnyEvent: boolean
   hasEvent: boolean
-  recommendationsCount: number
-  introductionsCount: number
-  meetingsCount: number
   contactValue: string
   savingContact: boolean
   contactSaved: boolean
   onSaveContact: (value: string) => Promise<boolean>
-  onEdit: () => void
-  onShowMatches?: () => void
   onLogout: () => Promise<void>
   /** Resolves with an error message, or an empty string after the server confirmed the action. */
   onLeaveEvent: () => Promise<string>
@@ -37,36 +34,21 @@ interface AccountProfilePanelProps {
   deletingAccount: boolean
 }
 
-function toSnapshot(draft: EventProfileDraft): ProfileSnapshot {
-  const years = Number(draft.experience)
-  return {
-    goal: draft.goal,
-    role: draft.role,
-    experienceYears: draft.experience.trim() !== '' && Number.isInteger(years) ? years : null,
-    skills: parseProfileTopics(draft.skills),
-    interests: parseProfileTopics(draft.interests),
-    about: draft.about,
-    lookingFor: parseProfileTopics(draft.lookingFor),
-  }
-}
-
 export function AccountProfilePanel({
   locale,
-  savedProfile,
+  eventToolbar,
+  readAccount,
+  saveAccount,
+  source,
   username,
   eventName,
   isOrganizer,
   organizesAnyEvent,
   hasEvent,
-  recommendationsCount,
-  introductionsCount,
-  meetingsCount,
   contactValue,
   savingContact,
   contactSaved,
   onSaveContact,
-  onEdit,
-  onShowMatches,
   onLogout,
   onLeaveEvent,
   onDeleteAccount,
@@ -105,43 +87,91 @@ export function AccountProfilePanel({
     if (await onSaveContact(value)) setContactInput('')
   }
 
-  const aside = (
-    <>
-      <section className="surface profile-card" aria-labelledby="me-account-title">
-        <h2 id="me-account-title">{t.accountTitle}</h2>
-        {username && (
-          <div className="profile-account-row">
-            <span>{t.signedInAs}</span>
-            <strong>{username}</strong>
-          </div>
-        )}
-        <div className="profile-account-row">
-          <span>{t.eventLabel}</span>
-          <strong>{hasEvent ? `${eventName || '—'} · ${isOrganizer ? t.roleOrganizer : t.roleParticipant}` : t.noEvent}</strong>
-        </div>
-      </section>
+  const labels = accountLabels[locale]
+  const [draft, setDraft] = useState<AccountProfile | null>(null)
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    let active = true
+    readAccount().then(profile => { if (active) setDraft(profile) })
+      .catch(() => { if (active) setStatus('error') })
+    return () => { active = false }
+  }, [readAccount, attempt])
 
-      <section className="surface profile-card" aria-labelledby="me-contact-title">
-        <h2 id="me-contact-title">{t.contactTitle}</h2>
-        <p>{messages.social.contactNotice}</p>
-        <p>{contactValue ? `${t.contactCurrent} ${contactValue}` : t.contactNone}</p>
-        <form className="profile-contact-form" onSubmit={submitContact}>
-          <label className="visually-hidden" htmlFor="me-contact-input">{messages.social.contactLabel}</label>
-          <input
-            id="me-contact-input"
-            name="profileContact"
-            maxLength={120}
-            placeholder={messages.social.contactPlaceholder}
-            value={contactInput}
-            disabled={savingContact}
-            onChange={event => setContactInput(event.target.value)}
-          />
-          <button type="submit" className="secondary-button" disabled={savingContact || !contactInput.trim()}>
-            {t.contactSave}
-          </button>
-          {contactSaved && <span className="copy-status" role="status">{messages.social.contactSaved}</span>}
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    if (!draft || status === 'saving') return
+    setStatus('saving')
+    try {
+      setDraft(await saveAccount(draft))
+      setStatus('saved')
+    } catch { setStatus('error') }
+  }
+
+  return (
+    <div className="account-settings">
+      <header className="account-settings__header">
+        <div>
+          <h1 id="me-title">{t.navLabel}</h1>
+          {username && <p>{t.signedInAs} <strong>{username}</strong></p>}
+        </div>
+        {username && <span className="account-initial" aria-hidden="true">{Array.from(username)[0]?.toUpperCase()}</span>}
+      </header>
+
+      <div className="account-settings__grid">
+        <form className="surface profile-card account-profile-form" onSubmit={submit}>
+          <h2>{labels.details}</h2>
+          <p>{labels.scope}</p>
+          {draft && <fieldset disabled={status === 'saving'}>
+            <label className="field"><span>{labels.name}</span><input name="accountName" required maxLength={80} value={draft.name}
+              onChange={e => { setDraft({ ...draft, name: e.target.value }); setStatus('idle') }} /></label>
+            <label className="field"><span>{labels.profession}</span><input name="accountProfession" maxLength={80} value={draft.profession}
+              onChange={e => { setDraft({ ...draft, profession: e.target.value }); setStatus('idle') }} /></label>
+            <label className="field field-full"><span>{t.about}</span><textarea name="accountAbout" rows={4} maxLength={400} value={draft.about}
+              onChange={e => { setDraft({ ...draft, about: e.target.value }); setStatus('idle') }} /></label>
+            <div className="account-save">
+              <button type="submit" className="primary-button">{labels.save}</button>
+              {status === 'saved' && <span role="status">{labels.saved}</span>}
+            </div>
+          </fieldset>}
+          {status === 'error' && <p role="alert">{labels.error} {!draft && <button type="button" onClick={() => {
+            setStatus('idle')
+            setAttempt(value => value + 1)
+          }}>{labels.retry}</button>}</p>}
         </form>
-      </section>
+        <section className="surface profile-card" aria-labelledby="me-contact-title">
+          <h2 id="me-contact-title">{t.contactTitle}</h2>
+          <p>{messages.social.contactNotice}</p>
+          <p>{contactValue ? `${t.contactCurrent} ${contactValue}` : t.contactNone}</p>
+          <form className="profile-contact-form" onSubmit={submitContact}>
+            <label className="visually-hidden" htmlFor="me-contact-input">{messages.social.contactLabel}</label>
+            <input
+              id="me-contact-input"
+              name="profileContact"
+              maxLength={120}
+              placeholder={messages.social.contactPlaceholder}
+              value={contactInput}
+              disabled={savingContact}
+              onChange={event => setContactInput(event.target.value)}
+            />
+            <button type="submit" className="secondary-button" disabled={savingContact || !contactInput.trim()}>
+              {t.contactSave}
+            </button>
+            {contactSaved && <span className="copy-status" role="status">{messages.social.contactSaved}</span>}
+          </form>
+        </section>
+      </div>
+
+      {eventToolbar && <section className="surface profile-card account-import">
+        <h2>{labels.event}</h2>
+        <div className="account-import__controls">
+          {eventToolbar}
+          {source && draft && <button type="button" disabled={status === 'saving'} className="secondary-button" onClick={() => {
+            setDraft({ name: source.name, profession: source.role, about: source.about })
+            setStatus('idle')
+          }} aria-label={`${labels.copy} · ${eventName}`}>{labels.copy}</button>}
+        </div>
+      </section>}
 
       <section className="surface profile-card profile-danger" aria-labelledby="me-danger-title">
         <h2 id="me-danger-title">{t.dangerTitle}</h2>
@@ -213,23 +243,6 @@ export function AccountProfilePanel({
           <p className="confirm-dialog__warning">{d.deleteWarning}</p>
         </ConfirmDialog>
       )}
-    </>
-  )
-
-  return (
-    <ProfileOverview
-      locale={locale}
-      profile={savedProfile ? toSnapshot(savedProfile) : null}
-      displayName={savedProfile?.name}
-      visible={savedProfile ? savedProfile.visible : undefined}
-      stats={[
-        { value: recommendationsCount, label: t.statRecommendations },
-        { value: introductionsCount, label: t.statIntroductions },
-        { value: meetingsCount, label: t.statMeetings },
-      ]}
-      onEdit={onEdit}
-      onShowMatches={onShowMatches}
-      aside={aside}
-    />
+    </div>
   )
 }

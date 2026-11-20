@@ -292,7 +292,15 @@ export function isBlockedOrRestrictedError(error: unknown): boolean {
   )
 }
 
+export interface AccountProfile {
+  name: string
+  profession: string
+  about: string
+}
+
 export interface TanysApiClient {
+  getAccountProfile(): Promise<AccountProfile>
+  saveAccountProfile(profile: AccountProfile): Promise<AccountProfile>
   registerWithPassword(username: string, password: string): Promise<AuthUser>
   signInWithPassword(username: string, password: string): Promise<AuthUser>
   requestAuthChallenge(email: string, purpose: AuthPurpose): Promise<{ challengeId: string }>
@@ -424,6 +432,8 @@ export function createTanysApiClient(
       })
     },
 
+    getAccountProfile: () => request<AccountProfile>('/me/profile'),
+    saveAccountProfile: profile => request<AccountProfile>('/me/profile', { method: 'PUT', body: JSON.stringify(profile) }),
     async getMe() {
       try {
         return await request<AuthUser>('/me')
