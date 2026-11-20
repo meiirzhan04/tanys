@@ -89,22 +89,26 @@ function createMemoryDatabase() {
       current.attempts += 1
       return { rowCount: 1, rows: [{ bucket_key: key }] }
     }
-    if (sql.startsWith('INSERT INTO users(username, password_hash)')) {
-      const [username, passwordHash] = params
+    if (sql.startsWith('INSERT INTO users(username, password_hash')) {
+      const [username, passwordHash, handleAllowed] = params
       for (const u of users.values()) {
         if (u.username === username) return { rowCount: 0, rows: [] }
       }
       const id = randomUUID()
-      users.set(id, { id, username, email: `${username}@local.test`, passwordHash, canCreateEvents: false })
+      const handleTaken = [...users.values()].some(u => u.handle === username)
+      users.set(id, { id, username, handle: handleAllowed && !handleTaken ? username : null, email: `${username}@local.test`, passwordHash, canCreateEvents: false })
       return { rowCount: 1, rows: [{ id }] }
     }
     if (sql.startsWith('SELECT id,password_hash FROM users WHERE username=$1')) {
       const u = [...users.values()].find((item) => item.username === params[0])
       return u ? { rowCount: 1, rows: [{ id: u.id, password_hash: u.passwordHash }] } : { rowCount: 0, rows: [] }
     }
-    if (sql.startsWith('SELECT username,can_create_events FROM users WHERE id=$1')) {
+    if (sql.startsWith('SELECT username,handle,can_create_events FROM users WHERE id=$1')) {
       const u = users.get(params[0])
-      return u ? { rowCount: 1, rows: [{ username: u.username ?? null, can_create_events: u.canCreateEvents }] } : { rowCount: 0, rows: [] }
+      return u ? { rowCount: 1, rows: [{ username: u.username ?? null, handle: u.handle ?? null, can_create_events: u.canCreateEvents }] } : { rowCount: 0, rows: [] }
+    }
+    if (sql.startsWith('INSERT INTO request_buckets AS bucket')) {
+      return { rowCount: 1, rows: [{ bucket_key: params[0] }] }
     }
     if (sql.startsWith("SELECT 1 FROM memberships WHERE user_id=$1 AND role='organizer'")) {
       const owns = [...memberships.values()].some(m => m.userId === params[0] && m.role === 'organizer')
@@ -237,19 +241,19 @@ function createMemoryDatabase() {
     }
 
     // Organizer members, interests, booths
-    if (sql.startsWith('SELECT m.user_id AS "userId", m.role, COALESCE(p.name, u.username)')) {
-      const [eventId, cursor, limit] = params
-      const rows = [...memberships.values()]
-        .filter((m) => m.eventId === eventId && (!cursor || m.userId > cursor))
+    if ((sql.startsWith('SELECT m.user_id AS "userId", m.role,') && sql.includes('COALESCE(CASE WHEN p.visible')) || sql.startsWith('SELECT count(*)::int AS total FROM memberships m')) {
+      const [eventId, , , , cursor, limit] = params
+      const all = [...memberships.values()]
+        .filter((m) => m.eventId === eventId)
         .sort((a, b) => a.userId.localeCompare(b.userId))
-        .slice(0, limit)
         .map((m) => {
           const u = users.get(m.userId)
           const p = profiles.get(memberKey(eventId, m.userId))
-          return p && p.visible
-            ? { userId: m.userId, role: m.role, name: p.name, username: u?.username ?? null, profileRole: p.role, goal: p.goal, visible: true }
-            : { userId: m.userId, role: m.role, name: u?.username ?? null, username: u?.username ?? null, profileRole: null, goal: null, visible: null }
+          if (p && p.visible) return { userId: m.userId, role: m.role, name: p.name, handle: u?.handle ?? null, profileRole: p.role, goal: p.goal, visible: true }
+          return { userId: m.userId, role: m.role, name: u?.handle ?? null, handle: u?.handle ?? null, profileRole: null, goal: null, visible: p ? false : null }
         })
+      if (sql.startsWith('SELECT count(*)')) return { rowCount: 1, rows: [{ total: all.length }] }
+      const rows = all.filter((m) => !cursor || m.userId > cursor).slice(0, limit)
       return { rowCount: rows.length, rows }
     }
     if (sql.startsWith('SELECT interests FROM event_profiles WHERE event_id=$1 AND visible')) {
@@ -333,23 +337,28 @@ function createMemoryDatabase() {
       const ok = Boolean(a && b && a.visible && b.visible && !pairBlocked(eventId, sender, recipient))
       return { rowCount: ok ? 1 : 0, rows: ok ? [{ '?column?': 1 }] : [] }
     }
-    if (sql.startsWith('INSERT INTO introductions(event_id,sender,recipient)')) {
-      const [eventId, sender, recipient] = params
+    if (sql.startsWith('INSERT INTO introductions(event_id,sender,recipient')) {
+      const [eventId, sender, recipient, message = null] = params
       const dup = [...introductions.values()].find(
         (i) => i.eventId === eventId && ((i.sender === sender && i.recipient === recipient) || (i.sender === recipient && i.recipient === sender)),
       )
       if (dup) return { rowCount: 0, rows: [] }
       const id = randomUUID()
       const now = new Date()
-      introductions.set(id, { id, eventId, sender, recipient, status: 'pending', createdAt: now, updatedAt: now })
+      introductions.set(id, { id, eventId, sender, recipient, status: 'pending', message, createdAt: now, updatedAt: now })
       return { rowCount: 1, rows: [{ id }] }
     }
-    if (sql.startsWith('SELECT id FROM introductions WHERE event_id=$1')) {
+    if (sql.startsWith('SELECT id,sender,status FROM introductions WHERE event_id=$1')) {
       const [eventId, a, b] = params
       const found = [...introductions.values()].find(
         (i) => i.eventId === eventId && ((i.sender === a && i.recipient === b) || (i.sender === b && i.recipient === a)),
       )
-      return found ? { rowCount: 1, rows: [{ id: found.id }] } : { rowCount: 0, rows: [] }
+      return found ? { rowCount: 1, rows: [{ id: found.id, sender: found.sender, status: found.status }] } : { rowCount: 0, rows: [] }
+    }
+    if (sql.startsWith("UPDATE introductions SET status='pending'")) {
+      const i = introductions.get(params[0])
+      if (i) Object.assign(i, { status: 'pending', message: params[1], updatedAt: new Date() })
+      return { rowCount: i ? 1 : 0, rows: [] }
     }
     if (sql.startsWith('SELECT i.* FROM introductions i WHERE i.event_id=$1 AND i.id=$3')) {
       const [eventId, userId, id] = params
@@ -392,6 +401,8 @@ function createMemoryDatabase() {
             participantId: p.userId,
             participantName: p.name,
             participantRole: p.role,
+            participantHandle: users.get(peerId)?.handle ?? null,
+            message: i.message ?? null,
             contact: i.status === 'accepted' ? (contacts.get(peerId) ?? null) : null,
           }
         })
@@ -704,7 +715,7 @@ test('security and event isolation matrix across guest, participants, and cross-
     // /me exposes ONLY { id, username, canCreateEvents } and never leaks email/password_hash
     const meA = await api(orgA.cookie, 'GET', '/me')
     assert.equal(meA.status, 200)
-    assert.deepEqual(Object.keys(meA.body).sort(), ['canCreateEvents', 'id', 'username'])
+    assert.deepEqual(Object.keys(meA.body).sort(), ['canCreateEvents', 'handle', 'id', 'username'])
     assert.equal(meA.body.username, orgA.username)
     assert.equal('email' in meA.body, false)
     assert.equal('passwordHash' in meA.body, false)
@@ -816,8 +827,11 @@ test('security and event isolation matrix across guest, participants, and cross-
     assert.equal(membersRes.raw.includes('passwordHash'), false)
     assert.equal(membersRes.raw.includes('Bob A2'), false) // hidden profile name stays hidden when visible=false
     const bobMember = membersRes.body.items.find((m) => m.userId === partA2.id)
+    // Hidden profile: only the public handle (which starts equal to the login name) and the hidden status
     assert.equal(bobMember?.name, partA2.username)
-    assert.equal(bobMember?.username, partA2.username)
+    assert.equal(bobMember?.handle, partA2.username)
+    assert.equal(bobMember?.visible, false)
+    assert.equal('username' in bobMember, false)
 
     // 4. Recommendations & Mutual-Consent Contact Privacy & Blocks & Moderation
     assert.equal((await api(partB1.cookie, 'GET', `/events/${evA}/recommendations`)).status, 404)

@@ -328,3 +328,31 @@ describe('createTanysApiClient', () => {
     )
   })
 })
+
+describe('connections API contract', () => {
+  it('searches participants by handle with a limit and sends the optional request message', async () => {
+    const calls: Array<{ url: string; method: string; body?: string }> = []
+    const api = createTanysApiClient('/api/v1', async (input, init) => {
+      const url = String(input)
+      calls.push({ url, method: init?.method ?? 'GET', body: init?.body as string | undefined })
+      if (url.includes('/participants?')) {
+        return new Response(JSON.stringify({ items: [{ userId: 'u-2', handle: 'parasat', name: 'Parasat', role: 'iOS', goal: 'find_job', introduction: null }], query: 'parasat', minLength: 2 }), { status: 200 })
+      }
+      if (url.endsWith('/members?limit=50&q=ali&goal=hire&visibility=visible')) {
+        return new Response(JSON.stringify({ items: [{ userId: 'u-3', role: 'participant', handle: 'ali' }], nextCursor: 'u-3', total: 120 }), { status: 200 })
+      }
+      if (url.endsWith('/me/handle')) return new Response(JSON.stringify({ handle: 'parasat' }), { status: 200 })
+      return new Response(JSON.stringify({ id: 'i-1', status: 'pending', direction: 'outgoing', message: 'Hi' }), { status: 201 })
+    })
+    const found = await api.searchParticipants('evt 1', '@Parasat')
+    assert.equal(found.items[0].handle, 'parasat')
+    assert.equal(calls[0].url, '/api/v1/events/evt%201/participants?q=%40Parasat&limit=8')
+    await api.createIntroduction('evt-1', 'u-2', '  Hi  ')
+    assert.deepEqual(JSON.parse(calls[1].body ?? '{}'), { recipientId: 'u-2', message: 'Hi' })
+    await api.createIntroduction('evt-1', 'u-2', '   ')
+    assert.deepEqual(JSON.parse(calls[2].body ?? '{}'), { recipientId: 'u-2' })
+    const page = await api.pageEventMembers('evt-1', { q: ' ali ', goal: 'hire', visibility: 'visible' })
+    assert.deepEqual([page.total, page.nextCursor, page.items.length], [120, 'u-3', 1])
+    assert.deepEqual(await api.updateHandle('@Parasat'), { handle: 'parasat' })
+  })
+})

@@ -15,9 +15,44 @@ export interface IntroductionItem {
   participantId?: string
   participantName?: string
   participantRole?: string
+  /** Public Tanys handle of the other person (never the login name). */
+  participantHandle?: string | null
+  /** Optional note from the sender, up to 280 characters. */
+  message?: string | null
+  /** Private contact of the other person; present only after both agreed (status `accepted`). */
   contact?: string | null
   createdAt?: string
   updatedAt?: string
+}
+
+/** One result of `GET /events/:eventId/participants?q=` — public fields of a visible participant only. */
+export interface ParticipantSearchItem {
+  userId: string
+  handle: string | null
+  name: string | null
+  role: string | null
+  goal: Goal | null
+  introduction: { id: string; status: IntroductionStatus; direction: IntroductionDirection } | null
+}
+
+export interface ParticipantSearchResult {
+  items: ParticipantSearchItem[]
+  query: string
+  minLength: number
+}
+
+export interface MemberPageFilters {
+  q?: string
+  goal?: Goal
+  visibility?: 'visible' | 'hidden' | 'incomplete'
+  cursor?: string | null
+  limit?: number
+}
+
+export interface MemberPage {
+  items: EventMemberItem[]
+  nextCursor: string | null
+  total: number
 }
 
 export interface CommonSlot {
@@ -64,6 +99,9 @@ export interface EventMemberItem {
   userId: string
   role: EventRole
   name?: string | null
+  /** Public handle. */
+  handle?: string | null
+  /** @deprecated Older API versions sent the login username here. */
   username?: string | null
   profileRole?: string | null
   goal?: Goal | null
@@ -210,6 +248,8 @@ export interface AuthUser {
   username?: string
   /** Whether this account may create events (organizer permission granted by an administrator). */
   canCreateEvents?: boolean
+  /** Public handle other participants can search for, e.g. "parasat" (shown as @parasat). */
+  handle?: string | null
 }
 
 export interface EventSummary {
@@ -319,7 +359,9 @@ export interface TanysApiClient {
   sendEventFeedback(eventId: string, candidateId: string, response: Feedback): Promise<void>
   listIntroductions(eventId: string): Promise<IntroductionItem[]>
   getIntroduction(eventId: string, introductionId: string): Promise<IntroductionItem>
-  createIntroduction(eventId: string, recipientId: string): Promise<IntroductionItem>
+  createIntroduction(eventId: string, recipientId: string, message?: string): Promise<IntroductionItem>
+  searchParticipants(eventId: string, query: string, signal?: AbortSignal): Promise<ParticipantSearchResult>
+  updateHandle(handle: string): Promise<{ handle: string }>
   updateIntroduction(
     eventId: string,
     introductionId: string,
@@ -340,6 +382,7 @@ export interface TanysApiClient {
   createInvite(eventId: string, expiresAt: string): Promise<EventInvite>
   revokeInvite(eventId: string, inviteId: string): Promise<void>
   listEventMembers(eventId: string): Promise<EventMemberItem[]>
+  pageEventMembers(eventId: string, filters?: MemberPageFilters): Promise<MemberPage>
   getEventInterests(eventId: string): Promise<EventInterestsPayload>
   listEventBooths(eventId: string): Promise<EventBooth[]>
   createEventBooth(eventId: string, payload: CreateBoothPayload): Promise<EventBooth>
@@ -530,14 +573,44 @@ export function createTanysApiClient(
       )
     },
 
-    createIntroduction(eventId, recipientId) {
+    createIntroduction(eventId, recipientId, message) {
       return request<IntroductionItem>(
         `/events/${encodeURIComponent(eventId)}/introductions`,
         {
           method: 'POST',
-          body: JSON.stringify({ recipientId }),
+          body: JSON.stringify(message?.trim() ? { recipientId, message: message.trim() } : { recipientId }),
         },
       )
+    },
+
+    async searchParticipants(eventId, query, signal) {
+      const params = new URLSearchParams({ q: query, limit: '8' })
+      const data = await request<Partial<ParticipantSearchResult>>(
+        `/events/${encodeURIComponent(eventId)}/participants?${params.toString()}`,
+        { signal },
+      )
+      return {
+        items: Array.isArray(data?.items) ? data.items : [],
+        query: data?.query ?? query,
+        minLength: data?.minLength ?? 2,
+      }
+    },
+
+    updateHandle(handle) {
+      return request<{ handle: string }>('/me/handle', { method: 'PUT', body: JSON.stringify({ handle }) })
+    },
+
+    async pageEventMembers(eventId, filters = {}) {
+      const params = new URLSearchParams({ limit: String(filters.limit ?? 50) })
+      if (filters.q?.trim()) params.set('q', filters.q.trim())
+      if (filters.goal) params.set('goal', filters.goal)
+      if (filters.visibility) params.set('visibility', filters.visibility)
+      if (filters.cursor) params.set('cursor', filters.cursor)
+      const data = await request<{ items?: EventMemberItem[]; nextCursor?: string | null; total?: number }>(
+        `/events/${encodeURIComponent(eventId)}/members?${params.toString()}`,
+      )
+      const items = Array.isArray(data?.items) ? data.items : []
+      return { items, nextCursor: data?.nextCursor ?? null, total: typeof data?.total === 'number' ? data.total : items.length }
     },
 
     updateIntroduction(eventId, introductionId, status) {

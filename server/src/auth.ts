@@ -6,6 +6,7 @@ import { pool } from './db.js'
 import { HttpError, json, readBody, transaction, uuid } from './http.js'
 import { hashPassword, verifyPassword } from './passwords.js'
 import { deleteUserAccount } from './retention.js'
+import { HANDLE_PATTERN, isReservedHandle, normalizeHandleInput } from './handle.js'
 
 const sha = (value: string) => createHash('sha256').update(value).digest('hex')
 export const appOrigin = new URL(process.env.APP_ORIGIN || 'http://localhost:3000').origin
@@ -164,8 +165,9 @@ async function authenticatePassword(req: IncomingMessage, res: ServerResponse, r
     const passwordHash = await hashPassword(password)
     userId = await transaction(async client => {
       const user = await client.query<{ id: string }>(`
-        INSERT INTO users(username, password_hash) VALUES ($1,$2)
-        ON CONFLICT (username) DO NOTHING RETURNING id`, [username, passwordHash])
+        INSERT INTO users(username, password_hash, handle)
+        VALUES ($1,$2,CASE WHEN $3::boolean AND NOT EXISTS (SELECT 1 FROM users WHERE handle=$1) THEN $1 END)
+        ON CONFLICT (username) DO NOTHING RETURNING id`, [username, passwordHash, !isReservedHandle(username)])
       if (!user.rows[0]) throw new HttpError(409, 'username_unavailable')
       const { id } = user.rows[0]
       await client.query('INSERT INTO sessions(digest,user_id) VALUES($1,$2)', [digest, id])
@@ -215,11 +217,28 @@ export async function authRoute(req: IncomingMessage, res: ServerResponse, path:
   }
   else if (req.method === 'GET' && path === '/me') {
     const id = await viewer(req)
-    const row = await pool.query<{ username: string | null; can_create_events: boolean | null }>(
-      'SELECT username,can_create_events FROM users WHERE id=$1', [id])
+    const row = await pool.query<{ username: string | null; handle: string | null; can_create_events: boolean | null }>(
+      'SELECT username,handle,can_create_events FROM users WHERE id=$1', [id])
     const username = row.rows[0]?.username
+    const handle = row.rows[0]?.handle ?? null
     const canCreateEvents = row.rows[0]?.can_create_events === true
-    json(res, 200, username ? { id, username, canCreateEvents } : { id, canCreateEvents })
+    json(res, 200, username ? { id, username, handle, canCreateEvents } : { id, handle, canCreateEvents })
+  }
+  else if (req.method === 'PUT' && path === '/me/handle') {
+    // The public handle changes independently of the login username; old @handles simply stop resolving.
+    const id = await viewer(req)
+    const handle = normalizeHandleInput((await readBody(req)).handle)
+    if (!HANDLE_PATTERN.test(handle)) throw new HttpError(400, 'invalid_handle')
+    if (isReservedHandle(handle)) throw new HttpError(400, 'handle_reserved')
+    const updated = await pool.query(
+      'UPDATE users SET handle=$2 WHERE id=$1 AND NOT EXISTS (SELECT 1 FROM users WHERE handle=$2 AND id<>$1) RETURNING handle',
+      [id, handle],
+    ).catch(error => {
+      if ((error as { code?: string }).code === '23505') return { rowCount: 0, rows: [] }
+      throw error
+    })
+    if (!updated.rowCount) throw new HttpError(409, 'handle_unavailable')
+    json(res, 200, { handle: updated.rows[0].handle })
   }
   else if (req.method === 'DELETE' && path === '/auth/session') {
     await pool.query('DELETE FROM sessions WHERE digest=$1', [sha(token(req) || '')])

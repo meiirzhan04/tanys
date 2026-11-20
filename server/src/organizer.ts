@@ -68,20 +68,41 @@ export async function organizerRoute(req: IncomingMessage, res: ServerResponse, 
     }
     const profilesExist = await hasProfilesTable()
     if (profilesExist) {
-      const result = await pool.query(
-        `SELECT m.user_id AS "userId", m.role, COALESCE(p.name, u.username) AS name, u.username,
-                p.role AS "profileRole", p.goal, p.visible
-         FROM memberships m
+      // Server-side search and filters so large events (300+) never ship every member to the browser.
+      // Public handle only (never the login username, email or private contact). A hidden questionnaire is
+      // reported as hidden (instead of looking empty) but its name, role and goal stay private, also from filters.
+      const q = (query.get('q') ?? '').trim().replace(/^@+/, '').toLowerCase().slice(0, 64)
+      const goal = query.get('goal')
+      const visibility = query.get('visibility')
+      if (goal !== null && !['find_job', 'hire', 'find_mentor', 'be_mentor', 'find_cofounder', 'exchange_experience'].includes(goal)) {
+        throw new HttpError(400, 'invalid_filter')
+      }
+      if (visibility !== null && !['visible', 'hidden', 'incomplete'].includes(visibility)) throw new HttpError(400, 'invalid_filter')
+      const pattern = q ? `%${q.replace(/[\\%_]/g, character => `\\${character}`)}%` : null
+      const filters = `m.event_id = $1
+           AND ($2::text IS NULL OR (p.visible AND lower(p.name) LIKE $2 ESCAPE '\\') OR coalesce(u.handle, '') LIKE $2 ESCAPE '\\')
+           AND ($3::text IS NULL OR (p.visible AND p.goal = $3))
+           AND ($4::text IS NULL OR ($4 = 'visible' AND p.visible) OR ($4 = 'hidden' AND p.visible = false) OR ($4 = 'incomplete' AND p.user_id IS NULL))`
+      const from = `FROM memberships m
          LEFT JOIN users u ON u.id = m.user_id
-         LEFT JOIN event_profiles p ON p.event_id = m.event_id AND p.user_id = m.user_id AND p.visible
-         WHERE m.event_id = $1 AND ($2::uuid IS NULL OR m.user_id > $2)
-         ORDER BY m.user_id ASC
-         LIMIT $3`,
-        [eventId, cursor, limit + 1],
-      )
+         LEFT JOIN event_profiles p ON p.event_id = m.event_id AND p.user_id = m.user_id`
+      const args = [eventId, pattern, goal, visibility]
+      const [result, total] = await Promise.all([
+        pool.query(
+          `SELECT m.user_id AS "userId", m.role,
+                  COALESCE(CASE WHEN p.visible THEN NULLIF(btrim(p.name), '') END, u.handle) AS name, u.handle,
+                  CASE WHEN p.visible THEN p.role END AS "profileRole", CASE WHEN p.visible THEN p.goal END AS goal, p.visible
+           ${from}
+           WHERE ${filters} AND ($5::uuid IS NULL OR m.user_id > $5)
+           ORDER BY m.user_id ASC
+           LIMIT $6`,
+          [...args, cursor, limit + 1],
+        ),
+        pool.query(`SELECT count(*)::int AS total ${from} WHERE ${filters}`, args),
+      ])
       const items = result.rows.slice(0, limit)
       const nextCursor = result.rows.length > limit ? items[items.length - 1].userId : null
-      json(res, 200, { items, nextCursor })
+      json(res, 200, { items, nextCursor, total: total.rows[0]?.total ?? items.length })
       return true
     }
 

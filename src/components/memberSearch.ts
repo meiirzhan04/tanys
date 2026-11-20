@@ -8,8 +8,8 @@ export function normalizeMemberQuery(value: string): string {
 /** Return the name displayed in the organizer participant table. */
 export function getMemberDisplayName(member: EventMemberItem): string {
   const name = member.name?.trim()
-  const username = member.username?.trim()
-  return name || username || member.userId
+  const handle = (member.handle ?? member.username)?.trim()
+  return name || handle || member.userId
 }
 
 /**
