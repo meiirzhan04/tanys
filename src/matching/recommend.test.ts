@@ -279,6 +279,22 @@ test('uses a confirmed searched-for skill in the icebreaker', () => {
   assert.match(result.icebreaker ?? '', /Данияр.*FastAPI.*задачи/)
 })
 
+test('uses one greeting terminator and preserves candidate names in all locales', () => {
+  const greetings = { ru: 'Привет, ', kk: 'Сәлем, ', en: 'Hi ' }
+  const names = [
+    ['Қанат А.', 'Қанат А.'],
+    ['Данияр', 'Данияр!'],
+  ]
+
+  for (const locale of ['ru', 'kk', 'en'] as const) {
+    for (const [name, punctuated] of names) {
+      const [result] = recommend(input, [candidate('employer', 'hire', { name })], locale)
+      assert.equal(result.candidate.name, name)
+      assert.ok(result.icebreaker?.startsWith(`${greetings[locale]}${punctuated} `), result.icebreaker)
+    }
+  }
+})
+
 test('excludes unrelated pairs for mentoring, cofounders and experience exchange', () => {
   const ios: ProfileInput = {
     ...input, role: 'iOS Developer', skills: ['Swift'], lookingFor: ['SwiftUI', 'Combine'],

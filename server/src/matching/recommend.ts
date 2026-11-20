@@ -1,5 +1,5 @@
 import type { Candidate, Goal, Locale, ProfileInput, Recommendation } from './types.js'
-import { deduplicateExplanationSkills } from './explanation-skills.ts'
+import { deduplicateExplanationSkills, formatIcebreakerName } from './explanation-skills.ts'
 
 const reciprocalGoals: Record<Goal, Goal> = {
   find_job: 'hire',
@@ -22,7 +22,7 @@ interface RecommendationTemplates {
   lessExperienced: string
   sharedInterests: (items: string) => string
   joinExplanation: (goalReason: string, details: string) => string
-  formatIcebreaker: (name: string, detail: string, question: string) => string
+  formatIcebreaker: (greetingName: string, detail: string, question: string) => string
 }
 
 const templatesByLocale: Record<Locale, RecommendationTemplates> = {
@@ -52,7 +52,7 @@ const templatesByLocale: Record<Locale, RecommendationTemplates> = {
     lessExperienced: 'у будущего менти меньше лет опыта',
     sharedInterests: items => `общие интересы: ${items}`,
     joinExplanation: (goalReason, details) => `${goalReason} Совпадения — ${details}.`,
-    formatIcebreaker: (name, detail, question) => `Привет, ${name}! В вашей анкете указано «${detail}». ${question}`,
+    formatIcebreaker: (greetingName, detail, question) => `Привет, ${greetingName} В вашей анкете указано «${detail}». ${question}`,
   },
   kk: {
     goalReasons: {
@@ -80,7 +80,7 @@ const templatesByLocale: Record<Locale, RecommendationTemplates> = {
     lessExperienced: 'болашақ ментидің тәжірибесі азырақ',
     sharedInterests: items => `ортақ қызығушылықтар: ${items}`,
     joinExplanation: (goalReason, details) => `${goalReason} Сәйкестіктер — ${details}.`,
-    formatIcebreaker: (name, detail, question) => `Сәлем, ${name}! Сауалнамаңызда «${detail}» көрсетілген екен. ${question}`,
+    formatIcebreaker: (greetingName, detail, question) => `Сәлем, ${greetingName} Сауалнамаңызда «${detail}» көрсетілген екен. ${question}`,
   },
   en: {
     goalReasons: {
@@ -108,7 +108,7 @@ const templatesByLocale: Record<Locale, RecommendationTemplates> = {
     lessExperienced: 'the mentee has fewer years of experience',
     sharedInterests: items => `shared interests: ${items}`,
     joinExplanation: (goalReason, details) => `${goalReason} Matches — ${details}.`,
-    formatIcebreaker: (name, detail, question) => `Hi ${name}! I saw "${detail}" in your profile. ${question}`,
+    formatIcebreaker: (greetingName, detail, question) => `Hi ${greetingName} I saw "${detail}" in your profile. ${question}`,
   },
 }
 
@@ -215,7 +215,7 @@ export function normalizeSkill(value: string): string {
 
 function makeIcebreaker(goal: Goal, candidate: Candidate, locale: Locale, topic: string): string {
   const templates = templatesByLocale[locale]
-  return templates.formatIcebreaker(candidate.name, topic, templates.icebreakerQuestions[goal])
+  return templates.formatIcebreaker(formatIcebreakerName(candidate.name), topic, templates.icebreakerQuestions[goal])
 }
 
 function matchingRequestedRole(applicantRole: string, requested: readonly string[]): string | undefined {
