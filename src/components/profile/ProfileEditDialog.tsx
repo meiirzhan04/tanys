@@ -58,7 +58,9 @@ export function ProfileEditDialog({ locale, title, dirty, children, onSave, onCl
     lock.current = true
     const dialog = ref.current
     if (dialog && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      await dialog.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(5px)' }], 110).finished.catch(() => {})
+      dialog.animate([{ opacity: 1 }, { opacity: 0, transform: 'translateY(5px)' }], { duration: 110, fill: 'forwards' })
+      // Background tabs can pause animations. Finish dismissal independently of the animation timeline.
+      await new Promise(resolve => window.setTimeout(resolve, 110))
     }
     onClose()
   }
