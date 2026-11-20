@@ -43,7 +43,7 @@ type View = 'profile' | 'results' | 'schedule' | 'interests'
 
 const HEADER_EXTRA = {
   ru: { toDark: 'Тёмная тема', toLight: 'Светлая тема' },
-  kk: { toDark: 'Қараңғы тема', toLight: 'Жарық тема' },
+  kk: { toDark: 'Қараңғы режим', toLight: 'Жарық режим' },
   en: { toDark: 'Dark theme', toLight: 'Light theme' },
 } as const
 

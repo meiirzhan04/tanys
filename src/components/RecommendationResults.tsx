@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import type { IntroductionStatus, ReportReason } from '../api/client'
 import { getMessages } from '../i18n/messages'
+import { detectSkillLocale, inspectCandidateLanguage } from '../i18n/profileLanguage'
 import type { Feedback } from '../matching/session'
 import type { Locale, Recommendation } from '../matching/types'
 import type { MeetingBooking } from '../scheduling/slots'
@@ -52,6 +53,7 @@ function RecommendationCard({
   const social = getMessages(locale).social
   const mod = getMessages(locale).moderation
   const goalBadges = getCandidateGoalLabels(locale)
+  const languageInfo = inspectCandidateLanguage(candidate, locale)
 
   async function copyPhrase() {
     if (!icebreaker) return
@@ -72,8 +74,13 @@ function RecommendationCard({
           <span className="avatar" aria-hidden="true">{candidate.name[0]}</span>
           <div className="candidate-name">
             <h2>{candidate.name}</h2>
-            <p>{candidate.role}</p>
-            <p className="goal-label">{goalBadges[candidate.goal]}</p>
+            <p className="candidate-role" lang={languageInfo.roleLocale ?? undefined}>{candidate.role}</p>
+            <div className="candidate-meta">
+              <p className="goal-label">{goalBadges[candidate.goal]}</p>
+              {languageInfo.hasOriginalLanguageFields && (
+                <span className="profile-origin-badge">{t.originalProfileBadge(languageInfo.originLocale)}</span>
+              )}
+            </div>
           </div>
         </div>
         <p className="explanation">{recommendation.explanation}</p>
@@ -87,7 +94,9 @@ function RecommendationCard({
       </div>
       <div id={detailsId} className="result-details" hidden={!expanded}>
         {!!candidate.skills.length && <ul className="skill-list" aria-label={t.skillsAriaLabel}>
-          {candidate.skills.map((skill, index) => <li key={index}>{skill}</li>)}
+          {candidate.skills.map((skill, index) => (
+            <li key={index} lang={detectSkillLocale(skill) ?? undefined}>{skill}</li>
+          ))}
         </ul>}
         {icebreaker && <div className="icebreaker">
           <div className="phrase-heading">
@@ -226,6 +235,9 @@ export function RecommendationResults({
   const t = getMessages(locale).results
   const listRef = useRef<HTMLDivElement>(null)
   const pendingFocusIndexRef = useRef<number | null>(null)
+  const hasOriginalLanguageFields = recommendations.some(
+    item => inspectCandidateLanguage(item.candidate, locale).hasOriginalLanguageFields,
+  )
 
   useEffect(() => {
     const targetIndex = pendingFocusIndexRef.current
@@ -264,7 +276,9 @@ export function RecommendationResults({
           <button type="button" className="secondary-button" onClick={onEdit}>{t.editProfile}</button>
         </div>
       </div>
-      {recommendations.length ? <div ref={listRef} className="results-list surface">
+      {recommendations.length ? <>
+        {hasOriginalLanguageFields && <p className="results-language-note">{t.originalProfileNote}</p>}
+        <div ref={listRef} className="results-list surface">
         <div className="directory-header" aria-hidden="true">
           <span>{t.directoryParticipant}</span><span>{t.directoryWhy}</span><span />
         </div>
@@ -284,7 +298,7 @@ export function RecommendationResults({
             locale={locale}
           />
         ))}
-      </div> : <div className="surface empty-state">
+      </div></> : <div className="surface empty-state">
         <h2>{t.emptyTitle}</h2>
         <p>{t.emptyBody}</p>
         <div className="empty-state__actions">

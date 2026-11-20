@@ -85,6 +85,8 @@ export interface Messages {
     copy: string
     copied: string
     copyFallback: string
+    originalProfileBadge: (originLocale: Locale | null) => string
+    originalProfileNote: string
     emptyTitle: string
     emptyBody: string
   }
@@ -423,6 +425,8 @@ export const messagesByLocale: Record<Locale, Messages> = {
       copy: 'Скопировать',
       copied: 'Скопировано',
       copyFallback: 'Выделите и скопируйте текст вручную.',
+      originalProfileBadge: originLocale => (originLocale ? `как в анкете · ${originLocale.toUpperCase()}` : 'как в анкете'),
+      originalProfileNote: 'Поля с меткой «как в анкете» показаны в исходной формулировке участника без автоперевода.',
       emptyTitle: 'Список рекомендаций пуст',
       emptyBody: 'Уточните стек и навыки, искомые компетенции или интересы в анкете, чтобы найти больше подходящих собеседников.',
     },
@@ -759,6 +763,8 @@ export const messagesByLocale: Record<Locale, Messages> = {
       copy: 'Көшіру',
       copied: 'Көшірілді',
       copyFallback: 'Мәтінді қолмен белгілеп көшіріңіз.',
+      originalProfileBadge: originLocale => (originLocale ? `анкетадағыдай · ${originLocale.toUpperCase()}` : 'анкетадағыдай'),
+      originalProfileNote: '«Анкетадағыдай» белгісі бар өрістер қатысушының бастапқы жазбасымен автоаудармасыз көрсетіледі.',
       emptyTitle: 'Ұсыныстар тізімі бос',
       emptyBody: 'Лайықты қатысушыларды көбірек табу үшін анкетадағы стек пен дағдыларды, іздеген құзыреттерді немесе қызығушылықтарды нақтылаңыз.',
     },
@@ -1095,6 +1101,8 @@ export const messagesByLocale: Record<Locale, Messages> = {
       copy: 'Copy',
       copied: 'Copied',
       copyFallback: 'Select and copy the text manually.',
+      originalProfileBadge: originLocale => (originLocale ? `as in profile · ${originLocale.toUpperCase()}` : 'as in profile'),
+      originalProfileNote: 'Fields marked "as in profile" keep the participant’s original wording without machine translation.',
       emptyTitle: 'No matches found',
       emptyBody: 'Refine your skills, target competencies, or interests in your profile to broaden matching.',
     },
