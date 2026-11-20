@@ -2,12 +2,13 @@ import assert from 'node:assert/strict'
 import { randomBytes, randomUUID, createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import test from 'node:test'
+import { resolveIsolatedComposeConfig } from './event-fixture.mjs'
 
 const base = 'http://127.0.0.1:' + (process.env.API_PORT || 3000) + '/api/v1/events'
-const compose = ['compose','-f','compose.api.yaml']
 const fixture = randomUUID()
 
 function account(canOrganize) {
+  const { args: compose } = resolveIsolatedComposeConfig()
   const id = randomUUID()
   const email = id + '@participant.test'
   const token = randomBytes(32).toString('hex')
