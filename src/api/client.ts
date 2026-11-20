@@ -362,6 +362,7 @@ export interface TanysApiClient {
   createIntroduction(eventId: string, recipientId: string, message?: string): Promise<IntroductionItem>
   searchParticipants(eventId: string, query: string, signal?: AbortSignal): Promise<ParticipantSearchResult>
   updateHandle(handle: string): Promise<{ handle: string }>
+  getContact(): Promise<string | null>
   updateIntroduction(
     eventId: string,
     introductionId: string,
@@ -594,6 +595,11 @@ export function createTanysApiClient(
         query: data?.query ?? query,
         minLength: data?.minLength ?? 2,
       }
+    },
+
+    async getContact() {
+      const data = await request<{ value?: string | null }>('/me/contact')
+      return data?.value ?? null
     },
 
     updateHandle(handle) {

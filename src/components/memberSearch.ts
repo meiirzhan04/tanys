@@ -23,7 +23,9 @@ export function filterEventMembers(
   const normalizedQuery = normalizeMemberQuery(query)
   if (!normalizedQuery) return [...members]
 
+  const handleQuery = normalizedQuery.replace(/^@+/, '')
   return members.filter(member =>
-    normalizeMemberQuery(getMemberDisplayName(member)).includes(normalizedQuery),
+    normalizeMemberQuery(getMemberDisplayName(member)).includes(normalizedQuery) ||
+    Boolean(handleQuery && normalizeMemberQuery(member.handle ?? '').includes(handleQuery)),
   )
 }

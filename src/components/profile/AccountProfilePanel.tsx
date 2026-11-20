@@ -8,6 +8,8 @@ import type { EventProfileDraft } from '../profileDirty'
 import { profileCopy } from './profileCopy'
 import { accountDialogCopy } from './accountDialogCopy'
 import { ConfirmDialog } from './ConfirmDialog'
+import { EditFieldDialog } from './EditFieldDialog'
+import { identityCopy } from './identityCopy'
 
 interface AccountProfilePanelProps {
   locale: Locale
@@ -22,9 +24,11 @@ interface AccountProfilePanelProps {
   organizesAnyEvent: boolean
   hasEvent: boolean
   contactValue: string
-  savingContact: boolean
-  contactSaved: boolean
-  onSaveContact: (value: string) => Promise<boolean>
+  /** Public @handle, or null when not set yet. */
+  handle: string | null
+  /** Both resolve with an error message, or '' once the server saved the value. */
+  onSaveContact: (value: string) => Promise<string>
+  onSaveHandle: (value: string) => Promise<string>
   onLogout: () => Promise<void>
   /** Resolves with an error message, or an empty string after the server confirmed the action. */
   onLeaveEvent: () => Promise<string>
@@ -46,9 +50,9 @@ export function AccountProfilePanel({
   organizesAnyEvent,
   hasEvent,
   contactValue,
-  savingContact,
-  contactSaved,
+  handle,
   onSaveContact,
+  onSaveHandle,
   onLogout,
   onLeaveEvent,
   onDeleteAccount,
@@ -59,7 +63,8 @@ export function AccountProfilePanel({
   const t = profileCopy[locale]
   const messages = getMessages(locale)
   const d = accountDialogCopy[locale]
-  const [contactInput, setContactInput] = useState('')
+  const ic = identityCopy[locale]
+  const [editing, setEditing] = useState<'handle' | 'contact' | null>(null)
   const [dialog, setDialog] = useState<'logout' | 'leave' | 'delete' | null>(null)
   const [dialogError, setDialogError] = useState('')
   const busy = loggingOut || leavingEvent || deletingAccount
@@ -80,12 +85,6 @@ export function AccountProfilePanel({
     else setDialog(null)
   }
 
-  async function submitContact(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const value = contactInput.trim()
-    if (savingContact || !value) return
-    if (await onSaveContact(value)) setContactInput('')
-  }
 
   const labels = accountLabels[locale]
   const [draft, setDraft] = useState<AccountProfile | null>(null)
@@ -139,27 +138,66 @@ export function AccountProfilePanel({
             setAttempt(value => value + 1)
           }}>{labels.retry}</button>}</p>}
         </form>
-        <section className="surface profile-card" aria-labelledby="me-contact-title">
-          <h2 id="me-contact-title">{t.contactTitle}</h2>
-          <p>{messages.social.contactNotice}</p>
-          <p>{contactValue ? `${t.contactCurrent} ${contactValue}` : t.contactNone}</p>
-          <form className="profile-contact-form" onSubmit={submitContact}>
-            <label className="visually-hidden" htmlFor="me-contact-input">{messages.social.contactLabel}</label>
-            <input
-              id="me-contact-input"
-              name="profileContact"
-              maxLength={120}
-              placeholder={messages.social.contactPlaceholder}
-              value={contactInput}
-              disabled={savingContact}
-              onChange={event => setContactInput(event.target.value)}
-            />
-            <button type="submit" className="secondary-button" disabled={savingContact || !contactInput.trim()}>
-              {t.contactSave}
-            </button>
-            {contactSaved && <span className="copy-status" role="status">{messages.social.contactSaved}</span>}
-          </form>
-        </section>
+        <div className="identity-cards">
+          <section className="surface identity-card" aria-labelledby="me-handle-title">
+            <div className="identity-card__head">
+              <h2 id="me-handle-title">{ic.handleTitle}</h2>
+              <button type="button" className="icon-button" data-edit="handle" aria-label={ic.editHandle} onClick={() => setEditing('handle')}>
+                <PencilIcon />
+              </button>
+            </div>
+            <p className={`identity-card__value ${handle ? '' : 'identity-card__value--empty'}`}>{handle ? `@${handle}` : ic.handleNone}</p>
+            <p className="identity-card__note">{ic.handleHint}</p>
+          </section>
+          <section className="surface identity-card" aria-labelledby="me-contact-title">
+            <div className="identity-card__head">
+              <h2 id="me-contact-title">{ic.contactTitle}</h2>
+              <button type="button" className="icon-button" data-edit="contact" aria-label={ic.editContact} onClick={() => setEditing('contact')}>
+                <PencilIcon />
+              </button>
+            </div>
+            <p className={`identity-card__value ${contactValue ? '' : 'identity-card__value--empty'}`} data-contact-value>{contactValue || ic.contactNone}</p>
+            <p className="lock-note">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" /><path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="currentColor" strokeWidth="1.8" /></svg>
+              {ic.contactLock}
+            </p>
+            <details className="identity-card__help">
+              <summary>{ic.contactHelpSummary}</summary>
+              <p>{ic.contactHelp}</p>
+            </details>
+          </section>
+        </div>
+        {editing === 'handle' && (
+          <EditFieldDialog
+            title={ic.editHandle}
+            label={ic.handleLabel}
+            name="handle"
+            initialValue={handle ?? ''}
+            placeholder="parasat"
+            hint={ic.handleRules}
+            maxLength={33}
+            saveLabel={ic.save}
+            cancelLabel={ic.cancel}
+            onSave={onSaveHandle}
+            onClose={() => setEditing(null)}
+          />
+        )}
+        {editing === 'contact' && (
+          <EditFieldDialog
+            title={ic.editContact}
+            label={ic.contactLabel}
+            name="profileContact"
+            initialValue={contactValue}
+            placeholder={ic.contactPlaceholder}
+            hint={<><p>{ic.contactLock}</p><p>{ic.contactHelp}</p></>}
+            maxLength={256}
+            saveLabel={ic.save}
+            cancelLabel={ic.cancel}
+            clearLabel={ic.remove}
+            onSave={onSaveContact}
+            onClose={() => setEditing(null)}
+          />
+        )}
       </div>
 
       {eventToolbar && <section className="surface profile-card account-import">
@@ -244,5 +282,14 @@ export function AccountProfilePanel({
         </ConfirmDialog>
       )}
     </div>
+  )
+}
+
+function PencilIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+      <path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="m13.5 6.5 4 4" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
   )
 }

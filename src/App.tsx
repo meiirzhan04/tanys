@@ -8,6 +8,9 @@ import {
   syncAccountLocationUrl,
 } from './api/inviteRoute'
 import { TanysWordmark } from './components/brand/TanysLogo'
+import { shellCopy } from './components/connections/connectionsCopy'
+import { BackToTop } from './components/shell/BackToTop'
+import { SiteFooter } from './components/shell/SiteFooter'
 import { EventAccountFlow } from './components/EventAccountFlow'
 import { InterestMap } from './components/InterestMap'
 import { Landing } from './components/landing/Landing'
@@ -36,6 +39,7 @@ import type { MeetingBooking } from './scheduling/slots'
 import { resolveInitialTheme, saveThemePreference, subscribeSystemTheme } from './theme/themeStorage'
 import type { Theme } from './theme/themeStorage'
 import './styles.css'
+import './components/connections/connections.css'
 
 const AdminDashboard = lazy(() =>
   import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })),
@@ -299,9 +303,15 @@ export default function App() {
       <header className="site-header">
         <div className="site-width header-inner">
           {mode === 'demo' ? (
-            <button type="button" className="brand" aria-label="Tanys" onClick={handleGoHome}>
-              <TanysWordmark size={28} />
-            </button>
+            <span className="brand-group">
+              <button type="button" className="brand" aria-label="Tanys" onClick={handleGoHome}>
+                <TanysWordmark size={28} />
+              </button>
+              <span className="demo-chip" title={shellCopy[locale].demoNote}>
+                {shellCopy[locale].demoBadge}
+                <span className="demo-chip__note"> · {shellCopy[locale].demoShort}</span>
+              </span>
+            </span>
           ) : (
             <span className="brand">
               <TanysWordmark size={28} />
@@ -534,12 +544,8 @@ export default function App() {
         </div>
         </>
       )}
-      <footer className="site-footer">
-        <div className="site-width site-footer__inner">
-          <TanysWordmark size={22} />
-          <p>{me.footer}</p>
-        </div>
-      </footer>
+      <SiteFooter locale={locale} demo={mode === 'demo'} />
+      <BackToTop locale={locale} />
     </div>
   )
 }
