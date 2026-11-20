@@ -103,15 +103,37 @@ const templatesByLocale: Record<Locale, RecommendationTemplates> = {
   },
 }
 
-const skillAliases: Readonly<Record<string, string>> = {
-  js: 'javascript',
-  javascript: 'javascript',
-  ts: 'typescript',
-  typescript: 'typescript',
-  postgres: 'postgresql',
-  postgresql: 'postgresql',
-  'node.js': 'nodejs',
-  nodejs: 'nodejs',
+const skillAliases = new Map([
+  ['js', 'javascript'],
+  ['ts', 'typescript'],
+  ['postgres', 'postgresql'],
+  ['node.js', 'nodejs'],
+  ['node js', 'nodejs'],
+  ['react.js', 'react'],
+  ['reactjs', 'react'],
+  ['vue.js', 'vue'],
+  ['vuejs', 'vue'],
+])
+
+const roleAliases = new Map<string, string>()
+const roleGroups = {
+  backend: [
+    'backend', 'backdev', 'backenddev', 'backenddeveloper', 'backendengineer',
+    'бэкендразработчик', 'бекендразработчик', 'бэкендәзірлеуші', 'бекендәзірлеуші',
+  ],
+  frontend: [
+    'frontend', 'frontdev', 'frontenddev', 'frontenddeveloper', 'frontendengineer',
+    'фронтендразработчик', 'фронтендәзірлеуші',
+  ],
+  fullstack: [
+    'fullstack', 'fullstackdev', 'fullstackdeveloper', 'fullstackengineer',
+    'фулстекразработчик', 'фулстекәзірлеуші',
+  ],
+  ios: ['ios', 'iosdev', 'iosdeveloper', 'iosengineer', 'iosразработчик', 'iosәзірлеуші'],
+  android: ['android', 'androiddev', 'androiddeveloper', 'androidengineer', 'androidразработчик', 'androidәзірлеуші'],
+}
+for (const [role, aliases] of Object.entries(roleGroups)) {
+  for (const alias of aliases) roleAliases.set(alias, role)
 }
 
 function normalizeTopic(value: string): string {
@@ -119,8 +141,9 @@ function normalizeTopic(value: string): string {
 }
 
 function normalizeSkill(value: string): string {
-  const key = normalizeTopic(value)
-  return skillAliases[key] ?? key
+  const key = normalizeTopic(value.normalize('NFKC')).replace(/\s+/g, ' ')
+  const compactRole = key.replace(/[\s_\u2010-\u2015-]+/g, '')
+  return skillAliases.get(key) ?? roleAliases.get(compactRole) ?? key
 }
 
 function makeIcebreaker(goal: Goal, candidate: Candidate, locale: Locale, topic?: string): string {
