@@ -46,11 +46,8 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       PGDATABASE: ${POSTGRES_DB:?POSTGRES_DB is required}
       SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
-      SMTP_HOST: ${SMTP_HOST:?SMTP_HOST is required}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER:?SMTP_USER is required}
-      SMTP_PASS: ${SMTP_PASS:?SMTP_PASS is required}
-      SMTP_FROM: ${SMTP_FROM:?SMTP_FROM is required}
+      SMTP_URL: ${SMTP_URL:?SMTP_URL is required}
+      MAIL_FROM: ${MAIL_FROM:?MAIL_FROM is required}
     networks:
       - internal
     depends_on:
