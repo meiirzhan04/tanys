@@ -1,6 +1,4 @@
 import type pg from 'pg'
-import { pool } from './db.js'
-import { transaction } from './http.js'
 
 export interface RetentionPurgeOptions {
   now?: Date
@@ -33,68 +31,64 @@ type Queryable = {
  */
 export async function deleteUserAccount(
   userId: string,
-  clientOrPool: Queryable = pool,
+  clientOrPool: Queryable,
 ): Promise<{ deleted: boolean; userId: string }> {
-  const isClient = 'release' in clientOrPool && typeof (clientOrPool as any).release === 'function'
+  // 1. Record minimal PII-free tombstone for audit and backup replay
+  await clientOrPool.query(
+    `INSERT INTO deleted_account_tombstones(user_id, deleted_at)
+     VALUES($1, now())
+     ON CONFLICT (user_id) DO NOTHING`,
+    [userId],
+  )
 
-  const execute = async (client: Queryable) => {
-    // 1. Record minimal PII-free tombstone for audit and backup replay
-    await client.query(
-      `INSERT INTO deleted_account_tombstones(user_id, deleted_at)
-       VALUES($1, now())
-       ON CONFLICT (user_id) DO NOTHING`,
-      [userId],
-    )
+  // 2. Fetch email to purge unverified challenges
+  const userRes = await clientOrPool.query('SELECT email FROM users WHERE id = $1', [userId])
+  const email = userRes.rows[0]?.email
 
-    // 2. Fetch email to purge unverified challenges
-    const userRes = await client.query('SELECT email FROM users WHERE id = $1', [userId])
-    const email = userRes.rows[0]?.email
+  // 3. Immediately revoke all active sessions
+  await clientOrPool.query('DELETE FROM sessions WHERE user_id = $1', [userId])
 
-    // 3. Immediately revoke all active sessions
-    await client.query('DELETE FROM sessions WHERE user_id = $1', [userId])
-
-    // 4. Revoke and delete pending auth challenges
-    if (email) {
-      await client.query('DELETE FROM auth_challenges WHERE email = $1', [email])
-    }
-
-    // 5. Delete participant profile and memberships across events
-    await client.query('DELETE FROM event_profiles WHERE user_id = $1', [userId])
-    await client.query('DELETE FROM memberships WHERE user_id = $1', [userId])
-
-    // 6. Delete blocks and restrictions
-    await client.query('DELETE FROM event_blocks WHERE blocker_id = $1 OR blocked_id = $1', [userId])
-    await client.query('DELETE FROM event_restrictions WHERE user_id = $1 OR restricted_by = $1', [userId])
-
-    // 7. Delete moderation records associated with the user
-    await client.query('DELETE FROM event_reports WHERE reporter_id = $1 OR subject_id = $1', [userId])
-    await client.query('UPDATE event_reports SET resolved_by = NULL WHERE resolved_by = $1', [userId])
-    await client.query('DELETE FROM moderation_actions WHERE moderator_id = $1 OR subject_id = $1', [userId])
-
-    // 8. Defensively clean up potential introductions, meetings, slots, and feedback tables
-    const dynamicTables = [
-      { name: 'event_introductions', query: 'DELETE FROM event_introductions WHERE sender_id = $1 OR recipient_id = $1' },
-      { name: 'event_meetings', query: 'DELETE FROM event_meetings WHERE user_id = $1 OR partner_id = $1' },
-      { name: 'event_availability', query: 'DELETE FROM event_availability WHERE user_id = $1' },
-      { name: 'event_feedback', query: 'DELETE FROM event_feedback WHERE user_id = $1 OR target_id = $1' },
-    ]
-    for (const dt of dynamicTables) {
-      const reg = await client.query(`SELECT to_regclass('public.${dt.name}') IS NOT NULL AS exists`)
-      if (reg.rows[0]?.exists) {
-        await client.query(dt.query, [userId])
-      }
-    }
-
-    // 9. Delete user record
-    await client.query('DELETE FROM users WHERE id = $1', [userId])
-
-    return { deleted: true, userId }
+  // 4. Revoke and delete pending auth challenges
+  if (email) {
+    await clientOrPool.query('DELETE FROM auth_challenges WHERE email = $1', [email])
   }
 
-  if (clientOrPool !== pool) {
-    return execute(clientOrPool)
+  // 5. Clean up contacts, meetings, introductions, availability, and feedback tables from migrations 008-010
+  const dynamicTables = [
+    { name: 'user_contacts', query: 'DELETE FROM user_contacts WHERE user_id = $1' },
+    {
+      name: 'meetings',
+      query:
+        'DELETE FROM meetings WHERE proposer = $1 OR introduction_id IN (SELECT id FROM introductions WHERE sender = $1 OR recipient = $1)',
+    },
+    { name: 'introductions', query: 'DELETE FROM introductions WHERE sender = $1 OR recipient = $1' },
+    { name: 'availability', query: 'DELETE FROM availability WHERE user_id = $1' },
+    { name: 'event_feedback', query: 'DELETE FROM event_feedback WHERE user_id = $1 OR candidate_id = $1' },
+  ]
+  for (const dt of dynamicTables) {
+    const reg = await clientOrPool.query(`SELECT to_regclass('public.${dt.name}') IS NOT NULL AS exists`)
+    if (reg.rows[0]?.exists) {
+      await clientOrPool.query(dt.query, [userId])
+    }
   }
-  return transaction(async client => execute(client))
+
+  // 6. Delete participant profile and memberships across events
+  await clientOrPool.query('DELETE FROM event_profiles WHERE user_id = $1', [userId])
+  await clientOrPool.query('DELETE FROM memberships WHERE user_id = $1', [userId])
+
+  // 7. Delete blocks and restrictions
+  await clientOrPool.query('DELETE FROM event_blocks WHERE blocker_id = $1 OR blocked_id = $1', [userId])
+  await clientOrPool.query('DELETE FROM event_restrictions WHERE user_id = $1 OR restricted_by = $1', [userId])
+
+  // 8. Delete moderation records associated with the user
+  await clientOrPool.query('DELETE FROM event_reports WHERE reporter_id = $1 OR subject_id = $1', [userId])
+  await clientOrPool.query('UPDATE event_reports SET resolved_by = NULL WHERE resolved_by = $1', [userId])
+  await clientOrPool.query('DELETE FROM moderation_actions WHERE moderator_id = $1 OR subject_id = $1', [userId])
+
+  // 9. Delete user record
+  await clientOrPool.query('DELETE FROM users WHERE id = $1', [userId])
+
+  return { deleted: true, userId }
 }
 
 /**
@@ -102,7 +96,7 @@ export async function deleteUserAccount(
  * restored from an earlier backup, honoring user deletion requests without PII leakage (#57).
  */
 export async function replayDeletedTombstones(
-  clientOrPool: Queryable = pool,
+  clientOrPool: Queryable,
 ): Promise<{ replayedCount: number; userIds: string[] }> {
   const result = await clientOrPool.query(
     `SELECT t.user_id AS "userId"
@@ -123,7 +117,7 @@ export async function replayDeletedTombstones(
  * Safe, idempotent, and non-destructive to active events.
  */
 export async function purgeExpiredData(
-  clientOrPool: Queryable = pool,
+  clientOrPool: Queryable,
   options: RetentionPurgeOptions = {},
 ): Promise<RetentionPurgeReport> {
   const now = options.now ?? new Date()
@@ -188,11 +182,19 @@ export async function purgeExpiredData(
       [closedEventIds],
     )
 
-    const dynamicTables = ['event_introductions', 'event_meetings', 'event_availability', 'event_feedback']
+    const dynamicTables = [
+      {
+        name: 'meetings',
+        query: 'DELETE FROM meetings WHERE introduction_id IN (SELECT id FROM introductions WHERE event_id = ANY($1::uuid[]))',
+      },
+      { name: 'introductions', query: 'DELETE FROM introductions WHERE event_id = ANY($1::uuid[])' },
+      { name: 'availability', query: 'DELETE FROM availability WHERE event_id = ANY($1::uuid[])' },
+      { name: 'event_feedback', query: 'DELETE FROM event_feedback WHERE event_id = ANY($1::uuid[])' },
+    ]
     for (const dt of dynamicTables) {
-      const reg = await clientOrPool.query(`SELECT to_regclass('public.${dt}') IS NOT NULL AS exists`)
+      const reg = await clientOrPool.query(`SELECT to_regclass('public.${dt.name}') IS NOT NULL AS exists`)
       if (reg.rows[0]?.exists) {
-        await clientOrPool.query(`DELETE FROM ${dt} WHERE event_id = ANY($1::uuid[])`, [closedEventIds])
+        await clientOrPool.query(dt.query, [closedEventIds])
       }
     }
 
@@ -250,7 +252,7 @@ export async function purgeExpiredData(
 /**
  * Starts unref'd periodic background retention purge on the active process.
  */
-export function startPeriodicRetention(poolInstance: pg.Pool = pool, intervalMs = 60 * 60 * 1000): NodeJS.Timeout {
+export function startPeriodicRetention(poolInstance: pg.Pool, intervalMs = 60 * 60 * 1000): NodeJS.Timeout {
   const timer = setInterval(async () => {
     try {
       await purgeExpiredData(poolInstance)

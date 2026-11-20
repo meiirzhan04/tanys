@@ -4,8 +4,6 @@ CREATE TABLE IF NOT EXISTS deleted_account_tombstones (
 );
 CREATE INDEX IF NOT EXISTS deleted_account_tombstones_deleted_at ON deleted_account_tombstones(deleted_at);
 
-ALTER TABLE users ADD COLUMN IF NOT EXISTS contact text;
-
 ALTER TABLE sessions ADD COLUMN IF NOT EXISTS created_at timestamptz NOT NULL DEFAULT now();
 
 ALTER TABLE events ADD COLUMN IF NOT EXISTS closed_at timestamptz;

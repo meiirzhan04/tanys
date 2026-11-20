@@ -167,6 +167,13 @@ export interface Messages {
       genericRequest: string
       deleteAccountFailed: string
     }
+    unsaved: {
+      title: string
+      body: string
+      stayButton: string
+      discardButton: string
+      badge: string
+    }
   }
   social: {
     navIntroductions: string
@@ -244,6 +251,13 @@ export interface Messages {
     inviteCopied: string
     revokeInvite: string
     inviteRevoked: string
+    inviteExpired: string
+    showQr: string
+    qrDialogTitle: string
+    qrDialogHint: string
+    qrClose: string
+    qrGenerating: string
+    qrUnavailableNotice: string
     noInvites: string
     membersTitle: string
     memberNameCol: string
@@ -256,6 +270,11 @@ export interface Messages {
     profileHidden: string
     profileIncomplete: string
     noMembers: string
+    memberSearchLabel: string
+    memberSearchPlaceholder: string
+    clearMemberSearch: string
+    noMemberMatches: string
+    exportInterestsCsv: string
     boothsTitle: string
     boothNameLabel: string
     boothNamePlaceholder: string
@@ -476,6 +495,13 @@ export const messagesByLocale: Record<Locale, Messages> = {
         genericRequest: 'Произошла ошибка. Попробуйте повторить действие.',
         deleteAccountFailed: 'Не удалось удалить аккаунт. Попробуйте позже.',
       },
+      unsaved: {
+        title: 'Есть несохранённые изменения анкеты',
+        body: 'Если перейти сейчас, изменения в анкете этой вкладки будут отброшены.',
+        stayButton: 'Остаться',
+        discardButton: 'Отбросить изменения',
+        badge: 'Есть несохранённые изменения',
+      },
     },
     social: {
       navIntroductions: 'Знакомства',
@@ -553,6 +579,13 @@ export const messagesByLocale: Record<Locale, Messages> = {
       inviteCopied: 'Ссылка скопирована',
       revokeInvite: 'Отозвать',
       inviteRevoked: 'Отозвано',
+      inviteExpired: 'Истекло',
+      showQr: 'Показать QR',
+      qrDialogTitle: 'QR-код приглашения',
+      qrDialogHint: 'Покажите этот QR с телефона или на экране проектора. Код создан локально в браузере.',
+      qrClose: 'Закрыть',
+      qrGenerating: 'Формируем QR-код…',
+      qrUnavailableNotice: 'Приглашение отозвано или истекло. Сервер отклонит вход даже по ранее сохранённому QR-коду.',
       noInvites: 'Выпустите ссылку-приглашение, чтобы пригласить участников в это событие.',
       membersTitle: 'Участники события',
       memberNameCol: 'Участник',
@@ -565,6 +598,11 @@ export const messagesByLocale: Record<Locale, Messages> = {
       profileHidden: 'Скрыт',
       profileIncomplete: 'Анкета не заполнена',
       noMembers: 'В этом событии пока нет участников.',
+      memberSearchLabel: 'Поиск участника по имени',
+      memberSearchPlaceholder: 'Поиск по имени…',
+      clearMemberSearch: 'Сбросить',
+      noMemberMatches: 'По этому запросу участников не найдено.',
+      exportInterestsCsv: 'Скачать CSV',
       boothsTitle: 'Стенды партнёров события',
       boothNameLabel: 'Название стенда',
       boothNamePlaceholder: 'Например, Сообщество Go',
@@ -783,6 +821,13 @@ export const messagesByLocale: Record<Locale, Messages> = {
         genericRequest: 'Қате орын алды. Әрекетті қайталап көріңіз.',
         deleteAccountFailed: 'Аккаунтты өшіру мүмкін болмады. Кейінірек қайталап көріңіз.',
       },
+      unsaved: {
+        title: 'Анкетада сақталмаған өзгерістер бар',
+        body: 'Қазір басқа бөлімге өтсеңіз, осы қойындыдағы өзгерістер сақталмайды.',
+        stayButton: 'Қалу',
+        discardButton: 'Өзгерістерден бас тарту',
+        badge: 'Сақталмаған өзгерістер бар',
+      },
     },
     social: {
       navIntroductions: 'Танысулар',
@@ -860,6 +905,13 @@ export const messagesByLocale: Record<Locale, Messages> = {
       inviteCopied: 'Сілтеме көшірілді',
       revokeInvite: 'Қайтарып алу',
       inviteRevoked: 'Қайтарып алынды',
+      inviteExpired: 'Мерзімі өтті',
+      showQr: 'QR көрсету',
+      qrDialogTitle: 'Шақыру QR-коды',
+      qrDialogHint: 'Бұл QR-кодты телефоннан немесе проектордан көрсетіңіз. Код браузерде жергілікті жасалды.',
+      qrClose: 'Жабу',
+      qrGenerating: 'QR-код жасалуда…',
+      qrUnavailableNotice: 'Шақыру қайтарып алынған немесе мерзімі өткен. Ескі QR-кодпен де кіруді сервер қабылдамайды.',
       noInvites: 'Қатысушыларды шақыру үшін шақыру сілтемесін шығарыңыз.',
       membersTitle: 'Іс-шара қатысушылары',
       memberNameCol: 'Қатысушы',
@@ -872,6 +924,11 @@ export const messagesByLocale: Record<Locale, Messages> = {
       profileHidden: 'Жасырын',
       profileIncomplete: 'Анкета толтырылмаған',
       noMembers: 'Бұл іс-шарада әлі қатысушылар жоқ.',
+      memberSearchLabel: 'Қатысушыны аты бойынша іздеу',
+      memberSearchPlaceholder: 'Аты бойынша іздеу…',
+      clearMemberSearch: 'Тазарту',
+      noMemberMatches: 'Бұл сұрау бойынша қатысушылар табылмады.',
+      exportInterestsCsv: 'CSV жүктеу',
       boothsTitle: 'Іс-шара серіктес стендтері',
       boothNameLabel: 'Стенд атауы',
       boothNamePlaceholder: 'Мысалы, Go қауымдастығы',
@@ -1090,6 +1147,13 @@ export const messagesByLocale: Record<Locale, Messages> = {
         genericRequest: 'Something went wrong. Please try again.',
         deleteAccountFailed: 'Failed to delete account. Please try again later.',
       },
+      unsaved: {
+        title: 'You have unsaved profile changes',
+        body: 'If you leave now, your edits in this tab will be discarded.',
+        stayButton: 'Stay',
+        discardButton: 'Discard changes',
+        badge: 'Unsaved changes',
+      },
     },
     social: {
       navIntroductions: 'Introductions',
@@ -1167,6 +1231,13 @@ export const messagesByLocale: Record<Locale, Messages> = {
       inviteCopied: 'Link copied',
       revokeInvite: 'Revoke',
       inviteRevoked: 'Revoked',
+      inviteExpired: 'Expired',
+      showQr: 'Show QR',
+      qrDialogTitle: 'Invite QR code',
+      qrDialogHint: 'Display this QR on a phone or projector. Generated locally in your browser.',
+      qrClose: 'Close',
+      qrGenerating: 'Generating QR code…',
+      qrUnavailableNotice: 'This invite was revoked or expired. Even a previously saved QR screenshot will be rejected by the server.',
       noInvites: 'Issue an invite link to invite participants into this event.',
       membersTitle: 'Event participants',
       memberNameCol: 'Participant',
@@ -1179,6 +1250,11 @@ export const messagesByLocale: Record<Locale, Messages> = {
       profileHidden: 'Hidden',
       profileIncomplete: 'Profile not filled',
       noMembers: 'No participants in this event yet.',
+      memberSearchLabel: 'Search participant by name',
+      memberSearchPlaceholder: 'Search by name…',
+      clearMemberSearch: 'Clear',
+      noMemberMatches: 'No participants match this search.',
+      exportInterestsCsv: 'Export CSV',
       boothsTitle: 'Partner booths',
       boothNameLabel: 'Booth name',
       boothNamePlaceholder: 'e.g. Go Community',

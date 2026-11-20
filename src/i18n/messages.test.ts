@@ -35,6 +35,9 @@ test('provides complete, distinct translations for ru, kk, and en', () => {
     assert.ok(messages.account.visibilityNotice.trim())
     assert.ok(messages.account.consentLabel.trim())
     assert.ok(messages.account.expiredTitle.trim())
+    assert.ok(messages.account.unsaved.title.trim())
+    assert.ok(messages.account.unsaved.stayButton.trim())
+    assert.ok(messages.account.unsaved.discardButton.trim())
     for (const [field, errorText] of Object.entries(messages.account.errors)) {
       assert.ok(errorText.trim(), `missing account error ${field} for ${code}`)
     }
@@ -44,6 +47,11 @@ test('provides complete, distinct translations for ru, kk, and en', () => {
     assert.ok(messages.organizer.title.trim())
     assert.ok(messages.organizer.createEventButton.trim())
     assert.ok(messages.organizer.noBooths.trim())
+    assert.ok(messages.organizer.showQr.trim())
+    assert.ok(messages.organizer.qrDialogTitle.trim())
+    assert.ok(messages.organizer.exportInterestsCsv.trim())
+    assert.ok(messages.organizer.memberSearchLabel.trim())
+    assert.ok(messages.organizer.noMemberMatches.trim())
     assert.ok(messages.moderation.blockButton.trim())
     assert.ok(messages.moderation.reportedNotice.trim())
     assert.ok(messages.moderation.supportNotice.trim())

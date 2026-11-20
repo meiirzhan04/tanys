@@ -196,9 +196,10 @@ test('organizer creates events without JSON, isolates second empty event, manage
     await orgPage.locator('input[name="eventName"]').fill('Almaty Go Conf')
     await orgPage.locator('button', { hasText: 'Создать событие' }).click()
 
-    // Empty event 1 initially has zero synthetic booths & zero synthetic topics!
+    // Empty event 1 initially has zero synthetic booths & zero synthetic topics; CSV export is disabled
     await expect(orgPage.locator('text=В этом событии пока нет стендов.')).toBeVisible()
     await expect(orgPage.locator('.interest-map .empty-state')).toBeVisible()
+    await expect(orgPage.locator('.interest-map button', { hasText: 'Скачать CSV' })).toBeDisabled()
 
     // Issue invite link & create a published booth in Event 1
     await orgPage.locator('button', { hasText: 'Выпустить приглашение' }).click()
@@ -231,13 +232,21 @@ test('organizer creates events without JSON, isolates second empty event, manage
     await guestPage.locator('.workspace-nav button').nth(1).click()
     await expect(guestPage.locator('[data-booth-id]')).toHaveCount(0)
 
-    // Organizer creates Event 2 -> completely isolated! No participant from Event 1, no booths from Event 1, empty interests
+    // Search member by partial name (case-insensitive) in Event 1, then create Event 2 -> search resets and isolates events
+    await orgPage.locator('input[name="memberSearch"]').fill('  организ  ')
+    await expect(orgPage.locator('[data-member-id]')).toHaveCount(1)
+    await orgPage.locator('input[name="memberSearch"]').fill('нет такого')
+    await expect(orgPage.locator('text=По этому запросу участников не найдено.')).toBeVisible()
+
+    // Organizer creates Event 2 -> completely isolated! No participant from Event 1, search reset, no booths from Event 1, empty interests
     await orgPage.locator('input[name="eventName"]').fill('Astana Design Meetup')
     await orgPage.locator('button', { hasText: 'Создать событие' }).click()
+    await expect(orgPage.locator('input[name="memberSearch"]')).toHaveValue('')
     await expect(orgPage.locator('[data-managed-booth-id]')).toHaveCount(0)
     await expect(orgPage.locator('text=В этом событии пока нет стендов.')).toBeVisible()
     await expect(orgPage.locator('[data-member-id]')).toHaveCount(1)
     await expect(orgPage.locator('.interest-map .empty-state')).toBeVisible()
+    await expect(orgPage.locator('.interest-map button', { hasText: 'Скачать CSV' })).toBeDisabled()
   } finally {
     await orgCtx.close()
     await guestCtx.close()

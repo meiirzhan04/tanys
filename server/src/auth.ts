@@ -83,17 +83,6 @@ async function signIn(req: IncomingMessage, res: ServerResponse) {
   json(res, 200, { id: user })
 }
 
-async function updateContact(req: IncomingMessage, res: ServerResponse) {
-  const userId = await viewer(req)
-  const body = await readBody(req)
-  if (typeof body.value !== 'string' || body.value.trim().length > 200) {
-    throw new HttpError(400, 'invalid_contact')
-  }
-  const val = body.value.trim()
-  await pool.query('UPDATE users SET contact=$1 WHERE id=$2', [val, userId])
-  json(res, 204)
-}
-
 async function deleteAccountHandler(req: IncomingMessage, res: ServerResponse) {
   const userId = await viewer(req)
   let body: Record<string, unknown> = {}
@@ -126,7 +115,7 @@ async function deleteAccountHandler(req: IncomingMessage, res: ServerResponse) {
     }
   }
 
-  await deleteUserAccount(userId)
+  await transaction(client => deleteUserAccount(userId, client))
   res.setHeader('Set-Cookie', cookie('', 0))
   json(res, 204)
 }
@@ -134,12 +123,7 @@ async function deleteAccountHandler(req: IncomingMessage, res: ServerResponse) {
 export async function authRoute(req: IncomingMessage, res: ServerResponse, path: string) {
   if (req.method === 'POST' && path === '/auth/challenges') await challenge(req,res)
   else if (req.method === 'POST' && path === '/auth/sessions') await signIn(req,res)
-  else if (req.method === 'GET' && path === '/me') {
-    const id = await viewer(req)
-    const row = await pool.query('SELECT contact FROM users WHERE id=$1', [id])
-    json(res, 200, { id, contact: row.rows[0]?.contact ?? null })
-  }
-  else if (req.method === 'PUT' && path === '/me/contact') await updateContact(req, res)
+  else if (req.method === 'GET' && path === '/me') json(res, 200, { id: await viewer(req) })
   else if (req.method === 'DELETE' && path === '/auth/session') {
     await pool.query('DELETE FROM sessions WHERE digest=$1', [sha(token(req) || '')])
     res.setHeader('Set-Cookie', cookie('',0))

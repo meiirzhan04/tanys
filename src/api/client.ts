@@ -225,6 +225,7 @@ export interface TanysApiClient {
     introductionId: string,
     status: Exclude<IntroductionStatus, 'pending'>,
   ): Promise<IntroductionItem>
+  getAvailability(eventId: string): Promise<{ start: string; end: string }[]>
   saveAvailability(eventId: string, slots: readonly { start: string; end: string }[]): Promise<void>
   listCommonSlots(eventId: string, introductionId: string): Promise<CommonSlot[]>
   listMeetings(eventId: string): Promise<ServerMeeting[]>
@@ -434,6 +435,10 @@ export function createTanysApiClient(
       )
     },
 
+    async getAvailability(eventId) {
+      const result = await request<{ slots: {start:string;end:string}[] }>(`/events/${encodeURIComponent(eventId)}/availability/me`)
+      return result.slots
+    },
     async saveAvailability(eventId, slots) {
       await request<null>(
         `/events/${encodeURIComponent(eventId)}/availability/me`,
@@ -511,10 +516,31 @@ export function createTanysApiClient(
     },
 
     async listEventMembers(eventId) {
-      const data = await request<{ items?: EventMemberItem[] }>(
-        `/events/${encodeURIComponent(eventId)}/members`,
-      )
-      return Array.isArray(data?.items) ? data.items : []
+      const all: EventMemberItem[] = []
+      const seenUsers = new Set<string>()
+      const seenCursors = new Set<string>()
+      let cursor: string | null = null
+
+      while (true) {
+        const suffix: string = cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''
+        const data: { items?: EventMemberItem[]; nextCursor?: string | null } = await request<{
+          items?: EventMemberItem[]
+          nextCursor?: string | null
+        }>(`/events/${encodeURIComponent(eventId)}/members${suffix}`)
+        const items = Array.isArray(data?.items) ? data.items : []
+        for (const member of items) {
+          if (seenUsers.has(member.userId)) continue
+          seenUsers.add(member.userId)
+          all.push(member)
+        }
+        const next: string | null =
+          typeof data?.nextCursor === 'string' && data.nextCursor.trim() ? data.nextCursor : null
+        if (!next || seenCursors.has(next)) break
+        seenCursors.add(next)
+        cursor = next
+      }
+
+      return all
     },
 
     async getEventInterests(eventId) {

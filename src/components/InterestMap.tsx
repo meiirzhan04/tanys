@@ -5,10 +5,12 @@ import type { Locale } from '../matching/types'
 interface InterestMapProps {
   summary: InterestSummary
   locale: Locale
+  onExportCsv?: () => void
 }
 
-export function InterestMap({ summary, locale }: InterestMapProps) {
-  const t = getMessages(locale).interestMap
+export function InterestMap({ summary, locale, onExportCsv }: InterestMapProps) {
+  const messages = getMessages(locale)
+  const t = messages.interestMap
   const number = new Intl.NumberFormat(locale)
   const highestCount = summary.topics[0]?.count ?? 1
 
@@ -19,6 +21,14 @@ export function InterestMap({ summary, locale }: InterestMapProps) {
           <h1 id="interest-map-title" tabIndex={-1}>{t.title}</h1>
           <p>{t.profileCount} <strong>{number.format(summary.profileCount)}</strong></p>
         </div>
+        {onExportCsv && (
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={summary.topics.length === 0}
+            onClick={onExportCsv}
+          >{messages.organizer.exportInterestsCsv}</button>
+        )}
       </div>
       {summary.topics.length ? (
         <div className="surface">

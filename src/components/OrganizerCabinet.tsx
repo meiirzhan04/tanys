@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { isApiError } from '../api/client'
 import type {
@@ -11,11 +11,15 @@ import type {
   ModerationAction,
   TanysApiClient,
 } from '../api/client'
+import { buildInterestCsvFilename, serializeInterestMapCsv } from '../data/interestCsv'
 import type { InterestSummary } from '../data/interestSummary'
 import { getMessages } from '../i18n/messages'
 import type { Locale } from '../matching/types'
 import { getGoalLabels } from './goalLabels'
 import { InterestMap } from './InterestMap'
+import { buildInviteUrl, getInviteState } from './inviteQr'
+import { InviteQrModal } from './InviteQrModal'
+import { filterEventMembers } from './memberSearch'
 
 export interface OrganizerCabinetProps {
   api: TanysApiClient
@@ -75,7 +79,10 @@ export function OrganizerCabinet({
   const [invites, setInvites] = useState<EventInvite[]>([])
   const [issuingInvite, setIssuingInvite] = useState(false)
   const [copiedInviteId, setCopiedInviteId] = useState('')
+  const [qrInviteId, setQrInviteId] = useState<string | null>(null)
+  const qrTriggerRef = useRef<HTMLButtonElement | null>(null)
   const [members, setMembers] = useState<EventMemberItem[]>([])
+  const [memberSearch, setMemberSearch] = useState('')
   const [interests, setInterests] = useState<EventInterestsPayload | null>(null)
   const [booths, setBooths] = useState<EventBooth[]>([])
   const [reports, setReports] = useState<EventReportItem[]>([])
@@ -96,7 +103,9 @@ export function OrganizerCabinet({
   useEffect(() => {
     setEditName(activeEvent?.name ?? '')
     setInvites([])
+    setQrInviteId(null)
     setMembers([])
+    setMemberSearch('')
     setInterests(null)
     setBooths([])
     setReports([])
@@ -236,7 +245,7 @@ export function OrganizerCabinet({
 
   async function handleCopyInvite(invite: EventInvite) {
     if (!activeEvent) return
-    const url = `${window.location.origin}/invite/${encodeURIComponent(activeEvent.id)}/${encodeURIComponent(invite.token)}`
+    const url = buildInviteUrl(window.location.origin, activeEvent.id, invite.token)
     try {
       await navigator.clipboard.writeText(url)
       setCopiedInviteId(invite.id)
@@ -331,6 +340,25 @@ export function OrganizerCabinet({
   }
 
   const isClosed = activeEvent?.status === 'closed'
+  const interestSummary = toInterestSummary(interests, members.length)
+  const filteredMembers = filterEventMembers(members, memberSearch)
+
+  function handleExportInterestsCsv() {
+    if (!activeEvent || interestSummary.topics.length === 0) return
+    const csv = serializeInterestMapCsv(interestSummary.topics, {
+      topic: messages.interestMap.topic,
+      participants: messages.interestMap.participants,
+    })
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = buildInterestCsvFilename(activeEvent.name || activeEvent.id, activeEvent.id)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <section className="organizer-section" aria-labelledby="organizer-title">
@@ -440,18 +468,29 @@ export function OrganizerCabinet({
             ) : (
               <ul className="invite-list">
                 {invites.map(invite => {
-                  const fullUrl = `${window.location.origin}/invite/${encodeURIComponent(activeEvent.id)}/${encodeURIComponent(invite.token)}`
+                  const fullUrl = buildInviteUrl(window.location.origin, activeEvent.id, invite.token)
+                  const inviteState = getInviteState(invite)
                   return (
                     <li key={invite.id} className="invite-row" data-invite-id={invite.id}>
                       <code className="invite-url">{fullUrl}</code>
                       <div className="social-card__actions">
-                        {invite.revoked ? (
-                          <span className="status-badge status-badge--cancelled">{o.inviteRevoked}</span>
+                        {inviteState !== 'active' ? (
+                          <span className="status-badge status-badge--cancelled">
+                            {inviteState === 'revoked' ? o.inviteRevoked : o.inviteExpired}
+                          </span>
                         ) : (
                           <>
                             <button type="button" className="secondary-button" onClick={() => void handleCopyInvite(invite)}>
                               {copiedInviteId === invite.id ? o.inviteCopied : o.copyInvite}
                             </button>
+                            <button
+                              type="button"
+                              className="secondary-button"
+                              onClick={event => {
+                                qrTriggerRef.current = event.currentTarget
+                                setQrInviteId(invite.id)
+                              }}
+                            >{o.showQr}</button>
                             <button type="button" className="meeting-slot-cancel" onClick={() => void handleRevokeInvite(invite.id)}>
                               {o.revokeInvite}
                             </button>
@@ -473,37 +512,64 @@ export function OrganizerCabinet({
             ) : members.length === 0 ? (
               <p className="social-card__hint">{o.noMembers}</p>
             ) : (
-              <table className="interest-table members-table">
-                <thead>
-                  <tr>
-                    <th scope="col">{o.memberNameCol}</th>
-                    <th scope="col">{o.memberRoleCol}</th>
-                    <th scope="col">{o.memberGoalCol}</th>
-                    <th scope="col">{o.memberVisibilityCol}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {members.map(member => (
-                    <tr key={member.userId} data-member-id={member.userId}>
-                      <th scope="row">{member.name || member.userId}</th>
-                      <td>{member.profileRole || (member.role === 'organizer' ? o.roleOrganizer : o.roleParticipant)}</td>
-                      <td>{member.goal ? goalLabels[member.goal] : '—'}</td>
-                      <td>
-                        {member.visible === true
-                          ? o.profileVisible
-                          : member.visible === false
-                            ? o.profileHidden
-                            : o.profileIncomplete}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <>
+                <div className="contact-row">
+                  <input
+                    type="search"
+                    name="memberSearch"
+                    aria-label={o.memberSearchLabel}
+                    placeholder={o.memberSearchPlaceholder}
+                    value={memberSearch}
+                    onChange={event => setMemberSearch(event.target.value)}
+                  />
+                  {memberSearch.trim() && (
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => setMemberSearch('')}
+                    >{o.clearMemberSearch}</button>
+                  )}
+                </div>
+                {filteredMembers.length === 0 ? (
+                  <p className="social-card__hint">{o.noMemberMatches}</p>
+                ) : (
+                  <table className="interest-table members-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">{o.memberNameCol}</th>
+                        <th scope="col">{o.memberRoleCol}</th>
+                        <th scope="col">{o.memberGoalCol}</th>
+                        <th scope="col">{o.memberVisibilityCol}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredMembers.map(member => (
+                        <tr key={member.userId} data-member-id={member.userId}>
+                          <th scope="row">{member.name || member.userId}</th>
+                          <td>{member.profileRole || (member.role === 'organizer' ? o.roleOrganizer : o.roleParticipant)}</td>
+                          <td>{member.goal ? goalLabels[member.goal] : '—'}</td>
+                          <td>
+                            {member.visible === true
+                              ? o.profileVisible
+                              : member.visible === false
+                                ? o.profileHidden
+                                : o.profileIncomplete}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </>
             )}
           </div>
 
           {/* 5. Real event interest map (#12 connected to event aggregates, zero demo profiles) */}
-          <InterestMap summary={toInterestSummary(interests, members.length)} locale={locale} />
+          <InterestMap
+            summary={interestSummary}
+            locale={locale}
+            onExportCsv={handleExportInterestsCsv}
+          />
 
           {/* 6. Managed partner booths (#14 connected to event booths, zero demo booths) */}
           <div className="surface organizer-card">
@@ -668,6 +734,27 @@ export function OrganizerCabinet({
           </div>
         </>
       )}
+
+      {activeEvent && qrInviteId && (() => {
+        const activeInvite = invites.find(item => item.id === qrInviteId)
+        if (!activeInvite) return null
+        const fullUrl = buildInviteUrl(window.location.origin, activeEvent.id, activeInvite.token)
+        return (
+          <InviteQrModal
+            eventName={activeEvent.name || activeEvent.id}
+            inviteUrl={fullUrl}
+            revoked={activeInvite.revoked}
+            expiresAt={activeInvite.expiresAt}
+            locale={locale}
+            copied={copiedInviteId === activeInvite.id}
+            onCopy={() => void handleCopyInvite(activeInvite)}
+            onClose={() => {
+              setQrInviteId(null)
+              requestAnimationFrame(() => qrTriggerRef.current?.focus())
+            }}
+          />
+        )
+      })()}
     </section>
   )
 }

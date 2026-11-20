@@ -1,3 +1,4 @@
+import { AvailabilityEditor } from './AvailabilityEditor'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
@@ -33,6 +34,8 @@ import type { Goal, Locale, Recommendation } from '../matching/types'
 import { getGoalLabels } from './goalLabels'
 import { OrganizerCabinet } from './OrganizerCabinet'
 import { PartnerBooths } from './PartnerBooths'
+import { hasUnsavedProfileChanges, parseProfileTopics } from './profileDirty'
+import type { EventProfileDraft } from './profileDirty'
 import { RecommendationResults } from './RecommendationResults'
 import {
   countActionableMeetings,
@@ -41,19 +44,7 @@ import {
 } from './socialHelpers'
 import type { SocialNotification } from './socialHelpers'
 import { IntroductionsPanel, NotificationBanner, ServerMeetingsPanel } from './SocialPanels'
-
-interface EventProfileDraft {
-  name: string
-  goal: Goal | ''
-  role: string
-  experience: string
-  skills: string
-  interests: string
-  about: string
-  lookingFor: string
-  visible: boolean
-  consentAccepted: boolean
-}
+import { UnsavedChangesDialog } from './UnsavedChangesDialog'
 
 type ProfileErrorField = 'name' | 'goal' | 'role' | 'experience' | 'skills' | 'interests' | 'about' | 'consent'
 type ProfileErrors = Partial<Record<ProfileErrorField, string>>
@@ -91,7 +82,7 @@ function profileToDraft(profile: ServerProfile | null): EventProfileDraft {
 }
 
 function parseTopics(value: string): string[] {
-  return value.split(/[,\n]/).map(item => item.trim()).filter(Boolean)
+  return parseProfileTopics(value)
 }
 
 function validateDraft(draft: EventProfileDraft, locale: Locale): ProfileErrors {
@@ -135,6 +126,7 @@ export interface EventAccountFlowProps {
   locale: Locale
   initialInvite: InviteTarget | null
   onExitToDemo: () => void
+  exitRequestSeq?: number
   api?: TanysApiClient
 }
 
@@ -142,6 +134,7 @@ export function EventAccountFlow({
   locale,
   initialInvite,
   onExitToDemo,
+  exitRequestSeq = 0,
   api = defaultApiClient,
 }: EventAccountFlowProps) {
   const id = useId()
@@ -174,7 +167,10 @@ export function EventAccountFlow({
   const [eventError, setEventError] = useState('')
   const [tab, setTab] = useState<EventTab>('profile')
   const [hasSavedProfile, setHasSavedProfile] = useState(false)
+  const [savedBaseline, setSavedBaseline] = useState<EventProfileDraft | null>(null)
   const [draft, setDraft] = useState<EventProfileDraft>(() => emptyDraft())
+  const [pendingLeaveAction, setPendingLeaveAction] = useState<(() => void) | null>(null)
+  const pendingTriggerRef = useRef<HTMLElement | null>(null)
   const [showErrors, setShowErrors] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
@@ -279,8 +275,10 @@ export function EventAccountFlow({
       setActiveEventId(eventId)
       setActiveEvent(details)
       setHasSavedProfile(Boolean(profile))
+      const loadedDraft = profile ? profileToDraft(profile) : null
+      setSavedBaseline(loadedDraft)
       if (!preserveDraft) {
-        setDraft(profileToDraft(profile))
+        setDraft(loadedDraft ?? emptyDraft())
         setShowErrors(false)
       }
       setRecommendations(null)
@@ -494,6 +492,8 @@ export function EventAccountFlow({
       prevMeetingsRef.current = []
       socialInitializedRef.current = false
       setDraft(emptyDraft())
+      setSavedBaseline(null)
+      setPendingLeaveAction(null)
       setHasSavedProfile(false)
       setShowErrors(false)
       setSaveError('')
@@ -518,6 +518,7 @@ export function EventAccountFlow({
         setActiveEvent(null)
         setRecommendations(null)
         setDraft(emptyDraft())
+        setSavedBaseline(null)
         setHasSavedProfile(false)
       }
     } catch (error) {
@@ -595,8 +596,10 @@ export function EventAccountFlow({
         visible: draft.visible,
         consentVersion: 'v1',
       })
+      const nextSaved = profileToDraft(saved)
       setHasSavedProfile(true)
-      setDraft(profileToDraft(saved))
+      setSavedBaseline(nextSaved)
+      setDraft(nextSaved)
       setSaveSuccess(true)
       await loadRecommendations(activeEventId)
     } catch (error) {
@@ -840,6 +843,52 @@ export function EventAccountFlow({
   const errors = showErrors ? validateDraft(draft, locale) : {}
   const showLookingFor = draft.goal === 'hire' || draft.goal === 'find_cofounder' || draft.goal === 'find_mentor'
   const isClosed = activeEvent?.status === 'closed'
+  const hasUnsavedChanges = useMemo(
+    () => phase === 'ready' && tab === 'profile' && hasUnsavedProfileChanges(savedBaseline, draft),
+    [draft, phase, savedBaseline, tab],
+  )
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [hasUnsavedChanges])
+
+  const guardNavigation = useCallback((action: () => void, trigger?: HTMLElement | null) => {
+    if (!hasUnsavedChanges) {
+      action()
+      return
+    }
+    pendingTriggerRef.current = trigger ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null)
+    setPendingLeaveAction(() => action)
+  }, [hasUnsavedChanges])
+
+  const lastExitSeqRef = useRef(exitRequestSeq)
+  useEffect(() => {
+    if (exitRequestSeq === lastExitSeqRef.current) return
+    lastExitSeqRef.current = exitRequestSeq
+    guardNavigation(onExitToDemo)
+  }, [exitRequestSeq, guardNavigation, onExitToDemo])
+
+  function handleStayOnProfile() {
+    setPendingLeaveAction(null)
+    requestAnimationFrame(() => pendingTriggerRef.current?.focus())
+  }
+
+  function handleDiscardAndContinue() {
+    const action = pendingLeaveAction
+    setPendingLeaveAction(null)
+    if (savedBaseline) {
+      setDraft(savedBaseline)
+      setShowErrors(false)
+      setSaveError('')
+    }
+    action?.()
+  }
 
   function updateField<K extends keyof EventProfileDraft>(key: K, value: EventProfileDraft[K]) {
     setDraft(current => ({ ...current, [key]: value }))
@@ -1003,13 +1052,13 @@ export function EventAccountFlow({
           type="button"
           aria-current={tab === 'results' ? 'page' : undefined}
           disabled={!activeEventId || !hasSavedProfile}
-          onClick={() => {
+          onClick={event => guardNavigation(() => {
             if (recommendations === null && activeEventId) {
               void loadRecommendations(activeEventId)
             } else {
               setTab('results')
             }
-          }}
+          }, event.currentTarget)}
         >
           {messages.nav.results} {recommendations && <span className="nav-count">{recommendations.length}</span>}
         </button>
@@ -1017,10 +1066,10 @@ export function EventAccountFlow({
           type="button"
           aria-current={tab === 'introductions' ? 'page' : undefined}
           disabled={!activeEventId}
-          onClick={() => {
+          onClick={event => guardNavigation(() => {
             setTab('introductions')
             if (activeEventId) void refreshSocialState(activeEventId, true)
-          }}
+          }, event.currentTarget)}
         >
           {messages.social.navIntroductions}{' '}
           <span className="nav-count">{pendingIncomingCount || introductions.length}</span>
@@ -1029,24 +1078,24 @@ export function EventAccountFlow({
           type="button"
           aria-current={tab === 'meetings' ? 'page' : undefined}
           disabled={!activeEventId}
-          onClick={() => {
+          onClick={event => guardNavigation(() => {
             setTab('meetings')
             if (activeEventId) void refreshSocialState(activeEventId, true)
-          }}
+          }, event.currentTarget)}
         >
           {messages.social.navMeetings} <span className="nav-count">{activeMeetingsCount}</span>
         </button>
         <button
           type="button"
           aria-current={tab === 'organizer' ? 'page' : undefined}
-          onClick={() => setTab('organizer')}
+          onClick={event => guardNavigation(() => setTab('organizer'), event.currentTarget)}
         >
           {messages.organizer.navLabel}
         </button>
         <button
           type="button"
           disabled={loggingOut}
-          onClick={() => void handleLogout()}
+          onClick={event => guardNavigation(() => void handleLogout(), event.currentTarget)}
         >{loggingOut ? t.loggingOut : t.logout}</button>
       </nav>
 
@@ -1063,7 +1112,10 @@ export function EventAccountFlow({
               <select
                 value={activeEventId}
                 disabled={eventLoading || saving}
-                onChange={event => void loadEventWorkspace(event.target.value)}
+                onChange={event => {
+                  const nextId = event.target.value
+                  guardNavigation(() => void loadEventWorkspace(nextId), event.currentTarget)
+                }}
               >
                 {events.map(item => (
                   <option key={item.id} value={item.id}>
@@ -1082,7 +1134,7 @@ export function EventAccountFlow({
                 type="button"
                 className="text-button"
                 disabled={leavingEvent || saving || deletingAccount}
-                onClick={() => void handleLeaveEvent()}
+                onClick={event => guardNavigation(() => void handleLeaveEvent(), event.currentTarget)}
               >{leavingEvent ? t.leavingEvent : t.leaveEvent}</button>
             )}
             <button
@@ -1091,7 +1143,7 @@ export function EventAccountFlow({
               disabled={deletingAccount || leavingEvent || loggingOut || saving}
               onClick={() => void handleDeleteAccount()}
             >{deletingAccount ? t.deletingAccount : t.deleteAccount}</button>
-            <button type="button" className="secondary-button" onClick={onExitToDemo}>
+            <button type="button" className="secondary-button" onClick={event => guardNavigation(onExitToDemo, event.currentTarget)}>
               {t.backToDemo}
             </button>
           </div>
@@ -1151,6 +1203,8 @@ export function EventAccountFlow({
             refreshing={socialRefreshing}
           />
         ) : tab === 'meetings' ? (
+          <>
+          {!isClosed && <AvailabilityEditor key={activeEventId} api={api} event={activeEventId} locale={locale} zone={eventTimeZone} />}
           <ServerMeetingsPanel
             meetings={meetings}
             locale={locale}
@@ -1162,6 +1216,7 @@ export function EventAccountFlow({
             onRefresh={() => { if (activeEventId) void refreshSocialState(activeEventId, true) }}
             refreshing={socialRefreshing}
           />
+          </>
         ) : tab === 'results' ? (
           recsLoading && recommendations === null ? (
             <div className="surface status-panel" role="status" aria-live="polite" aria-busy="true">
@@ -1397,10 +1452,23 @@ export function EventAccountFlow({
                 <button type="submit" className="primary-button" disabled={saving || isClosed}>
                   {saving ? t.savingProfile : t.saveProfile}
                 </button>
-                <span>{draft.visible ? t.visibilityStatusVisible : t.visibilityStatusHidden}</span>
+                <span>
+                  {hasUnsavedChanges
+                    ? t.unsaved.badge
+                    : draft.visible
+                      ? t.visibilityStatusVisible
+                      : t.visibilityStatusHidden}
+                </span>
               </div>
             </div>
           </form>
+        )}
+        {pendingLeaveAction && (
+          <UnsavedChangesDialog
+            locale={locale}
+            onStay={handleStayOnProfile}
+            onDiscard={handleDiscardAndContinue}
+          />
         )}
         <footer className="support-footer">
           <p>{messages.moderation.supportNotice}</p>

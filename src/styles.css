@@ -168,6 +168,15 @@ h1, h2, p { margin: 0; }
 .moderation-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 .report-form { display: grid; gap: 10px; margin-top: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 7px; background: #f8fafd; }
 .support-footer { margin-top: 24px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; line-height: 1.5; max-width: 840px; }
+.qr-modal-backdrop { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center; padding: 16px; background: rgba(19, 36, 63, 0.58); }
+.qr-modal { width: min(100%, 420px); max-height: calc(100vh - 32px); overflow-y: auto; padding: clamp(16px, 3vw, 24px); display: grid; gap: 14px; box-shadow: 0 18px 42px rgba(19, 36, 63, 0.25); }
+.qr-modal__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.qr-modal__header h2 { font-size: 18px; line-height: 1.25; }
+.qr-modal__hint { color: var(--muted); font-size: 13px; line-height: 1.45; }
+.qr-svg-frame { display: grid; place-items: center; padding: 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.qr-svg-box { width: min(100%, 260px); aspect-ratio: 1; }
+.qr-svg-box svg { display: block; width: 100%; height: 100%; }
+.qr-modal__link-box { padding: 10px 12px; border: 1px solid var(--line); border-radius: 7px; background: #f8fafd; }
 
 .interest-map { max-width: 840px; }
 .interest-table { width: 100%; border-collapse: collapse; font-size: 13px; }
