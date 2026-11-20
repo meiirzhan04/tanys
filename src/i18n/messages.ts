@@ -240,6 +240,13 @@ export interface Messages {
     inviteCopied: string
     revokeInvite: string
     inviteRevoked: string
+    inviteExpired: string
+    showQr: string
+    qrDialogTitle: string
+    qrDialogHint: string
+    qrClose: string
+    qrGenerating: string
+    qrUnavailableNotice: string
     noInvites: string
     membersTitle: string
     memberNameCol: string
@@ -545,6 +552,13 @@ export const messagesByLocale: Record<Locale, Messages> = {
       inviteCopied: 'Ссылка скопирована',
       revokeInvite: 'Отозвать',
       inviteRevoked: 'Отозвано',
+      inviteExpired: 'Истекло',
+      showQr: 'Показать QR',
+      qrDialogTitle: 'QR-код приглашения',
+      qrDialogHint: 'Покажите этот QR с телефона или на экране проектора. Код создан локально в браузере.',
+      qrClose: 'Закрыть',
+      qrGenerating: 'Формируем QR-код…',
+      qrUnavailableNotice: 'Приглашение отозвано или истекло. Сервер отклонит вход даже по ранее сохранённому QR-коду.',
       noInvites: 'Выпустите ссылку-приглашение, чтобы пригласить участников в это событие.',
       membersTitle: 'Участники события',
       memberNameCol: 'Участник',
@@ -848,6 +862,13 @@ export const messagesByLocale: Record<Locale, Messages> = {
       inviteCopied: 'Сілтеме көшірілді',
       revokeInvite: 'Қайтарып алу',
       inviteRevoked: 'Қайтарып алынды',
+      inviteExpired: 'Мерзімі өтті',
+      showQr: 'QR көрсету',
+      qrDialogTitle: 'Шақыру QR-коды',
+      qrDialogHint: 'Бұл QR-кодты телефоннан немесе проектордан көрсетіңіз. Код браузерде жергілікті жасалды.',
+      qrClose: 'Жабу',
+      qrGenerating: 'QR-код жасалуда…',
+      qrUnavailableNotice: 'Шақыру қайтарып алынған немесе мерзімі өткен. Ескі QR-кодпен де кіруді сервер қабылдамайды.',
       noInvites: 'Қатысушыларды шақыру үшін шақыру сілтемесін шығарыңыз.',
       membersTitle: 'Іс-шара қатысушылары',
       memberNameCol: 'Қатысушы',
@@ -1151,6 +1172,13 @@ export const messagesByLocale: Record<Locale, Messages> = {
       inviteCopied: 'Link copied',
       revokeInvite: 'Revoke',
       inviteRevoked: 'Revoked',
+      inviteExpired: 'Expired',
+      showQr: 'Show QR',
+      qrDialogTitle: 'Invite QR code',
+      qrDialogHint: 'Display this QR on a phone or projector. Generated locally in your browser.',
+      qrClose: 'Close',
+      qrGenerating: 'Generating QR code…',
+      qrUnavailableNotice: 'This invite was revoked or expired. Even a previously saved QR screenshot will be rejected by the server.',
       noInvites: 'Issue an invite link to invite participants into this event.',
       membersTitle: 'Event participants',
       memberNameCol: 'Participant',
