@@ -127,6 +127,14 @@ export interface Messages {
     expiredBody: string
     openMyEvents: string
     eventSelectorLabel: string
+    copyManually: string
+    inviteLink: string
+    joinWithLink: string
+    inviteInvalid: string
+    inviteRetry: string
+    inviteClosed: string
+    downloadQr: string
+    qrError: string
     noEventsTitle: string
     noEventsBody: string
     logout: string
@@ -467,6 +475,14 @@ export const messagesByLocale: Record<Locale, Messages> = {
       expiredBody: 'Попросите организатора прислать новое приглашение или откройте одно из ваших мероприятий.',
       openMyEvents: 'Мои мероприятия',
       eventSelectorLabel: 'Мероприятие',
+      copyManually: 'Выделите ссылку и скопируйте её вручную.',
+      inviteLink: 'Ссылка приглашения',
+      joinWithLink: 'Присоединиться по ссылке',
+      inviteInvalid: 'Вставьте полную ссылку приглашения Tanys, полученную от организатора.',
+      inviteRetry: 'Повторить присоединение',
+      inviteClosed: 'Мероприятие закрыто для новых участников',
+      downloadQr: 'Скачать QR-код',
+      qrError: 'Не удалось создать QR-код. Можно скопировать ссылку.',
       noEventsTitle: 'Пока нет активных мероприятий',
       noEventsBody: 'Чтобы присоединиться, откройте ссылку-приглашение от организатора.',
       logout: 'Выйти',
@@ -805,6 +821,14 @@ export const messagesByLocale: Record<Locale, Messages> = {
       expiredBody: 'Ұйымдастырушыдан жаңа сілтеме сұраңыз немесе өз іс-шараларыңыздың бірін ашыңыз.',
       openMyEvents: 'Менің іс-шараларым',
       eventSelectorLabel: 'Іс-шара',
+      copyManually: 'Сілтемені белгілеп, қолмен көшіріңіз.',
+      inviteLink: 'Шақыру сілтемесі',
+      joinWithLink: 'Сілтеме арқылы қосылу',
+      inviteInvalid: 'Ұйымдастырушы жіберген толық Tanys шақыру сілтемесін енгізіңіз.',
+      inviteRetry: 'Қайта қосылу',
+      inviteClosed: 'Іс-шараға жаңа қатысушылар қабылданбайды',
+      downloadQr: 'QR-кодты жүктеу',
+      qrError: 'QR-код жасалмады. Сілтемені көшіре аласыз.',
       noEventsTitle: 'Белсенді іс-шаралар әлі жоқ',
       noEventsBody: 'Қосылу үшін ұйымдастырушы жіберген шақыру сілтемесін ашыңыз.',
       logout: 'Шығу',
@@ -1143,6 +1167,14 @@ export const messagesByLocale: Record<Locale, Messages> = {
       expiredBody: 'Ask the organizer for a fresh invite link or open one of your events.',
       openMyEvents: 'My events',
       eventSelectorLabel: 'Event',
+      copyManually: 'Select the link and copy it manually.',
+      inviteLink: 'Invitation link',
+      joinWithLink: 'Join with link',
+      inviteInvalid: 'Paste the full Tanys invitation link from your organizer.',
+      inviteRetry: 'Retry joining',
+      inviteClosed: 'This event is closed to new participants',
+      downloadQr: 'Download QR code',
+      qrError: 'Could not generate the QR code. You can still copy the link.',
       noEventsTitle: 'No active events yet',
       noEventsBody: 'Open an invite link from your event organizer to join.',
       logout: 'Sign out',

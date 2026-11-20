@@ -50,10 +50,10 @@ export function Landing({ locale, topTopics, profileCount, onStart, onPickGoal, 
               {copy.ctaPrimary}
               <LandingIcon name="arrow" size={18} />
             </button>
-            <button type="button" className="hero-ghost" onClick={onOpenAccount}>
+            <a className="hero-ghost" href="/join">
               <LandingIcon name="qr" size={18} />
               {copy.ctaSecondary}
-            </button>
+            </a>
           </div>
           <ul className="hero-trust hero-in" style={stagger(4)}>
             {copy.trust.map(item => (

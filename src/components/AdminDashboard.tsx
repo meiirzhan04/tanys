@@ -10,8 +10,8 @@ const ADMIN_COPY = {
     refresh: 'Обновить',
     loading: 'Загрузка данных платформы...',
     back: 'На главную',
-    signInPrompt: 'Войдите в аккаунт с правами организатора или в первый аккаунт, чтобы открыть админ-панель.',
-    forbiddenPrompt: 'Доступ ограничен: текущий аккаунт не имеет прав организатора (`can_create_events`).',
+    signInPrompt: 'Войдите в аккаунт администратора платформы.',
+    forbiddenPrompt: 'Этот кабинет доступен только администраторам платформы.',
     openAccount: 'Войти в аккаунт',
     searchPlaceholder: 'Поиск по логину, событию, имени, роли или жалобе...',
     stats: {
@@ -42,8 +42,8 @@ const ADMIN_COPY = {
     refresh: 'Жаңарту',
     loading: 'Платформа деректері жүктелуде...',
     back: 'Басты бетке',
-    signInPrompt: 'Әкімші панелін ашу үшін ұйымдастырушы аккаунтымен кіріңіз.',
-    forbiddenPrompt: 'Қолжетімділік шектелген: ағымдағы аккаунтта ұйымдастырушы құқығы жоқ.',
+    signInPrompt: 'Платформа әкімшісінің аккаунтына кіріңіз.',
+    forbiddenPrompt: 'Бұл бөлім тек платформа әкімшілеріне қолжетімді.',
     openAccount: 'Аккаунтқа кіру',
     searchPlaceholder: 'Логин, іс-шара, аты немесе рөлі бойынша іздеу...',
     stats: {
@@ -74,8 +74,8 @@ const ADMIN_COPY = {
     refresh: 'Refresh',
     loading: 'Loading platform overview...',
     back: 'Back to app',
-    signInPrompt: 'Sign in with an organizer account (or the first account) to open the Admin Panel.',
-    forbiddenPrompt: 'Access restricted: this account does not have organizer permissions yet.',
+    signInPrompt: 'Sign in with a platform administrator account.',
+    forbiddenPrompt: 'Only platform administrators can open this dashboard.',
     openAccount: 'Open Account Sign In',
     searchPlaceholder: 'Search by username, event, participant, role, or report...',
     stats: {

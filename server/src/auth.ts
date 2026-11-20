@@ -249,3 +249,9 @@ export async function authRoute(req: IncomingMessage, res: ServerResponse, path:
   else return false
   return true
 }
+
+/** Global permission must still be active when exercising event ownership. */
+export async function canCreateEvents(userId: string, db: Pick<typeof pool, 'query'> = pool): Promise<boolean> {
+  const access = await db.query('SELECT can_create_events FROM users WHERE id=$1', [userId])
+  return access.rows[0]?.can_create_events === true
+}

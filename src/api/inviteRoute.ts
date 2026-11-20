@@ -21,14 +21,17 @@ export interface StorageLike {
  * - /?event=:eventId&invite=:token
  */
 export function parseInviteLocation(pathname: string, search: string): InviteTarget | null {
+  function decode(segment: string): string {
+    try { return decodeURIComponent(segment).trim() } catch { return '' }
+  }
   const params = new URLSearchParams(search)
   const queryToken = (params.get('invite') ?? params.get('token') ?? '').trim() || undefined
   const queryEvent = (params.get('event') ?? '').trim()
 
   const inviteMatch = pathname.match(/^\/invite\/([^/]+)(?:\/([^/]+))?\/?$/)
   if (inviteMatch) {
-    const eventId = decodeURIComponent(inviteMatch[1]).trim()
-    const pathToken = inviteMatch[2] ? decodeURIComponent(inviteMatch[2]).trim() : undefined
+    const eventId = decode(inviteMatch[1])
+    const pathToken = inviteMatch[2] ? decode(inviteMatch[2]) : undefined
     if (eventId) {
       return { eventId, ...(pathToken || queryToken ? { token: pathToken ?? queryToken } : {}) }
     }
@@ -36,7 +39,7 @@ export function parseInviteLocation(pathname: string, search: string): InviteTar
 
   const eventMatch = pathname.match(/^\/events\/([^/]+)\/?$/)
   if (eventMatch) {
-    const eventId = decodeURIComponent(eventMatch[1]).trim()
+    const eventId = decode(eventMatch[1])
     if (eventId) {
       return { eventId, ...(queryToken ? { token: queryToken } : {}) }
     }
@@ -56,8 +59,8 @@ export function isAdminRoute(pathname: string, search: string): boolean {
 
 export function isAccountRoute(pathname: string, search: string, storage?: StorageLike | null): boolean {
   if (isAdminRoute(pathname, search)) return false
-  if (parseInviteLocation(pathname, search)) return true
-  if (/^\/(login|account|events)\/?$/.test(pathname)) return true
+  if (pathname.startsWith('/invite/') || parseInviteLocation(pathname, search)) return true
+  if (/^\/(login|account|events|join)\/?$/.test(pathname)) return true
   const params = new URLSearchParams(search)
   if (params.get('mode') === 'account') return true
   return storage === null ? false : loadAccountModePreference(storage)
@@ -92,6 +95,12 @@ export function syncAccountLocationUrl(enabled: boolean): void {
   try {
     const url = new URL(window.location.href)
     if (enabled) {
+      if (isAdminRoute(url.pathname, url.search)) {
+        url.pathname = '/login'
+        url.search = ''
+        window.history.replaceState(null, '', url.pathname)
+        return
+      }
       if (isAccountRoute(url.pathname, url.search, null)) return
       url.searchParams.set('mode', 'account')
     } else {

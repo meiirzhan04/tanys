@@ -1,3 +1,5 @@
+import { EditFieldDialog } from './profile/EditFieldDialog'
+import { identityCopy } from './profile/identityCopy'
 import { useId, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import type {
@@ -72,12 +74,12 @@ export interface IntroductionsPanelProps {
   slotsByIntroId: Readonly<Record<string, readonly CommonSlot[]>>
   loadingSlotsIntroId: string
   proposingSlotKey: string
-  /** The viewer's own contact (owner-only), shown as a status line; editing lives in the profile. */
+  /** The viewer's own contact (owner-only), shown as a status line; editable here before exchanging contacts. */
   contactValue: string
   socialError: string
   socialNotice: string
   onRequest: (userId: string, message: string) => Promise<string>
-  onOpenProfile: () => void
+  onSaveContact: (value: string) => Promise<string>
   onUpdateIntro: (introId: string, status: Exclude<IntroductionStatus, 'pending'>) => void
   onToggleSlots: (introId: string) => void
   onProposeMeeting: (introId: string, slotId: string) => void
@@ -101,7 +103,7 @@ export function IntroductionsPanel({
   socialError,
   socialNotice,
   onRequest,
-  onOpenProfile,
+  onSaveContact,
   onUpdateIntro,
   onToggleSlots,
   onProposeMeeting,
@@ -109,6 +111,8 @@ export function IntroductionsPanel({
   refreshing,
 }: IntroductionsPanelProps) {
   const s = getMessages(locale).social
+  const ic = identityCopy[locale]
+  const [editingContact, setEditingContact] = useState(false)
   const c = connectionsCopy[locale]
   const incoming = introductions.filter(item => item.direction === 'incoming')
   const outgoing = introductions.filter(item => item.direction === 'outgoing')
@@ -286,12 +290,28 @@ export function IntroductionsPanel({
               <div className="requests__empty"><p>{tab === 'incoming' ? s.noIncoming : s.noOutgoing}</p></div>
             )}
           </div>
+        {editingContact && (
+          <EditFieldDialog
+            title={ic.editContact}
+            label={ic.contactLabel}
+            name="profileContact"
+            initialValue={contactValue}
+            placeholder={ic.contactPlaceholder}
+            hint={<><p>{ic.contactLock}</p><p>{ic.contactHelp}</p></>}
+            maxLength={256}
+            saveLabel={ic.save}
+            cancelLabel={ic.cancel}
+            clearLabel={ic.remove}
+            onSave={onSaveContact}
+            onClose={() => setEditingContact(false)}
+          />
+        )}
           <div className="own-contact">
             <p>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" /><path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="currentColor" strokeWidth="1.8" /></svg>
               {contactValue ? c.ownContactSet(contactValue) : c.ownContactMissing}
             </p>
-            <button type="button" className="text-button" onClick={onOpenProfile}>{c.openProfile}</button>
+            <button type="button" className="text-button" data-edit="contact" onClick={() => setEditingContact(true)}>{ic.editContact}</button>
           </div>
         </section>
       </div>

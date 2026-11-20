@@ -261,6 +261,7 @@ export interface EventSummary {
 }
 
 export interface EventDetails {
+  role?: EventRole
   id: string
   name?: string
   status: EventStatus
@@ -586,6 +587,7 @@ export function createTanysApiClient(
 
     async searchParticipants(eventId, query, signal) {
       const params = new URLSearchParams({ q: query, limit: '8' })
+      if (!query.trim()) params.set('browse', '1')
       const data = await request<Partial<ParticipantSearchResult>>(
         `/events/${encodeURIComponent(eventId)}/participants?${params.toString()}`,
         { signal },

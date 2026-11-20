@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { viewer } from './auth.js'
+import { canCreateEvents, viewer } from './auth.js'
 import { pool } from './db.js'
 import { HttpError, json, readBody, transaction, uuid } from './http.js'
 
@@ -99,7 +99,7 @@ export async function moderationRoute(req: IncomingMessage, res: ServerResponse,
 
   // GET /events/:eventId/reports (organizer-only closed queue)
   if (isReportsCollection && req.method === 'GET') {
-    if (role !== 'organizer') throw new HttpError(403, 'organizer_required')
+    if (role !== 'organizer' || !await canCreateEvents(userId)) throw new HttpError(403, 'organizer_required')
     const result = await pool.query(
       `SELECT r.id, r.subject_id AS "subjectId", COALESCE(p.name, u.username) AS "subjectName",
               r.reason, r.details, r.status, r.action,
@@ -117,7 +117,7 @@ export async function moderationRoute(req: IncomingMessage, res: ServerResponse,
 
   // PATCH /events/:eventId/reports/:reportId (organizer-only moderation decision + audit log)
   if (isReportItem && req.method === 'PATCH') {
-    if (role !== 'organizer') throw new HttpError(403, 'organizer_required')
+    if (role !== 'organizer' || !await canCreateEvents(userId)) throw new HttpError(403, 'organizer_required')
     const reportId = suffix[1]
     const body = await readBody(req)
     if (body.status !== 'resolved') throw new HttpError(400, 'invalid_status')

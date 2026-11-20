@@ -4,7 +4,7 @@ export interface AccountDialogCopy {
   cancel: string
   logoutTitle: string
   logoutBody: string
-  logoutNote: string
+  logoutAction: string
   leaveTitle: (event: string) => string
   leaveBody: (event: string) => string
   leaveOrganizerNote: string
@@ -18,9 +18,9 @@ export interface AccountDialogCopy {
 export const accountDialogCopy: Record<Locale, AccountDialogCopy> = {
   ru: {
     cancel: 'Отмена',
-    logoutTitle: 'Выход из аккаунта',
-    logoutBody: 'Вы уверены, что хотите выйти?',
-    logoutNote: 'Анкета и мероприятия сохранятся — войти снова можно в любой момент.',
+    logoutTitle: 'Вы уверены, что хотите выйти?',
+    logoutBody: 'Вы завершите текущую сессию. Чтобы вернуться в аккаунт, потребуется снова войти.',
+    logoutAction: 'Выйти из аккаунта',
     leaveTitle: event => `Выйти из мероприятия «${event}»?`,
     leaveBody: event =>
       `Ваша анкета в «${event}» будет скрыта из рекомендаций, и вы перестанете быть участником этого мероприятия. Вернуться можно по новому приглашению. Аккаунт и другие мероприятия не затрагиваются.`,
@@ -39,9 +39,9 @@ export const accountDialogCopy: Record<Locale, AccountDialogCopy> = {
   },
   kk: {
     cancel: 'Болдырмау',
-    logoutTitle: 'Аккаунттан шығу',
-    logoutBody: 'Шынымен шыққыңыз келе ме?',
-    logoutNote: 'Анкета мен іс-шаралар сақталады — кез келген уақытта қайта кіре аласыз.',
+    logoutTitle: 'Шынымен шыққыңыз келе ме?',
+    logoutBody: 'Ағымдағы сеанс аяқталады. Аккаунтқа оралу үшін қайта кіру қажет.',
+    logoutAction: 'Аккаунттан шығу',
     leaveTitle: event => `«${event}» іс-шарасынан шығу керек пе?`,
     leaveBody: event =>
       `«${event}» іс-шарасындағы анкетаңыз ұсыныстардан жасырылады және сіз бұл іс-шараның қатысушысы болмайсыз. Жаңа шақыру арқылы қайта қосыла аласыз. Аккаунт пен басқа іс-шаралар өзгермейді.`,
@@ -60,9 +60,9 @@ export const accountDialogCopy: Record<Locale, AccountDialogCopy> = {
   },
   en: {
     cancel: 'Cancel',
-    logoutTitle: 'Sign out',
-    logoutBody: 'Are you sure you want to sign out?',
-    logoutNote: 'Your profile and events stay as they are — you can sign in again any time.',
+    logoutTitle: 'Are you sure you want to sign out?',
+    logoutBody: 'This will end your current session. To return to your account, sign in again.',
+    logoutAction: 'Sign out of account',
     leaveTitle: event => `Leave “${event}”?`,
     leaveBody: event =>
       `Your profile in “${event}” will be hidden from recommendations and you will no longer be a participant of this event. You can rejoin with a new invite. Your account and other events are not affected.`,

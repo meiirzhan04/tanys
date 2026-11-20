@@ -8,7 +8,7 @@ async function mockAccountApi(context: BrowserContext, profile: Record<string, u
   const profiles = new Map(events.slice(0, 3).map(e => [e.id, {
     ...profile, name: 'Name ' + e.id, role: 'Role ' + e.id, about: 'About ' + e.id,
   }]))
-  const state = { loggedIn: true, contact: '', account: { name: '', profession: '', about: '' } }
+  const state = { canCreateEvents: false, loggedIn: true, contact: '', account: { name: '', profession: '', about: '' } }
   await context.route('**/api/v1/**', async route => {
     const req = route.request()
     const path = new URL(req.url()).pathname.replace(/^\/api\/v1/, '')
@@ -17,7 +17,7 @@ async function mockAccountApi(context: BrowserContext, profile: Record<string, u
       route.fulfill({ status, contentType: 'application/json', body: status === 204 ? '' : JSON.stringify(data ?? {}) })
 
     if (method === 'GET' && path === '/me') {
-      return state.loggedIn ? respond(200, { id: 'user-1', username: 'aliya' }) : respond(401, { error: { code: 'unauthorized' } })
+      return state.loggedIn ? respond(200, { id: 'user-1', username: 'aliya', canCreateEvents: state.canCreateEvents }) : respond(401, { error: { code: 'unauthorized' } })
     }
     if (path === '/me/profile') {
       if (method === 'PUT') state.account = req.postDataJSON()
@@ -27,8 +27,9 @@ async function mockAccountApi(context: BrowserContext, profile: Record<string, u
       state.loggedIn = false
       return respond(204)
     }
+    if (method === 'GET' && path === '/me/contact') return respond(200, { value: state.contact })
     if (method === 'PUT' && path === '/me/contact') {
-      state.contact = JSON.parse(req.postData() || '{}').contact ?? ''
+      state.contact = req.postDataJSON().value
       return respond(204)
     }
     if (method === 'GET' && path === '/events') {
@@ -45,6 +46,7 @@ async function mockAccountApi(context: BrowserContext, profile: Record<string, u
     }
     return respond(404, { error: { code: 'not_found' } })
   })
+  return state
 }
 
 test('landing goal card pre-selects the goal and brings the form into view (#redesign)', async ({ page }) => {
@@ -143,21 +145,18 @@ test('account profile and three event questionnaires stay independent after relo
     await page.locator('.workspace-nav button').first().click()
     await expect(page.locator('[name=name]')).toHaveValue('New event name')
     await page.locator('.nav-profile-btn').click()
-    // Contact is edited in a modal from the read-only card; Cancel keeps the old value
-    await page.locator('[data-edit="contact"]').click()
-    await page.getByRole('dialog').locator('input[name="profileContact"]').fill('@nope')
-    await page.getByRole('dialog').getByRole('button', { name: 'Отмена' }).click()
-    await expect(page.getByRole('dialog')).toHaveCount(0)
-    await expect(page.locator('[data-contact-value]')).not.toContainText('@nope')
-    await page.locator('[data-edit="contact"]').click()
-    await page.getByRole('dialog').locator('input[name="profileContact"]').fill('@aliya_dev')
-    await page.getByRole('dialog').getByRole('button', { name: 'Сохранить' }).click()
-    await expect(page.getByRole('dialog')).toHaveCount(0)
-    await expect(page.locator('[data-contact-value]')).toHaveText('@aliya_dev')
+    await expect(page.locator('#me-contact-title, [name=profileContact]')).toHaveCount(0)
     expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false)
 
+    await page.locator('.workspace-nav button').filter({ hasText: 'Знакомства' }).click()
+    await page.locator('[data-edit=contact]').click()
+    await page.getByRole('dialog').locator('[name=profileContact]').fill('@aliya_dev')
+    await page.getByRole('dialog').getByRole('button', { name: 'Сохранить' }).click()
+    await expect(page.locator('.own-contact')).toContainText('@aliya_dev')
+    await page.locator('.nav-profile-btn').click()
+
     // Cancel keeps the session; confirming signs out to the sign-in screen
-    await page.locator('[data-action="logout"]').click()
+    await page.locator('.header-link-btn').click()
     await expect(page.getByRole('alertdialog')).toContainText('Вы уверены, что хотите выйти?')
     await page.getByRole('alertdialog').getByRole('button', { name: 'Отмена' }).click()
     await expect(page.getByRole('alertdialog')).toHaveCount(0)
@@ -187,4 +186,19 @@ test('account profile tab shows the empty state before any profile is saved (#re
   } finally {
     await context.close()
   }
+})
+
+test('active session picks up organizer grants and revocations on return', async ({ page, context }) => {
+  const account = await mockAccountApi(context, null)
+  await page.goto('/login')
+  await expect(page.locator('.nav-profile-btn')).toBeVisible()
+  await expect(page.locator('.nav-organizer-btn')).toHaveCount(0)
+  account.canCreateEvents = true
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await page.locator('.nav-organizer-btn').click()
+  await expect(page.locator('[name=eventName]')).toBeVisible()
+  account.canCreateEvents = false
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+  await expect(page.locator('.nav-organizer-btn, [name=eventName]')).toHaveCount(0)
+  await expect(page.locator('#me-title')).toBeVisible()
 })
