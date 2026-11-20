@@ -202,3 +202,42 @@ test('active session picks up organizer grants and revocations on return', async
   await expect(page.locator('.nav-organizer-btn, [name=eventName]')).toHaveCount(0)
   await expect(page.locator('#me-title')).toBeVisible()
 })
+
+test('a regular user reaches every participant tab, without the organizer tab', async ({ browser }, testInfo) => {
+  const viewport = testInfo.project.use.viewport ?? { width: 1280, height: 860 }
+  // Without any event: each tab explains how to join instead of being locked.
+  const empty = await browser.newContext({ viewport, locale: 'ru-RU' })
+  await mockAccountApi(empty, null)
+  try {
+    const page = await empty.newPage()
+    await page.goto('/?mode=account')
+    await expect(page.locator('.nav-profile-btn')).toBeVisible()
+    await expect(page.locator('.nav-organizer-btn')).toHaveCount(0)
+    await page.locator('.nav-profile-btn').click()
+    for (const label of ['Анкета мероприятия', 'Рекомендации', 'Знакомства', 'Мои встречи']) {
+      const tab = page.locator('.workspace-nav button').filter({ hasText: label })
+      await expect(tab).toBeEnabled()
+      await tab.click()
+      await expect(tab).toHaveAttribute('aria-current', 'page')
+      await expect(page.locator('.empty-state input[inputmode=url]')).toBeVisible()
+    }
+  } finally {
+    await empty.close()
+  }
+
+  // With an event but no saved questionnaire: matches point to the questionnaire.
+  const joined = await browser.newContext({ viewport, locale: 'ru-RU' })
+  await mockAccountApi(joined, { goal: 'find_job', skills: [], interests: [], lookingFor: [], experienceYears: 1, visible: true })
+  try {
+    const page = await joined.newPage()
+    await page.goto('/?mode=account')
+    await page.locator('.event-picker select').selectOption('D')
+    await page.locator('.workspace-nav button').filter({ hasText: 'Рекомендации' }).click()
+    await expect(page.getByRole('heading', { name: 'Сначала заполните анкету мероприятия' })).toBeVisible()
+    await page.getByRole('button', { name: 'Заполнить анкету' }).click()
+    await expect(page.locator('form.profile-form')).toBeVisible()
+    await expect(page.locator('.nav-organizer-btn')).toHaveCount(0)
+  } finally {
+    await joined.close()
+  }
+})
