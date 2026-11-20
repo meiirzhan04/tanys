@@ -149,6 +149,9 @@ h1, h2, p { margin: 0; }
 .social-card__hint { color: var(--muted); font-size: 13px; }
 .social-slots { display: grid; gap: 8px; }
 .contact-panel { padding: 14px 16px; display: grid; gap: 8px; }
+.availability-form { display: grid; gap: 12px; }
+.availability-slots { list-style: none; padding: 0; margin: 0; }
+.availability-slots .social-card { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; }
 .contact-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .contact-row input { flex: 1 1 200px; }
 .contact-reveal { padding: 8px 10px; border-radius: 6px; background: #f5f8fc; border: 1px solid var(--line); font-size: 13px; overflow-wrap: anywhere; }

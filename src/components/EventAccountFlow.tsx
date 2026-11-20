@@ -1174,7 +1174,17 @@ export function EventAccountFlow({
           />
         ) : tab === 'meetings' ? (
           <>
-          {!isClosed && <AvailabilityEditor key={activeEventId} api={api} event={activeEventId} locale={locale} zone={eventTimeZone} />}
+          {!isClosed && (
+            <AvailabilityEditor
+              key={activeEventId}
+              api={api}
+              event={activeEventId}
+              locale={locale}
+              zone={eventTimeZone}
+              startsAt={activeEvent?.startsAt}
+              endsAt={activeEvent?.endsAt}
+            />
+          )}
           <ServerMeetingsPanel
             meetings={meetings}
             locale={locale}
