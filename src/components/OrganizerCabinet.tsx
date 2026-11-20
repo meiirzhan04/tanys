@@ -15,6 +15,7 @@ import { buildInterestCsvFilename, serializeInterestMapCsv } from '../data/inter
 import type { InterestSummary } from '../data/interestSummary'
 import { getMessages } from '../i18n/messages'
 import type { Locale } from '../matching/types'
+import { CustomSelect } from './CustomSelect'
 import { getGoalLabels } from './goalLabels'
 import { InterestMap } from './InterestMap'
 import { buildInviteUrl, getInviteState } from './inviteQr'
@@ -424,16 +425,13 @@ export function OrganizerCabinet({
           </label>
           <label className="field">
             <span>{o.timeZoneLabel}</span>
-            <select
+            <CustomSelect
               name="eventTimeZone"
               value={newTimeZone}
               disabled={creatingEvent}
-              onChange={event => setNewTimeZone(event.target.value)}
-            >
-              {TIMEZONE_OPTIONS.map(tz => (
-                <option key={tz.value} value={tz.value}>{tz.label}</option>
-              ))}
-            </select>
+              options={TIMEZONE_OPTIONS}
+              onChange={val => setNewTimeZone(val)}
+            />
           </label>
           <label className="field">
             <span>{o.startsAtLabel}</span>

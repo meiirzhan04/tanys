@@ -30,6 +30,7 @@ import type { PartnerBooth } from '../data/booths'
 import { getMessages } from '../i18n/messages'
 import type { Feedback } from '../matching/session'
 import type { Goal, Locale, Recommendation } from '../matching/types'
+import { CustomSelect } from './CustomSelect'
 import { getGoalLabels } from './goalLabels'
 import { OrganizerCabinet } from './OrganizerCabinet'
 import { PartnerBooths } from './PartnerBooths'
@@ -1316,7 +1317,7 @@ export function EventAccountFlow({
 
                 <div className="field">
                   <label htmlFor={`${id}-goal`}>{formText.goalLabel}</label>
-                  <select
+                  <CustomSelect
                     id={`${id}-goal`}
                     name="goal"
                     required
@@ -1324,13 +1325,10 @@ export function EventAccountFlow({
                     aria-invalid={errors.goal ? true : undefined}
                     aria-describedby={errors.goal ? `${id}-goal-error` : undefined}
                     value={draft.goal}
-                    onChange={event => updateField('goal', event.target.value as Goal | '')}
-                  >
-                    <option disabled value="">{formText.goalPlaceholder}</option>
-                    {Object.entries(goalLabels).map(([goal, label]) => (
-                      <option key={goal} value={goal}>{label}</option>
-                    ))}
-                  </select>
+                    placeholder={formText.goalPlaceholder}
+                    options={Object.entries(goalLabels).map(([goal, label]) => ({ value: goal, label }))}
+                    onChange={val => updateField('goal', val as Goal | '')}
+                  />
                   {errors.goal && <span id={`${id}-goal-error`} className="field-error">{errors.goal}</span>}
                 </div>
 
