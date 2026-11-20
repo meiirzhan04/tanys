@@ -87,3 +87,30 @@ test('uses a searched-for skill in the icebreaker and falls back to a fact from 
   assert.match(results[0].icebreaker ?? '', /Данияр.*FastAPI.*задачи/)
   assert.match(results[1].icebreaker ?? '', /Алия.*Продакт-менеджер.*задачи/)
 })
+
+test('preserves top-5 candidate IDs and raw profile facts across ru, kk, and en locales', () => {
+  const pool = [
+    candidate('c1', 'hire', { name: 'Данияр', role: 'Tech Lead', skills: ['Go'], lookingFor: ['Python', 'FastAPI'], interests: ['API'] }),
+    candidate('c2', 'hire', { name: 'Алия', role: 'Engineering Manager', skills: ['Python'], lookingFor: ['FastAPI'], interests: ['API'] }),
+    candidate('c3', 'hire', { name: 'Тимур', role: 'CTO', skills: ['Python'], lookingFor: [], interests: ['API'] }),
+    candidate('c4', 'hire', { name: 'Мадина', role: 'HR', skills: [], lookingFor: ['React'], interests: ['API'] }),
+    candidate('c5', 'hire', { name: 'Арман', role: 'Recruiter', skills: [], lookingFor: [], interests: [] }),
+    candidate('c6', 'hire', { name: 'Жанна', role: 'Recruiter', skills: [], lookingFor: [], interests: [] }),
+  ]
+
+  const ru = recommend(input, pool, 'ru')
+  const kk = recommend(input, pool, 'kk')
+  const en = recommend(input, pool, 'en')
+
+  assert.deepEqual(ru.map(item => item.candidate.id), ['c1', 'c2', 'c3', 'c4', 'c5'])
+  assert.deepEqual(kk.map(item => item.candidate.id), ['c1', 'c2', 'c3', 'c4', 'c5'])
+  assert.deepEqual(en.map(item => item.candidate.id), ['c1', 'c2', 'c3', 'c4', 'c5'])
+
+  assert.match(kk[0].explanation, /Сіз жұмыс іздеп жүрсіз.*Python, FastAPI/)
+  assert.match(kk[0].icebreaker ?? '', /^Сәлем, Данияр!.*«Python».*\?$/)
+  assert.match(en[0].explanation, /You are looking for a job.*Python, FastAPI/)
+  assert.match(en[0].icebreaker ?? '', /^Hi Данияр!.*"Python".*\?$/)
+  assert.notEqual(ru[0].explanation, kk[0].explanation)
+  assert.notEqual(ru[0].explanation, en[0].explanation)
+  assert.notEqual(kk[0].explanation, en[0].explanation)
+})

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { recordRecommendationFeedback, startRecommendationSession } from './session.ts'
+import { localizeRecommendationSession, recordRecommendationFeedback, startRecommendationSession } from './session.ts'
 import type { RecommendationSession } from './session'
 import type { Candidate, ProfileInput } from './types'
 
@@ -46,4 +46,22 @@ test('returns an empty list when the pool is exhausted and resets feedback for a
   assert.deepEqual(ids(done), [])
   assert.deepEqual(ids(next), ['a'])
   assert.equal(next.feedback.size, 0)
+})
+
+test('localizing a session keeps input, feedback, and candidate IDs while translating texts', () => {
+  const initial = startRecommendationSession(input, candidates, 'ru')
+  const afterFeedback = recordRecommendationFeedback(initial, 'a', 'met')
+  const inKazakh = localizeRecommendationSession(afterFeedback, 'kk')
+  const inEnglish = localizeRecommendationSession(inKazakh, 'en')
+  const afterNextFeedback = recordRecommendationFeedback(inEnglish, 'b', 'not_a_fit')
+
+  assert.deepEqual(ids(afterFeedback), ['b', 'c', 'd', 'e', 'f'])
+  assert.deepEqual(ids(inKazakh), ['b', 'c', 'd', 'e', 'f'])
+  assert.deepEqual(ids(inEnglish), ['b', 'c', 'd', 'e', 'f'])
+  assert.equal(inKazakh.input, input)
+  assert.deepEqual([...inEnglish.feedback], [['a', 'met']])
+  assert.match(inKazakh.recommendations[0].explanation, /Сіз жұмыс іздеп жүрсіз/)
+  assert.match(inEnglish.recommendations[0].explanation, /You are looking for a job/)
+  assert.match(afterNextFeedback.recommendations[0].explanation, /You are looking for a job/)
+  assert.deepEqual(ids(afterNextFeedback), ['c', 'd', 'e', 'f', 'g'])
 })

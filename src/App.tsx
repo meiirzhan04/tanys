@@ -5,9 +5,14 @@ import { RecommendationResults } from './components/RecommendationResults'
 import profiles from './data/profiles.json'
 import { resolveAppCandidates } from './data/loadCandidates'
 import { previewProfiles, sampleProfile } from './data/previewProfiles'
-import { recordRecommendationFeedback, startRecommendationSession } from './matching/session'
+import { getMessages, SUPPORTED_LOCALES } from './i18n/messages'
+import {
+  localizeRecommendationSession,
+  recordRecommendationFeedback,
+  startRecommendationSession,
+} from './matching/session'
 import type { Feedback, RecommendationSession } from './matching/session'
-import type { Candidate, ProfileInput } from './matching/types'
+import type { Candidate, Locale, ProfileInput } from './matching/types'
 import { bookSlot, cancelSlotBooking, loadBookings, saveBookings } from './scheduling/slots'
 import type { MeetingBooking } from './scheduling/slots'
 import './styles.css'
@@ -15,28 +20,40 @@ import './styles.css'
 const candidates: readonly Candidate[] = resolveAppCandidates(profiles, previewProfiles)
 type View = 'profile' | 'results' | 'schedule'
 
-function getResultsMessage(session: RecommendationSession): string {
+function getResultsMessage(session: RecommendationSession, locale: Locale): string {
+  const t = getMessages(locale).results
   const count = session.recommendations.length
   if (session.feedback.size) {
-    return `Отметка сохранена. Рекомендаций · ${count}`
+    return t.feedbackSaved(count)
   }
   if (count > 0 && count < 5) {
-    return `Показаны все доступные совпадения · ${count} из 5`
+    return t.partialMatches(count)
   }
   return ''
 }
 
 export default function App() {
+  const [locale, setLocale] = useState<Locale>('ru')
   const [view, setView] = useState<View>('profile')
   const [session, setSession] = useState<RecommendationSession>()
   const [bookings, setBookings] = useState<MeetingBooking[]>(() => loadBookings())
+  const messages = getMessages(locale)
+
+  useEffect(() => {
+    document.documentElement.lang = locale
+  }, [locale])
 
   useEffect(() => {
     if (view === 'results') document.getElementById('results-title')?.focus()
-  }, [session, view])
+  }, [session?.input, view])
+
+  function handleLocaleChange(nextLocale: Locale) {
+    setLocale(nextLocale)
+    setSession(current => current && localizeRecommendationSession(current, nextLocale))
+  }
 
   function submit(profile: ProfileInput) {
-    setSession(startRecommendationSession(profile, candidates))
+    setSession(startRecommendationSession(profile, candidates, locale))
     setView('results')
   }
 
@@ -66,38 +83,53 @@ export default function App() {
       <header className="site-header">
         <div className="site-width header-inner">
           <span className="brand"><span className="brand-mark" aria-hidden="true">T</span>Tanys</span>
-          <span className="header-context">Нетворкинг на митапе</span>
-          <span className="demo-status">Вымышленные анкеты</span>
+          <span className="header-context">{messages.header.context}</span>
+          <div className="header-actions">
+            <span className="demo-status">{messages.header.demoStatus}</span>
+            <div className="lang-switcher" role="group" aria-label={messages.languageSwitcherLabel}>
+              {SUPPORTED_LOCALES.map(item => (
+                <button
+                  key={item.code}
+                  type="button"
+                  lang={item.code}
+                  aria-label={item.label}
+                  aria-pressed={locale === item.code}
+                  onClick={() => handleLocaleChange(item.code)}
+                >{item.shortLabel}</button>
+              ))}
+            </div>
+          </div>
         </div>
       </header>
 
       <div className="site-width workspace">
-        <nav className="workspace-nav" aria-label="Разделы Tanys">
-          <button type="button" aria-current={view === 'profile' ? 'page' : undefined} onClick={() => setView('profile')}>Анкета</button>
+        <nav className="workspace-nav" aria-label={messages.nav.label}>
+          <button type="button" aria-current={view === 'profile' ? 'page' : undefined} onClick={() => setView('profile')}>{messages.nav.profile}</button>
           <button type="button" disabled={!session} aria-current={view === 'results' ? 'page' : undefined} onClick={() => setView('results')}>
-            Рекомендации {session && <span className="nav-count">{session.recommendations.length}</span>}
+            {messages.nav.results} {session && <span className="nav-count">{session.recommendations.length}</span>}
           </button>
           <button type="button" aria-current={view === 'schedule' ? 'page' : undefined} onClick={() => setView('schedule')}>
-            Встречи <span className="nav-count">{bookings.length}</span>
+            {messages.nav.schedule} <span className="nav-count">{bookings.length}</span>
           </button>
         </nav>
 
         <main className="main-content">
           <div hidden={view !== 'profile'}>
-            <ProfileForm onSubmit={submit} example={sampleProfile} />
+            <ProfileForm onSubmit={submit} example={sampleProfile} locale={locale} />
           </div>
           {view === 'results' && session && <RecommendationResults
             recommendations={session.recommendations}
             onEdit={() => setView('profile')}
             onFeedback={handleFeedback}
-            message={getResultsMessage(session)}
+            message={getResultsMessage(session, locale)}
             bookings={bookings}
             onBookSlot={handleBookSlot}
             onCancelSlot={handleCancelSlot}
+            locale={locale}
           />}
           {view === 'schedule' && <>
-            <div className="page-heading"><h1>Встречи</h1></div>
-            <SchedulePanel bookings={bookings} onCancel={handleCancelSlot} />
+            <div className="page-heading"><h1>{messages.meetings.pageTitle}</h1></div>
+            <SchedulePanel bookings={bookings} onCancel={handleCancelSlot} locale={locale} />
           </>}
         </main>
       </div>

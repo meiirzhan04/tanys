@@ -1,7 +1,8 @@
 import { useId, useState } from 'react'
 import type { FormEvent } from 'react'
-import type { Goal, ProfileInput } from '../matching/types'
-import { goalLabels } from './goalLabels'
+import { getMessages } from '../i18n/messages'
+import type { Goal, Locale, ProfileInput } from '../matching/types'
+import { getGoalLabels } from './goalLabels'
 import type { ProfileFormProps } from './props'
 
 type Fields = { goal: Goal | ''; role: string; experience: string; skills: string; interests: string; about: string; lookingFor: string }
@@ -24,25 +25,33 @@ function topics(value: string) {
   return value.split(/[,\n]/).map(topic => topic.trim()).filter(Boolean)
 }
 
-function validate(fields: Fields): Errors {
+function validate(fields: Fields, locale: Locale): Errors {
+  const t = getMessages(locale).form.errors
   const errors: Errors = {}
   const experience = Number(fields.experience)
-  if (!fields.goal) errors.goal = 'Выберите цель знакомства.'
-  if (!fields.role.trim()) errors.role = 'Укажите вашу роль.'
+  if (!fields.goal) errors.goal = t.goal
+  if (!fields.role.trim()) errors.role = t.role
   if (!fields.experience || !Number.isInteger(experience) || experience < 0 || experience > 60) {
-    errors.experience = 'Введите целое число от 0 до 60.'
+    errors.experience = t.experience
   }
-  if (!topics(fields.skills).length) errors.skills = 'Введите хотя бы один навык.'
-  if (!topics(fields.interests).length) errors.interests = 'Введите хотя бы один интерес.'
-  if (!fields.about.trim()) errors.about = 'Кратко расскажите о себе.'
+  if (!topics(fields.skills).length) errors.skills = t.skills
+  if (!topics(fields.interests).length) errors.interests = t.interests
+  if (!fields.about.trim()) errors.about = t.about
   return errors
 }
 
-export function ProfileForm({ initialProfile, onSubmit, example }: ProfileFormProps & { example: ProfileInput }) {
+export function ProfileForm({
+  initialProfile,
+  onSubmit,
+  example,
+  locale = 'ru',
+}: ProfileFormProps & { example: ProfileInput; locale?: Locale }) {
   const id = useId()
   const [fields, setFields] = useState(() => toFields(initialProfile))
   const [showErrors, setShowErrors] = useState(false)
-  const errors = showErrors ? validate(fields) : {}
+  const messages = getMessages(locale).form
+  const goalLabels = getGoalLabels(locale)
+  const errors = showErrors ? validate(fields, locale) : {}
   const showLookingFor = fields.goal === 'hire' || fields.goal === 'find_cofounder' || fields.goal === 'find_mentor'
 
   const change = (field: keyof Fields, value: string) => setFields(current => ({ ...current, [field]: value }))
@@ -64,7 +73,7 @@ export function ProfileForm({ initialProfile, onSubmit, example }: ProfileFormPr
 
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const firstInvalid = Object.keys(validate(fields))[0]
+    const firstInvalid = Object.keys(validate(fields, locale))[0]
     if (firstInvalid) {
       setShowErrors(true)
       const field = event.currentTarget.elements.namedItem(firstInvalid)
@@ -89,61 +98,61 @@ export function ProfileForm({ initialProfile, onSubmit, example }: ProfileFormPr
     <form className="profile-form" aria-labelledby="profile-title" noValidate onSubmit={submit}>
       <div className="page-heading">
         <div>
-          <h1 id="profile-title">Анкета участника</h1>
-          <p>Укажите цель знакомства, навыки и интересы для подбора.</p>
+          <h1 id="profile-title">{messages.title}</h1>
+          <p>{messages.subtitle}</p>
         </div>
         <button className="secondary-button" type="button" onClick={() => {
           setFields(toFields(example))
           setShowErrors(false)
-        }}>Заполнить пример</button>
+        }}>{messages.fillExample}</button>
       </div>
 
       <div className="form-panel surface">
         <div className="form-fields">
           <div className="field field-full">
-            <label htmlFor={`${id}-goal`}>Цель знакомства</label>
+            <label htmlFor={`${id}-goal`}>{messages.goalLabel}</label>
             <select {...control('goal')} onChange={event => change('goal', event.target.value)}>
-              <option disabled value="">Выберите цель</option>
+              <option disabled value="">{messages.goalPlaceholder}</option>
               {Object.entries(goalLabels).map(([goal, label]) => <option key={goal} value={goal}>{label}</option>)}
             </select>
             {fieldError('goal')}
           </div>
 
           <div className="field">
-            <label htmlFor={`${id}-role`}>Роль</label>
-            <input {...control('role')} maxLength={80} placeholder="Например, Backend-разработчик" onChange={event => change('role', event.target.value)} />
+            <label htmlFor={`${id}-role`}>{messages.roleLabel}</label>
+            <input {...control('role')} maxLength={80} placeholder={messages.rolePlaceholder} onChange={event => change('role', event.target.value)} />
             {fieldError('role')}
           </div>
           <div className="field">
-            <label htmlFor={`${id}-experience`}>Опыт в годах</label>
+            <label htmlFor={`${id}-experience`}>{messages.experienceLabel}</label>
             <input {...control('experience')} type="number" min={0} max={60} placeholder="0" onChange={event => change('experience', event.target.value)} />
             {fieldError('experience')}
           </div>
           <div className="field">
-            <label htmlFor={`${id}-skills`}>Стек и навыки</label>
-            <input {...control('skills')} maxLength={160} placeholder="Python, FastAPI, PostgreSQL" onChange={event => change('skills', event.target.value)} />
+            <label htmlFor={`${id}-skills`}>{messages.skillsLabel}</label>
+            <input {...control('skills')} maxLength={160} placeholder={messages.skillsPlaceholder} onChange={event => change('skills', event.target.value)} />
             {fieldError('skills')}
           </div>
           <div className="field">
-            <label htmlFor={`${id}-interests`}>Интересы</label>
-            <input {...control('interests')} maxLength={160} placeholder="Стартапы, API, DevOps" onChange={event => change('interests', event.target.value)} />
+            <label htmlFor={`${id}-interests`}>{messages.interestsLabel}</label>
+            <input {...control('interests')} maxLength={160} placeholder={messages.interestsPlaceholder} onChange={event => change('interests', event.target.value)} />
             {fieldError('interests')}
           </div>
 
           {showLookingFor && <label className="field field-full">
-            <span>Какие навыки ищете <small>необязательно</small></span>
-            <input maxLength={160} placeholder="Например, React, продажи" value={fields.lookingFor} onChange={event => change('lookingFor', event.target.value)} />
+            <span>{messages.lookingForLabel} <small>{messages.optional}</small></span>
+            <input maxLength={160} placeholder={messages.lookingForPlaceholder} value={fields.lookingFor} onChange={event => change('lookingFor', event.target.value)} />
           </label>}
 
           <div className="field field-full">
-            <label htmlFor={`${id}-about`}>О себе</label>
-            <textarea {...control('about')} rows={2} maxLength={400} placeholder="Что вы делаете и о чём хотите поговорить?" onChange={event => change('about', event.target.value)} />
+            <label htmlFor={`${id}-about`}>{messages.aboutLabel}</label>
+            <textarea {...control('about')} rows={2} maxLength={400} placeholder={messages.aboutPlaceholder} onChange={event => change('about', event.target.value)} />
             {fieldError('about')}
           </div>
         </div>
         <div className="form-footer">
-          <button type="submit" className="primary-button">Найти участников</button>
-          <span>Анкета остаётся в этой вкладке.</span>
+          <button type="submit" className="primary-button">{messages.submit}</button>
+          <span>{messages.privacyNote}</span>
         </div>
       </div>
     </form>

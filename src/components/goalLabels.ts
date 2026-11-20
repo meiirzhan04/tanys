@@ -1,10 +1,8 @@
-import type { Goal } from '../matching/types'
+import { messagesByLocale } from '../i18n/messages'
+import type { Goal, Locale } from '../matching/types'
 
-export const goalLabels: Record<Goal, string> = {
-  find_job: 'Найти работу',
-  hire: 'Нанять',
-  find_mentor: 'Найти ментора',
-  be_mentor: 'Стать ментором',
-  find_cofounder: 'Найти кофаундера',
-  exchange_experience: 'Обменяться опытом',
+export function getGoalLabels(locale: Locale = 'ru'): Record<Goal, string> {
+  return messagesByLocale[locale].goals
 }
+
+export const goalLabels: Record<Goal, string> = messagesByLocale.ru.goals
