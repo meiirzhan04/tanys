@@ -629,9 +629,17 @@ p { text-wrap: pretty; }
 .bento-card--wide { grid-column: 1 / -1; min-width: 0; }
 .bento-card--third { grid-column: span 4; min-width: 0; }
 .bento-grid > .interest-map { grid-column: 1 / -1; min-width: 0; max-width: 100%; }
-.meetings-bento-grid > :first-child { grid-column: span 5; min-width: 0; }
-.meetings-bento-grid > :last-child { grid-column: span 7; min-width: 0; }
-.meetings-bento-grid > :only-child { grid-column: 1 / -1; }
+.meetings-bento-grid { display: grid; gap: 24px; align-content: start; }
+.meetings-bento-grid > * { min-width: 0; }
+.social-section.meetings-panel--empty {
+  gap: 4px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.meetings-panel--empty .page-heading { margin: 0; gap: 8px; }
+.meetings-panel--empty .page-heading h1 { font-size: 1rem; }
+.meeting-empty-note { margin: 0; color: var(--muted); font-size: 0.875rem; }
 
 .bento-card:hover,
 .kpi-card:hover,
@@ -1166,6 +1174,75 @@ p { text-wrap: pretty; }
 .social-slots { display: grid; gap: 8px; }
 .contact-panel { padding: 16px 18px; display: grid; gap: 10px; }
 .availability-form { display: grid; gap: 12px; }
+.availability-range { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.availability-range fieldset {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+.availability-range legend { padding-inline: 6px; color: var(--muted); font-size: 0.8125rem; }
+.availability-date-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 44px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--paper-subtle);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+.availability-date-trigger svg { flex: none; color: var(--accent-text); }
+.availability-calendar {
+  width: min(360px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
+  padding: 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 20px;
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--card-shadow);
+}
+.availability-calendar::backdrop { background: rgba(0, 0, 0, 0.6); }
+.availability-calendar__heading {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  align-items: center;
+  text-align: center;
+}
+.availability-calendar__heading h3 { margin: 0; font-size: 1rem; }
+.availability-calendar__days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; margin-block: 12px; }
+.availability-calendar__days span { text-align: center; font-size: 0.75rem; color: var(--muted); }
+.availability-calendar__days button, .availability-calendar__heading button {
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.availability-calendar button:disabled { opacity: 0.4; cursor: default; }
+.availability-calendar__days button[aria-pressed="true"],
+.availability-calendar__days button:not(:disabled):hover,
+.availability-calendar__heading button:not(:disabled):hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: var(--accent-text);
+}
+.availability-calendar__close { width: 100%; }
+@media (max-width: 560px) {
+  .availability-range { grid-template-columns: minmax(0, 1fr); }
+  .availability-form .primary-button { width: 100%; }
+}
 .availability-slots { list-style: none; padding: 0; margin: 0; }
 .availability-slots .social-card { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; }
 .contact-row { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -1372,9 +1449,7 @@ p { text-wrap: pretty; }
 @media (max-width: 980px) {
   .bento-card,
   .bento-card--third,
-  .bento-grid > .interest-map,
-  .meetings-bento-grid > :first-child,
-  .meetings-bento-grid > :last-child {
+  .bento-grid > .interest-map {
     grid-column: 1 / -1;
   }
 }
@@ -1548,7 +1623,6 @@ input[type='search']::-webkit-search-cancel-button { cursor: pointer; }
 .custom-select__control select { padding-right: 42px; text-overflow: ellipsis; cursor: pointer; }
 .custom-select__control select:disabled { opacity: 0.6; cursor: default; }
 .custom-select__control select:-moz-focusring { color: transparent; text-shadow: 0 0 0 var(--ink); }
-.availability-form .form-fields { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
 
 /* Text selection follows the brand accent instead of the system blue */
 ::selection { background: rgba(255, 106, 36, 0.32); color: inherit; }

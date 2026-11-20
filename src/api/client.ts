@@ -21,6 +21,7 @@ export interface IntroductionItem {
   message?: string | null
   /** Private contact of the other person; present only after both agreed (status `accepted`). */
   contact?: string | null
+  icebreaker?: string | null
   createdAt?: string
   updatedAt?: string
 }
@@ -358,9 +359,9 @@ export interface TanysApiClient {
   saveEventProfile(eventId: string, profile: ServerProfilePayload): Promise<ServerProfile>
   getEventRecommendations(eventId: string, locale: Locale): Promise<Recommendation[]>
   sendEventFeedback(eventId: string, candidateId: string, response: Feedback): Promise<void>
-  listIntroductions(eventId: string): Promise<IntroductionItem[]>
-  getIntroduction(eventId: string, introductionId: string): Promise<IntroductionItem>
-  createIntroduction(eventId: string, recipientId: string, message?: string): Promise<IntroductionItem>
+  listIntroductions(eventId: string, locale?: Locale): Promise<IntroductionItem[]>
+  getIntroduction(eventId: string, introductionId: string, locale?: Locale): Promise<IntroductionItem>
+  createIntroduction(eventId: string, recipientId: string, message?: string, icebreaker?: string): Promise<IntroductionItem>
   searchParticipants(eventId: string, query: string, signal?: AbortSignal): Promise<ParticipantSearchResult>
   updateHandle(handle: string): Promise<{ handle: string }>
   getContact(): Promise<string | null>
@@ -562,25 +563,25 @@ export function createTanysApiClient(
       )
     },
 
-    async listIntroductions(eventId) {
+    async listIntroductions(eventId, locale) {
       const data = await request<{ items?: IntroductionItem[] }>(
-        `/events/${encodeURIComponent(eventId)}/introductions`,
+        `/events/${encodeURIComponent(eventId)}/introductions${locale ? `?locale=${locale}` : ''}`,
       )
       return Array.isArray(data?.items) ? data.items : []
     },
 
-    getIntroduction(eventId, introductionId) {
+    getIntroduction(eventId, introductionId, locale) {
       return request<IntroductionItem>(
-        `/events/${encodeURIComponent(eventId)}/introductions/${encodeURIComponent(introductionId)}`,
+        `/events/${encodeURIComponent(eventId)}/introductions/${encodeURIComponent(introductionId)}${locale ? `?locale=${locale}` : ''}`,
       )
     },
 
-    createIntroduction(eventId, recipientId, message) {
+    createIntroduction(eventId, recipientId, message, icebreaker) {
       return request<IntroductionItem>(
         `/events/${encodeURIComponent(eventId)}/introductions`,
         {
           method: 'POST',
-          body: JSON.stringify(message?.trim() ? { recipientId, message: message.trim() } : { recipientId }),
+          body: JSON.stringify({ recipientId, message: message?.trim() || undefined, icebreaker }),
         },
       )
     },

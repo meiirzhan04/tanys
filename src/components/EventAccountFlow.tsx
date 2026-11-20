@@ -232,7 +232,7 @@ export function EventAccountFlow({
     setSocialRefreshing(true)
     try {
       const [rawIntros, nextMeetings] = await Promise.all([
-        api.listIntroductions(eventId),
+        api.listIntroductions(eventId, locale),
         api.listMeetings(eventId),
       ])
 
@@ -241,7 +241,7 @@ export function EventAccountFlow({
         rawIntros.map(async item => {
           if (item.status === 'accepted' && item.contact === undefined) {
             try {
-              const detailed = await api.getIntroduction(eventId, item.id)
+              const detailed = await api.getIntroduction(eventId, item.id, locale)
               return { ...item, ...detailed }
             } catch {
               return item
@@ -764,7 +764,8 @@ export function EventAccountFlow({
     setSocialError('')
     setSocialNotice('')
     try {
-      const created = await api.createIntroduction(activeEventId, candidateId)
+      const icebreaker = recommendations?.find(item => item.candidate.id === candidateId)?.icebreaker
+      const created = await api.createIntroduction(activeEventId, candidateId, undefined, icebreaker)
       const enriched: IntroductionItem = {
         ...created,
         participantId: created.participantId ?? candidateId,
@@ -1367,7 +1368,7 @@ export function EventAccountFlow({
             refreshing={socialRefreshing}
           />
         ) : tab === 'meetings' ? (
-          <div className="meetings-bento-grid bento-grid">
+          <div className="meetings-bento-grid">
           {!isClosed && (
             <AvailabilityEditor
               key={activeEventId}

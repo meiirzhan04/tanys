@@ -163,3 +163,34 @@ test('availability times offer only 15-minute steps and flag a saved off-grid sl
     await context.close()
   }
 })
+
+test('selects a date inside the event and saves a slot above the compact empty meetings state', async ({ browser }, testInfo) => {
+  const context = await browser.newContext({
+    viewport: testInfo.project.use.viewport ?? { width: 360, height: 800 },
+    locale: 'en-US',
+  })
+  const calls = await mockApi(context)
+  try {
+    const page = await context.newPage()
+    await page.goto('/?mode=account')
+    await expect(page.locator('#event-profile-title')).toBeVisible()
+    await page.locator('.workspace-nav button').nth(3).click()
+    await expect(page.locator('.meetings-panel--empty .meeting-empty-note')).toBeVisible()
+    await page.getByRole('button', { name: 'Start date Choose a date' }).click()
+    const calendar = page.getByRole('dialog')
+    await expect(calendar.locator('.availability-calendar__days button:not(:disabled)')).toHaveCount(1)
+    await expect(calendar.getByRole('button', { name: 'Previous month' })).toBeDisabled()
+    await expect(calendar.getByRole('button', { name: 'Next month' })).toBeDisabled()
+    await calendar.locator('.availability-calendar__days button:not(:disabled)').click()
+    await expect(calendar).toBeHidden()
+    await expect(page.getByRole('button', { name: /^End date / })).not.toHaveText('Choose a date')
+    await page.locator('select[name="availabilityStartTime"]').selectOption('09:15')
+    await page.locator('select[name="availabilityEndTime"]').selectOption('10:00')
+    await page.getByRole('button', { name: 'Add interval' }).click()
+    await expect(page.locator('.availability-slots li')).toHaveCount(1)
+    expect(calls).toContain('PUT /events/evt-a/availability/me')
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(false)
+  } finally {
+    await context.close()
+  }
+})

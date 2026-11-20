@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import type { FormEvent, MouseEvent } from 'react'
+import type { FormEvent } from 'react'
 import type { TanysApiClient } from '../api/client'
 import { getMessages } from '../i18n/messages'
 import type { Locale } from '../matching/types'
 import { formatMeetingInterval } from './socialHelpers'
 import { TimeSelect } from './TimeSelect'
+import { AvailabilityDatePicker } from './AvailabilityDatePicker'
 import { isQuarterHourInstant, isQuarterHourTime } from '../scheduling/timeStep'
 
 type Slot = { start: string; end: string }
@@ -19,17 +20,11 @@ function localDate(value?: string) {
   return `${date.getFullYear()}-${month}-${day}`
 }
 
-function openDatePicker(event: MouseEvent<HTMLInputElement>) {
-  try {
-    event.currentTarget.showPicker?.()
-  } catch {
-    // The browser's native date control remains available.
-  }
-}
-
 const labels = {
   ru: {
     title: 'Моё свободное время',
+    start: 'Начало',
+    end: 'Окончание',
     startDate: 'Дата начала',
     endDate: 'Дата окончания',
     startTime: 'Время начала',
@@ -47,6 +42,8 @@ const labels = {
   },
   kk: {
     title: 'Бос уақытым',
+    start: 'Басталуы',
+    end: 'Аяқталуы',
     startDate: 'Басталу күні',
     endDate: 'Аяқталу күні',
     startTime: 'Басталу уақыты',
@@ -63,6 +60,8 @@ const labels = {
   },
   en: {
     title: 'My availability',
+    start: 'Start',
+    end: 'End',
     startDate: 'Start date',
     endDate: 'End date',
     startTime: 'Start time',
@@ -166,58 +165,55 @@ export function AvailabilityEditor({
     void save(next, true)
   }
   return (
-    <section className="surface contact-panel">
+    <section className="surface contact-panel availability-panel">
       <h2>{t.title}</h2>
       <p>
         {t.local} · {Intl.DateTimeFormat().resolvedOptions().timeZone}
       </p>
       <form className="availability-form" onSubmit={add}>
-        <div className="form-fields">
-          <label className="field">
-            <span>{t.startDate}</span>
-            <input required disabled={busy} type="date" min={firstDay} max={lastDay} value={startDate}
-              onClick={openDatePicker}
-              onChange={e => {
-                const date = e.target.value
+        <div className="availability-range">
+          <fieldset>
+            <legend>{t.start}</legend>
+            <AvailabilityDatePicker label={t.startDate} locale={locale} disabled={busy} min={firstDay} max={lastDay} value={startDate}
+              onChange={date => {
                 setStartDate(date)
                 if (endDate < date) setEndDate('')
               }}
             />
-          </label>
-          <label className="field">
-            <span>{t.startTime}</span>
-            <TimeSelect
-              name="availabilityStartTime"
-              required
-              disabled={busy}
-              value={startTime}
-              placeholder={t.timePlaceholder}
-              legacyLabel={t.legacyOption}
-              onChange={setStartTime}
-            />
-          </label>
-          <label className="field">
-            <span>{t.endDate}</span>
-            <input required disabled={busy} type="date" min={startDate || firstDay} max={lastDay}
-              value={endDate || startDate} onClick={openDatePicker} onChange={e => setEndDate(e.target.value)}
-            />
-          </label>
-          <label className="field">
-            <span>{t.endTime}</span>
-            <TimeSelect
-              name="availabilityEndTime"
-              required
-              disabled={busy}
-              value={endTime}
-              placeholder={t.timePlaceholder}
-              legacyLabel={t.legacyOption}
-              onChange={setEndTime}
-            />
-          </label>
+            <label className="field">
+              <span>{t.startTime}</span>
+              <TimeSelect
+                name="availabilityStartTime"
+                required
+                disabled={busy}
+                value={startTime}
+                placeholder={t.timePlaceholder}
+                legacyLabel={t.legacyOption}
+                onChange={setStartTime}
+              />
+            </label>
+          </fieldset>
+          <fieldset>
+            <legend>{t.end}</legend>
+            <AvailabilityDatePicker label={t.endDate} locale={locale} disabled={busy} min={startDate || firstDay} max={lastDay}
+              value={endDate || startDate} onChange={setEndDate} />
+            <label className="field">
+              <span>{t.endTime}</span>
+              <TimeSelect
+                name="availabilityEndTime"
+                required
+                disabled={busy}
+                value={endTime}
+                placeholder={t.timePlaceholder}
+                legacyLabel={t.legacyOption}
+                onChange={setEndTime}
+              />
+            </label>
+          </fieldset>
         </div>
         <p className="field-hint">{t.step}</p>
         <div className="social-card__actions">
-          <button className="secondary-button" type="submit" disabled={!slots || busy}>
+          <button className="primary-button" type="submit" disabled={!slots || busy}>
             {t.add}
           </button>
         </div>
