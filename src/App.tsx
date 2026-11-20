@@ -3,6 +3,7 @@ import { SchedulePanel } from './components/MeetingSlots'
 import { ProfileForm } from './components/ProfileForm'
 import { RecommendationResults } from './components/RecommendationResults'
 import profiles from './data/profiles.json'
+import { resolveAppCandidates } from './data/loadCandidates'
 import { previewProfiles, sampleProfile } from './data/previewProfiles'
 import { recommend } from './matching/recommend'
 import { recordRecommendationFeedback, startRecommendationSession } from './matching/session'
@@ -12,8 +13,19 @@ import { bookSlot, cancelSlotBooking, loadBookings, saveBookings } from './sched
 import type { MeetingBooking } from './scheduling/slots'
 import './styles.css'
 
-const candidates: readonly Candidate[] = [...profiles as Candidate[], ...previewProfiles]
+const candidates: readonly Candidate[] = resolveAppCandidates(profiles, previewProfiles)
 const sample = recommend(sampleProfile, candidates)[0]
+
+function getResultsMessage(session: RecommendationSession): string {
+  const count = session.recommendations.length
+  if (session.feedback.size) {
+    return `Отметка сохранена. Рекомендаций · ${count}`
+  }
+  if (count > 0 && count < 5) {
+    return `Показаны все доступные совпадения · ${count} из 5`
+  }
+  return ''
+}
 
 export default function App() {
   const [profile, setProfile] = useState<ProfileInput>()
@@ -64,7 +76,7 @@ export default function App() {
           recommendations={session.recommendations}
           onEdit={() => setSession(undefined)}
           onFeedback={handleFeedback}
-          message={session.feedback.size ? `Отметка сохранена. Рекомендаций · ${session.recommendations.length}` : ""}
+          message={getResultsMessage(session)}
           bookings={bookings}
           onBookSlot={handleBookSlot}
           onCancelSlot={handleCancelSlot}
@@ -75,7 +87,7 @@ export default function App() {
           </div>
           <div className="workspace">
             <ProfileForm initialProfile={profile} onSubmit={submit} example={sampleProfile} />
-            <aside className="sample-panel" aria-labelledby="sample-title">
+            {sample && <aside className="sample-panel" aria-labelledby="sample-title">
               <div className="sample-kicker">Пример рекомендации</div>
               <h2 id="sample-title">Первая встреча<br /> на митапе</h2>
               <div className="connection" aria-hidden="true">
@@ -91,7 +103,7 @@ export default function App() {
                 </ul>
                 <p>{sample.explanation}</p>
               </div>
-            </aside>
+            </aside>}
           </div>
           {bookings.length > 0 && <SchedulePanel bookings={bookings} onCancel={handleCancelSlot} />}
         </>}
