@@ -1,3 +1,4 @@
+import { meetingRoute } from './meetings.js'
 import { introductionRoute } from './introductions.js'
 import { recommendationRoute } from './recommendations.js'
 import { profileRoute } from './profiles.js'
@@ -14,7 +15,7 @@ import { createMetricsTracker, createObservedRequestHandler } from './observabil
 const metrics = createMetricsTracker()
 export const handler = createObservedRequestHandler({
   appOrigin,
-  routes: [introductionRoute, recommendationRoute, authRoute, eventRoute, organizerRoute, moderationRoute, profileRoute],
+  routes: [meetingRoute, introductionRoute, recommendationRoute, authRoute, eventRoute, organizerRoute, moderationRoute, profileRoute],
   checkReady: async () => {
     const migrations = (await readdir(new URL('../migrations/', import.meta.url))).filter(name => name.endsWith('.sql'))
     const result = await pool.query('SELECT name FROM schema_migrations WHERE name = ANY($1::text[])', [migrations])

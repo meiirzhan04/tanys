@@ -38,11 +38,12 @@ export function formatMeetingInterval(
       minute: '2-digit',
       hour12: false,
     })
-    const startText = timeFmt.format(startDate)
+    const dateFmt = new Intl.DateTimeFormat(tag, { timeZone, dateStyle: 'medium' })
+    const startText = dateFmt.format(startDate) + ' · ' + timeFmt.format(startDate)
     if (!endIso) return startText
     const endDate = new Date(endIso)
     if (Number.isNaN(endDate.getTime())) return startText
-    return `${startText}–${timeFmt.format(endDate)}`
+    return `${startText}–${dateFmt.format(startDate) === dateFmt.format(endDate) ? '' : dateFmt.format(endDate) + ' · '}${timeFmt.format(endDate)} (${timeZone})`
   } catch {
     return endIso ? `${startIso} – ${endIso}` : startIso
   }
