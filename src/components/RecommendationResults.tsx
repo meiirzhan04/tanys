@@ -1,13 +1,31 @@
 import { useState } from 'react'
 import type { Feedback } from '../matching/session'
 import type { Recommendation } from '../matching/types'
+import type { MeetingBooking } from '../scheduling/slots'
 import { goalLabels } from './goalLabels'
+import { CandidateMeetingPicker, SchedulePanel } from './MeetingSlots'
 import { RecommendationFeedback } from './RecommendationFeedback'
 import type { ResultsProps } from './props'
 
 type FeedbackHandler = (id: string, response: Feedback) => void
+type BookSlotHandler = (candidate: { id: string; name: string; role?: string }, slotId: string) => void
+type CancelSlotHandler = (slotId: string) => void
 
-function RecommendationCard({ recommendation, onFeedback }: { recommendation: Recommendation; onFeedback: FeedbackHandler }) {
+interface RecommendationCardProps {
+  recommendation: Recommendation
+  onFeedback: FeedbackHandler
+  bookings: readonly MeetingBooking[]
+  onBookSlot: BookSlotHandler
+  onCancelSlot: CancelSlotHandler
+}
+
+function RecommendationCard({
+  recommendation,
+  onFeedback,
+  bookings,
+  onBookSlot,
+  onCancelSlot,
+}: RecommendationCardProps) {
   const { candidate, icebreaker } = recommendation
   const [copyStatus, setCopyStatus] = useState('')
 
@@ -37,12 +55,34 @@ function RecommendationCard({ recommendation, onFeedback }: { recommendation: Re
         <p>{icebreaker}</p>
         <span className="copy-status" aria-live="polite">{copyStatus}</span>
       </div>}
+      <CandidateMeetingPicker
+        candidateId={candidate.id}
+        candidateName={candidate.name}
+        candidateRole={candidate.role}
+        bookings={bookings}
+        onBook={onBookSlot}
+        onCancel={onCancelSlot}
+      />
       <RecommendationFeedback candidateId={candidate.id} candidateName={candidate.name} onFeedback={onFeedback} />
     </article>
   )
 }
 
-export function RecommendationResults({ recommendations, onEdit, onFeedback, message }: ResultsProps & { onFeedback: FeedbackHandler; message: string }) {
+export function RecommendationResults({
+  recommendations,
+  onEdit,
+  onFeedback,
+  message,
+  bookings,
+  onBookSlot,
+  onCancelSlot,
+}: ResultsProps & {
+  onFeedback: FeedbackHandler
+  message: string
+  bookings: readonly MeetingBooking[]
+  onBookSlot: BookSlotHandler
+  onCancelSlot: CancelSlotHandler
+}) {
   return (
     <section aria-labelledby="results-title">
       <div className="results-heading">
@@ -50,11 +90,21 @@ export function RecommendationResults({ recommendations, onEdit, onFeedback, mes
         <button type="button" className="secondary-button" onClick={onEdit}>← Изменить анкету</button>
       </div>
       {recommendations.length ? <div className="results-grid">
-        {recommendations.map(recommendation => <RecommendationCard key={recommendation.candidate.id} recommendation={recommendation} onFeedback={onFeedback} />)}
+        {recommendations.map(recommendation => (
+          <RecommendationCard
+            key={recommendation.candidate.id}
+            recommendation={recommendation}
+            onFeedback={onFeedback}
+            bookings={bookings}
+            onBookSlot={onBookSlot}
+            onCancelSlot={onCancelSlot}
+          />
+        ))}
       </div> : <div className="surface empty-state">
         <h3>Список рекомендаций пуст</h3>
         <p>Измените цель знакомства, чтобы найти других участников.</p>
       </div>}
+      <SchedulePanel bookings={bookings} onCancel={onCancelSlot} />
     </section>
   )
 }
