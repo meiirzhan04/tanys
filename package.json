@@ -10,7 +10,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "node --experimental-strip-types --test src/matching/recommend.test.ts src/matching/session.test.ts"
+    "test": "node --experimental-strip-types --test src/matching/recommend.test.ts src/matching/session.test.ts src/scheduling/slots.test.ts"
   },
   "dependencies": {
     "react": "^19.2.0",
