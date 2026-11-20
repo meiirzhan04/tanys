@@ -102,6 +102,14 @@ function createMemoryDatabase() {
       const u = [...users.values()].find((item) => item.username === params[0])
       return u ? { rowCount: 1, rows: [{ id: u.id, password_hash: u.passwordHash }] } : { rowCount: 0, rows: [] }
     }
+    if (sql.startsWith('SELECT username,can_create_events FROM users WHERE id=$1')) {
+      const u = users.get(params[0])
+      return u ? { rowCount: 1, rows: [{ username: u.username ?? null, can_create_events: u.canCreateEvents }] } : { rowCount: 0, rows: [] }
+    }
+    if (sql.startsWith("SELECT 1 FROM memberships WHERE user_id=$1 AND role='organizer'")) {
+      const owns = [...memberships.values()].some(m => m.userId === params[0] && m.role === 'organizer')
+      return owns ? { rowCount: 1, rows: [{ '?column?': 1 }] } : { rowCount: 0, rows: [] }
+    }
     if (sql.startsWith('SELECT username FROM users WHERE id=$1')) {
       const u = users.get(params[0])
       return u ? { rowCount: 1, rows: [{ username: u.username ?? null }] } : { rowCount: 0, rows: [] }
@@ -202,10 +210,11 @@ function createMemoryDatabase() {
       return { rowCount: ok ? 1 : 0, rows: [] }
     }
     if (sql.startsWith('UPDATE events AS e SET name=$1')) {
-      const [name, timeZone, startsAt, endsAt, status, id] = params
+      const [name, timeZone, nextStart, nextEnd, status, id] = params
       const ev = events.get(id)
-      Object.assign(ev, { name, timeZone, startsAt, endsAt, status })
-      return { rowCount: 1, rows: [{ id: ev.id, name, timeZone, startsAt, endsAt, status }] }
+      // Mirrors COALESCE: times that were not sent keep their stored values.
+      Object.assign(ev, { name, timeZone, startsAt: nextStart ?? ev.startsAt, endsAt: nextEnd ?? ev.endsAt, status })
+      return { rowCount: 1, rows: [{ id: ev.id, name, timeZone, startsAt: ev.startsAt, endsAt: ev.endsAt, status }] }
     }
 
     // Invites
@@ -692,10 +701,10 @@ test('security and event isolation matrix across guest, participants, and cross-
     assert.deepEqual((await api(partA2.cookie, 'GET', '/me/profile?user_id=' + partA1.id)).body, other)
     assert.deepEqual((await api(partA1.cookie, 'GET', '/me/profile')).body, privateProfile)
 
-    // /me exposes ONLY { id, username } and never leaks email/password_hash
+    // /me exposes ONLY { id, username, canCreateEvents } and never leaks email/password_hash
     const meA = await api(orgA.cookie, 'GET', '/me')
     assert.equal(meA.status, 200)
-    assert.deepEqual(Object.keys(meA.body).sort(), ['id', 'username'])
+    assert.deepEqual(Object.keys(meA.body).sort(), ['canCreateEvents', 'id', 'username'])
     assert.equal(meA.body.username, orgA.username)
     assert.equal('email' in meA.body, false)
     assert.equal('passwordHash' in meA.body, false)
@@ -724,8 +733,9 @@ test('security and event isolation matrix across guest, participants, and cross-
     assert.equal(rlStatuses.at(-1), 429)
 
     // 2. Event creation role check & organizer isolation (Event A vs Event B)
-    const startsAt = new Date().toISOString()
-    const endsAt = new Date(Date.now() + 7 * 86400_000).toISOString()
+    const quarter = 15 * 60_000
+    const startsAt = new Date(Math.ceil(Date.now() / quarter) * quarter).toISOString()
+    const endsAt = new Date(Date.parse(startsAt) + 7 * 86400_000).toISOString()
     const inviteExp = new Date(Date.now() + 3600_000).toISOString()
 
     assert.equal((await api(partA1.cookie, 'POST', '/events', { name: 'Forbidden', timeZone: 'UTC', startsAt, endsAt })).status, 403)

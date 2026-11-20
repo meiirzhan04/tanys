@@ -4,6 +4,8 @@ import type { TanysApiClient } from '../api/client'
 import { getMessages } from '../i18n/messages'
 import type { Locale } from '../matching/types'
 import { formatMeetingInterval } from './socialHelpers'
+import { TimeSelect } from './TimeSelect'
+import { isQuarterHourInstant, isQuarterHourTime } from '../scheduling/timeStep'
 
 type Slot = { start: string; end: string }
 const minimumDuration = 15 * 60 * 1000
@@ -37,6 +39,11 @@ const labels = {
     local: 'Ввод в часовом поясе устройства',
     invalid:
       'Укажите свободное время в пределах события, минимум 15 минут. Интервалы не должны пересекаться.',
+    timePlaceholder: 'Выберите время',
+    step: 'Время выбирается с шагом 15 минут: :00, :15, :30 или :45.',
+    legacyOption: (time: string) => `${time} — недопустимо`,
+    legacySlot: 'Сохранено со временем не по шагу 15 минут. Удалите интервал и добавьте его заново с допустимым временем.',
+    invalidStep: 'Выберите время с шагом 15 минут: :00, :15, :30 или :45.',
   },
   kk: {
     title: 'Бос уақытым',
@@ -48,6 +55,11 @@ const labels = {
     remove: 'Алып тастау',
     local: 'Құрылғының уақыт белдеуі',
     invalid: 'Іс-шара шегінде кемінде 15 минут таңдаңыз. Аралықтар қабаттаспауы керек.',
+    timePlaceholder: 'Уақытты таңдаңыз',
+    step: 'Уақыт 15 минут қадаммен таңдалады: :00, :15, :30 немесе :45.',
+    legacyOption: (time: string) => `${time} — жарамсыз`,
+    legacySlot: '15 минут қадамына сай емес уақытпен сақталған. Аралықты жойып, жарамды уақытпен қайта қосыңыз.',
+    invalidStep: 'Уақытты 15 минут қадаммен таңдаңыз: :00, :15, :30 немесе :45.',
   },
   en: {
     title: 'My availability',
@@ -59,6 +71,11 @@ const labels = {
     remove: 'Remove',
     local: 'Enter times in your device time zone',
     invalid: 'Choose at least 15 minutes within the event. Intervals must not overlap.',
+    timePlaceholder: 'Choose a time',
+    step: 'Times use 15-minute steps: :00, :15, :30 or :45.',
+    legacyOption: (time: string) => `${time} — not allowed`,
+    legacySlot: 'Saved with a time outside the 15-minute steps. Remove the interval and add it again with an allowed time.',
+    invalidStep: 'Choose a time in 15-minute steps: :00, :15, :30 or :45.',
   },
 }
 
@@ -86,7 +103,7 @@ export function AvailabilityEditor({
   const firstDay = localDate(startsAt)
   const lastDay = localDate(endsAt)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<'request' | 'invalid'>()
+  const [error, setError] = useState<'request' | 'invalid' | 'step'>()
   useEffect(() => {
     let active = true
     api
@@ -115,7 +132,9 @@ export function AvailabilityEditor({
         setEndTime('')
       }
     } catch (e) {
-      setError(e && typeof e === 'object' && 'status' in e && e.status === 400 ? 'invalid' : 'request')
+      const code = e && typeof e === 'object' && 'code' in e ? e.code : undefined
+      const status = e && typeof e === 'object' && 'status' in e ? e.status : undefined
+      setError(code === 'invalid_time_step' ? 'step' : status === 400 ? 'invalid' : 'request')
     } finally {
       setBusy(false)
     }
@@ -124,6 +143,10 @@ export function AvailabilityEditor({
   function add(e: FormEvent) {
     e.preventDefault()
     if (!slots || busy) return
+    if (!isQuarterHourTime(startTime) || !isQuarterHourTime(endTime)) {
+      setError('step')
+      return
+    }
     const from = new Date(`${startDate}T${startTime}`)
     const until = new Date(`${endDate || startDate}T${endTime}`)
     const duration = +until - +from
@@ -163,7 +186,15 @@ export function AvailabilityEditor({
           </label>
           <label className="field">
             <span>{t.startTime}</span>
-            <input required disabled={busy} type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
+            <TimeSelect
+              name="availabilityStartTime"
+              required
+              disabled={busy}
+              value={startTime}
+              placeholder={t.timePlaceholder}
+              legacyLabel={t.legacyOption}
+              onChange={setStartTime}
+            />
           </label>
           <label className="field">
             <span>{t.endDate}</span>
@@ -173,9 +204,18 @@ export function AvailabilityEditor({
           </label>
           <label className="field">
             <span>{t.endTime}</span>
-            <input required disabled={busy} type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
+            <TimeSelect
+              name="availabilityEndTime"
+              required
+              disabled={busy}
+              value={endTime}
+              placeholder={t.timePlaceholder}
+              legacyLabel={t.legacyOption}
+              onChange={setEndTime}
+            />
           </label>
         </div>
+        <p className="field-hint">{t.step}</p>
         <div className="social-card__actions">
           <button className="secondary-button" type="submit" disabled={!slots || busy}>
             {t.add}
@@ -186,7 +226,12 @@ export function AvailabilityEditor({
         <ul className="social-list availability-slots">
           {slots.map((slot) => (
             <li key={slot.start} className="surface social-card">
-              <span>{formatMeetingInterval(slot.start, slot.end, zone, locale)}</span>
+              <span>
+                {formatMeetingInterval(slot.start, slot.end, zone, locale)}
+                {(!isQuarterHourInstant(slot.start) || !isQuarterHourInstant(slot.end)) && (
+                  <span className="field-hint legacy-time-hint" role="note">{t.legacySlot}</span>
+                )}
+              </span>
               <button
                 type="button"
                 className="meeting-slot-cancel"
@@ -201,7 +246,7 @@ export function AvailabilityEditor({
       ) : null}
       {error && (
         <p className="error-banner" role="alert">
-          {error === 'invalid' ? t.invalid : getMessages(locale).account.errors.genericRequest}
+          {error === 'invalid' ? t.invalid : error === 'step' ? t.invalidStep : getMessages(locale).account.errors.genericRequest}
         </p>
       )}
     </section>

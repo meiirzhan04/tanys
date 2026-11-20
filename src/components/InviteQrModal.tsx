@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { getMessages } from '../i18n/messages'
 import type { Locale } from '../matching/types'
 import { generateInviteQrSvg, getInviteState } from './inviteQr'
@@ -67,7 +68,8 @@ export function InviteQrModal({
     return () => { cancelled = true }
   }, [inviteUrl, state])
 
-  return (
+  // Render at <body> level so page animations or stacking contexts never clip the overlay.
+  return createPortal(
     <div
       className="qr-modal-backdrop"
       role="presentation"
@@ -122,6 +124,7 @@ export function InviteQrModal({
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

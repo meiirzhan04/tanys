@@ -18,6 +18,9 @@ import type { Locale } from '../matching/types'
 import { CustomSelect } from './CustomSelect'
 import { getCandidateGoalLabels } from './goalLabels'
 import { InterestMap } from './InterestMap'
+import { TimeSelect } from './TimeSelect'
+import { timeCopy } from '../i18n/timeCopy'
+import { fromLocalParts, isQuarterHourInstant, roundUpToQuarterHour, toLocalParts } from '../scheduling/timeStep'
 import { buildInviteUrl, getInviteState } from './inviteQr'
 import { InviteQrModal } from './InviteQrModal'
 import { filterEventMembers, getMemberDisplayName } from './memberSearch'
@@ -47,17 +50,21 @@ const TIMEZONE_OPTIONS = [
   { value: 'UTC', label: 'UTC (Координированное время)' },
 ] as const
 
-function toLocalDateTimeInput(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+type DateTimeParts = { date: string; time: string }
+
+function defaultStartsAt(): DateTimeParts {
+  return toLocalParts(roundUpToQuarterHour(new Date(Date.now() + 60 * 60 * 1000)))
 }
 
-function defaultStartsAt(): string {
-  return toLocalDateTimeInput(new Date(Date.now() + 60 * 60 * 1000))
+function defaultEndsAt(): DateTimeParts {
+  return toLocalParts(roundUpToQuarterHour(new Date(Date.now() + 8 * 60 * 60 * 1000)))
 }
 
-function defaultEndsAt(): string {
-  return toLocalDateTimeInput(new Date(Date.now() + 8 * 60 * 60 * 1000))
+/** A new or edited time must be on the 15-minute grid; an untouched saved time is accepted as stored. */
+function acceptableTime(next: Date, saved?: string): boolean {
+  if (!Number.isFinite(+next)) return false
+  if (saved && Date.parse(saved) === +next) return true
+  return isQuarterHourInstant(next)
 }
 
 function openPicker(event: MouseEvent<HTMLInputElement>) {
@@ -102,6 +109,9 @@ export function OrganizerCabinet({
 
   // Edit active event state
   const [editName, setEditName] = useState(activeEvent?.name ?? '')
+  const [editStart, setEditStart] = useState<DateTimeParts>(() => toLocalParts(activeEvent?.startsAt))
+  const [editEnd, setEditEnd] = useState<DateTimeParts>(() => toLocalParts(activeEvent?.endsAt))
+  const tc = timeCopy[locale]
   const [savingEvent, setSavingEvent] = useState(false)
 
   // Event-scoped real data (strictly reset when switching activeEvent!)
@@ -131,6 +141,8 @@ export function OrganizerCabinet({
 
   useEffect(() => {
     setEditName(activeEvent?.name ?? '')
+    setEditStart(toLocalParts(activeEvent?.startsAt))
+    setEditEnd(toLocalParts(activeEvent?.endsAt))
     setInvites([])
     setQrInviteId(null)
     setMembers([])
@@ -180,10 +192,14 @@ export function OrganizerCabinet({
 
   async function handleCreateEvent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const parsedStart = new Date(newStartsAt.trim())
-    const parsedEnd = new Date(newEndsAt.trim())
+    const parsedStart = fromLocalParts(newStartsAt.date, newStartsAt.time)
+    const parsedEnd = fromLocalParts(newEndsAt.date, newEndsAt.time)
     if (!newName.trim() || !Number.isFinite(+parsedStart) || !Number.isFinite(+parsedEnd) || +parsedEnd <= +parsedStart) {
       setError(o.invalidEventFields)
+      return
+    }
+    if (!acceptableTime(parsedStart) || !acceptableTime(parsedEnd)) {
+      setError(tc.invalidStep)
       return
     }
     setCreatingEvent(true)
@@ -214,19 +230,28 @@ export function OrganizerCabinet({
 
   async function handleSaveEvent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (!activeEvent || !editName.trim()) {
+    const nextStart = fromLocalParts(editStart.date, editStart.time)
+    const nextEnd = fromLocalParts(editEnd.date, editEnd.time)
+    if (!activeEvent || !editName.trim() || !Number.isFinite(+nextStart) || !Number.isFinite(+nextEnd) || +nextEnd <= +nextStart) {
       setError(o.invalidEventFields)
+      return
+    }
+    if (!acceptableTime(nextStart, activeEvent.startsAt) || !acceptableTime(nextEnd, activeEvent.endsAt)) {
+      setError(tc.invalidStep)
       return
     }
     setSavingEvent(true)
     setError('')
     setNotice('')
     try {
-      const updated = await api.updateEvent(activeEvent.id, { name: editName.trim() })
+      const payload: { name: string; startsAt?: string; endsAt?: string } = { name: editName.trim() }
+      if (Date.parse(activeEvent.startsAt ?? '') !== +nextStart) payload.startsAt = nextStart.toISOString()
+      if (Date.parse(activeEvent.endsAt ?? '') !== +nextEnd) payload.endsAt = nextEnd.toISOString()
+      const updated = await api.updateEvent(activeEvent.id, payload)
       onEventUpdated(updated)
       setNotice(o.eventSaved)
-    } catch {
-      setError(messages.account.errors.genericRequest)
+    } catch (err) {
+      setError(isApiError(err) && err.code === 'invalid_time_step' ? tc.invalidStep : messages.account.errors.genericRequest)
     } finally {
       setSavingEvent(false)
     }
@@ -253,7 +278,7 @@ export function OrganizerCabinet({
     setIssuingInvite(true)
     setError('')
     try {
-      const expiresAt = activeEvent.endsAt || defaultEndsAt()
+      const expiresAt = activeEvent.endsAt || new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString()
       const invite = await api.createInvite(activeEvent.id, expiresAt)
       setInvites(current => [invite, ...current])
     } catch {
@@ -433,32 +458,17 @@ export function OrganizerCabinet({
               onChange={val => setNewTimeZone(val)}
             />
           </label>
-          <label className="field">
-            <span>{o.startsAtLabel}</span>
-            <input
-              type="datetime-local"
-              step={900}
-              name="eventStartsAt"
-              value={newStartsAt}
-              disabled={creatingEvent}
-              onClick={openPicker}
-              onChange={event => setNewStartsAt(event.target.value)}
-            />
-          </label>
-          <label className="field">
-            <span>{o.endsAtLabel}</span>
-            <input
-              type="datetime-local"
-              step={900}
-              name="eventEndsAt"
-              min={newStartsAt || undefined}
-              value={newEndsAt}
-              disabled={creatingEvent}
-              onClick={openPicker}
-              onChange={event => setNewEndsAt(event.target.value)}
-            />
-          </label>
+          <DateTimeFields
+            prefix="event"
+            copy={tc}
+            start={newStartsAt}
+            end={newEndsAt}
+            disabled={creatingEvent}
+            onStart={setNewStartsAt}
+            onEnd={setNewEndsAt}
+          />
         </div>
+        <p className="field-hint">{tc.step}</p>
         <div className="social-card__actions">
           <button type="submit" className="primary-button" disabled={creatingEvent}>
             {creatingEvent ? o.creatingEvent : o.createEventButton}
@@ -471,14 +481,32 @@ export function OrganizerCabinet({
           {/* 2. Edit / close active event */}
           <form className="surface organizer-card bento-card" onSubmit={handleSaveEvent}>
             <h2>{o.editEventTitle}</h2>
-            <div className="contact-row">
-              <input
-                name="editEventName"
-                maxLength={160}
-                value={editName}
+            <div className="form-fields">
+              <label className="field field-full">
+                <span>{o.eventNameLabel}</span>
+                <input
+                  name="editEventName"
+                  maxLength={160}
+                  placeholder={o.eventNamePlaceholder}
+                  value={editName}
+                  disabled={savingEvent || isClosed}
+                  onChange={event => setEditName(event.target.value)}
+                />
+              </label>
+              <DateTimeFields
+                prefix="editEvent"
+                copy={tc}
+                start={editStart}
+                end={editEnd}
                 disabled={savingEvent || isClosed}
-                onChange={event => setEditName(event.target.value)}
+                onStart={setEditStart}
+                onEnd={setEditEnd}
               />
+            </div>
+            {[editStart.time, editEnd.time].filter(time => time && !/:(00|15|30|45)$/.test(time)).map(time => (
+              <p key={time} className="field-hint legacy-time-hint" role="note">{tc.legacyEventTime(time)}</p>
+            ))}
+            <div className="social-card__actions">
               <button type="submit" className="secondary-button" disabled={savingEvent || isClosed}>
                 {o.saveEventButton}
               </button>
@@ -551,9 +579,10 @@ export function OrganizerCabinet({
               <p className="social-card__hint">{o.noMembers}</p>
             ) : (
               <>
-                <div className="contact-row">
+                <div className="contact-row member-search-row">
                   <input
                     type="search"
+                    className="app-input"
                     name="memberSearch"
                     aria-label={o.memberSearchLabel}
                     placeholder={o.memberSearchPlaceholder}
@@ -571,6 +600,7 @@ export function OrganizerCabinet({
                 {filteredMembers.length === 0 ? (
                   <p className="social-card__hint">{o.noMemberMatches}</p>
                 ) : (
+                  <div className="table-scroll">
                   <table className="interest-table members-table">
                     <thead>
                       <tr>
@@ -597,6 +627,7 @@ export function OrganizerCabinet({
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 )}
               </>
             )}
@@ -794,5 +825,43 @@ export function OrganizerCabinet({
         )
       })()}
     </section>
+  )
+}
+
+interface DateTimeFieldsProps {
+  prefix: string
+  copy: (typeof timeCopy)[keyof typeof timeCopy]
+  start: DateTimeParts
+  end: DateTimeParts
+  disabled: boolean
+  onStart: (value: DateTimeParts) => void
+  onEnd: (value: DateTimeParts) => void
+}
+
+/** Date inputs plus 15-minute time selects for an event interval. */
+function DateTimeFields({ prefix, copy, start, end, disabled, onStart, onEnd }: DateTimeFieldsProps) {
+  return (
+    <>
+      <label className="field">
+        <span>{copy.startDate}</span>
+        <input type="date" name={`${prefix}StartDate`} value={start.date} disabled={disabled} onClick={openPicker}
+          onChange={event => onStart({ ...start, date: event.target.value })} />
+      </label>
+      <div className="field">
+        <span>{copy.startTime}</span>
+        <TimeSelect name={`${prefix}StartTime`} value={start.time} placeholder={copy.timePlaceholder} disabled={disabled}
+          legacyLabel={copy.legacyOption} aria-label={copy.startTime} onChange={time => onStart({ ...start, time })} />
+      </div>
+      <label className="field">
+        <span>{copy.endDate}</span>
+        <input type="date" name={`${prefix}EndDate`} value={end.date} min={start.date || undefined} disabled={disabled}
+          onClick={openPicker} onChange={event => onEnd({ ...end, date: event.target.value })} />
+      </label>
+      <div className="field">
+        <span>{copy.endTime}</span>
+        <TimeSelect name={`${prefix}EndTime`} value={end.time} placeholder={copy.timePlaceholder} disabled={disabled}
+          legacyLabel={copy.legacyOption} aria-label={copy.endTime} onChange={time => onEnd({ ...end, time })} />
+      </div>
+    </>
   )
 }
