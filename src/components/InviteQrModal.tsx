@@ -10,6 +10,7 @@ export interface InviteQrModalProps {
   revoked?: boolean
   expiresAt?: string
   locale: Locale
+  copyError?: string
   copied: boolean
   onCopy: () => void
   onClose: () => void
@@ -22,9 +23,12 @@ export function InviteQrModal({
   expiresAt,
   locale,
   copied,
+  copyError,
   onCopy,
   onClose,
 }: InviteQrModalProps) {
+  const copy = getMessages(locale).account
+  const [failed, setFailed] = useState(false)
   const o = getMessages(locale).organizer
   const closeButtonRef = useRef<HTMLButtonElement>(null)
   const [svgMarkup, setSvgMarkup] = useState('')
@@ -57,14 +61,15 @@ export function InviteQrModal({
   }, [expiresAt, state, nowMs])
 
   useEffect(() => {
+    setFailed(false)
+    setSvgMarkup('')
     if (state !== 'active') {
-      setSvgMarkup('')
       return
     }
     let cancelled = false
     void generateInviteQrSvg(inviteUrl).then(svg => {
       if (!cancelled) setSvgMarkup(svg)
-    })
+    }).catch(() => { if (!cancelled) setFailed(true) })
     return () => { cancelled = true }
   }, [inviteUrl, state])
 
@@ -103,19 +108,19 @@ export function InviteQrModal({
               {svgMarkup ? (
                 <div className="qr-svg-box" dangerouslySetInnerHTML={{ __html: svgMarkup }} />
               ) : (
-                <p className="social-card__hint">{o.qrGenerating}</p>
+                <p className="social-card__hint">{failed ? copy.qrError : o.qrGenerating}</p>
               )}
             </div>
             <div className="qr-modal__link-box">
               <code className="invite-url">{inviteUrl}</code>
             </div>
+            {copyError && <p role="alert">{copyError}</p>}
             <div className="social-card__actions">
               <button type="button" className="primary-button" onClick={onCopy}>
                 {copied ? o.inviteCopied : o.copyInvite}
               </button>
-              <button type="button" className="secondary-button" onClick={onClose}>
-                {o.qrClose}
-              </button>
+              {svgMarkup && <a className="secondary-button" download="tanys-invite.svg"
+                href={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgMarkup)}`}>{copy.downloadQr}</a>}
             </div>
           </>
         ) : (

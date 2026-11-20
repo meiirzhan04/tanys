@@ -5,18 +5,8 @@ import { HttpError, json, readBody, uuid } from './http.js'
 
 async function requireAdmin(req: IncomingMessage): Promise<string> {
   const userId = await viewer(req)
-  const access = await pool.query<{ can_create_events: boolean; has_any_organizer: boolean }>(
-    `SELECT u.can_create_events,
-            EXISTS(SELECT 1 FROM users WHERE can_create_events) AS has_any_organizer
-     FROM users u
-     WHERE u.id = $1`,
-    [userId],
-  )
-  if (!access.rowCount) throw new HttpError(401, 'session_required')
-  const row = access.rows[0]
-  if (!row.can_create_events && row.has_any_organizer) {
-    throw new HttpError(403, 'organizer_required')
-  }
+  const access = await pool.query('SELECT is_admin FROM users WHERE id=$1', [userId])
+  if (!access.rows[0]?.is_admin) throw new HttpError(403, 'admin_required')
   return userId
 }
 

@@ -1,3 +1,4 @@
+import { InviteEntry } from './InviteEntry'
 import { AvailabilityEditor } from './AvailabilityEditor'
 import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -33,7 +34,7 @@ import type { Feedback } from '../matching/session'
 import type { Goal, Locale, Recommendation } from '../matching/types'
 import { CustomSelect } from './CustomSelect'
 import { getGoalLabels } from './goalLabels'
-import { TanysMark } from './brand/TanysLogo'
+import { ConfirmDialog } from './profile/ConfirmDialog'
 import { accountLabels } from './profile/accountLabels'
 import { AccountProfilePanel } from './profile/AccountProfilePanel'
 import { profileCopy } from './profile/profileCopy'
@@ -140,6 +141,7 @@ export interface EventAccountFlowProps {
   locale: Locale
   initialInvite: InviteTarget | null
   onExitToDemo: () => void
+  onAuthenticatedChange?: (active: boolean) => void
   exitRequestSeq?: number
   api?: TanysApiClient
 }
@@ -149,9 +151,12 @@ export function EventAccountFlow({
   initialInvite,
   onExitToDemo,
   exitRequestSeq = 0,
+  onAuthenticatedChange,
   api = defaultApiClient,
 }: EventAccountFlowProps) {
   const id = useId()
+  const needsInviteLink = /^\/join\/?$/.test(window.location.pathname) ||
+    (window.location.pathname.startsWith('/invite/') && !initialInvite?.token)
   const messages = getMessages(locale)
   const t = messages.account
   const formText = messages.form
@@ -163,7 +168,7 @@ export function EventAccountFlow({
     return resolved
   })
   const [user, setUser] = useState<AuthUser | null>(null)
-  const [phase, setPhase] = useState<'checking' | 'auth' | 'joining' | 'expired' | 'ready'>('checking')
+  const [phase, setPhase] = useState<'checking' | 'auth' | 'joining' | 'expired' | 'inviteError' | 'ready'>('checking')
 
   // Auth form state
   const [registering, setRegistering] = useState(false)
@@ -177,6 +182,7 @@ export function EventAccountFlow({
   const [activeEventId, setActiveEventId] = useState<string>('')
   const [activeEvent, setActiveEvent] = useState<EventDetails | null>(null)
   const [eventLoading, setEventLoading] = useState(false)
+  const [inviteFailure, setInviteFailure] = useState<'inviteClosed' | 'inviteRevoked' | 'inviteExpired' | 'expiredTitle'>('expiredTitle')
   const [eventError, setEventError] = useState('')
   const [tab, setTab] = useState<EventTab>('profile')
   const [hasSavedProfile, setHasSavedProfile] = useState(false)
@@ -207,8 +213,13 @@ export function EventAccountFlow({
   const [loadingSlotsIntroId, setLoadingSlotsIntroId] = useState('')
   const [proposingSlotKey, setProposingSlotKey] = useState('')
   const [contactValue, setContactValue] = useState('')
-  const [savingContact, setSavingContact] = useState(false)
-  const [contactSaved, setContactSaved] = useState(false)
+  const endingSession = useRef(false)
+  const redirectToLogin = useCallback(() => {
+    endingSession.current = true
+    window.location.replace('/login')
+  }, [])
+  const [logoutOpen, setLogoutOpen] = useState(false)
+  const [logoutError, setLogoutError] = useState('')
   const [loggingOut, setLoggingOut] = useState(false)
   const [leavingEvent, setLeavingEvent] = useState(false)
   const [deletingAccount, setDeletingAccount] = useState(false)
@@ -257,16 +268,14 @@ export function EventAccountFlow({
       setMeetings(nextMeetings)
     } catch (error) {
       if (isApiError(error) && error.status === 401) {
-        setUser(null)
-        setPhase('auth')
-        setAuthError(formatApiError(error, locale, 'authService'))
+        redirectToLogin()
         return
       }
       // Keep existing state intact if background refresh fails (e.g., backend #52/#53 not yet mounted).
     } finally {
       setSocialRefreshing(false)
     }
-  }, [api, locale])
+  }, [api, locale, redirectToLogin])
 
   const accountCache = useRef<Promise<AccountProfile> | null>(null)
   const readAccount = useCallback(() => {
@@ -299,6 +308,11 @@ export function EventAccountFlow({
       ])
       setActiveEventId(eventId)
       setActiveEvent(details)
+      const membershipRole = details.role
+      if (membershipRole) {
+        setEvents(current => current.some(item => item.id === details.id)
+          ? current : [...current, { ...details, role: membershipRole }])
+      }
       setHasSavedProfile(Boolean(profile))
       const loadedDraft = profile ? profileToDraft(profile) : null
       setSavedBaseline(loadedDraft)
@@ -325,77 +339,78 @@ export function EventAccountFlow({
       } catch {
         setEventBooths([])
       }
+      return true
     } catch (error) {
       if (isApiError(error) && error.status === 401) {
-        setUser(null)
-        setPhase('auth')
-        setAuthError(formatApiError(error, locale, 'authService'))
+        redirectToLogin()
         return
       }
-      setEventError(formatApiError(error, locale, 'general'))
+      setEventError(isApiError(error) && error.status === 404 ? getMessages(locale).account.expiredBody : formatApiError(error, locale, 'general'))
+      return false
     } finally {
       setEventLoading(false)
     }
-  }, [api, locale, readAccount, refreshSocialState])
+  }, [api, locale, readAccount, redirectToLogin, refreshSocialState])
 
   const enterAuthenticated = useCallback(async (invite: InviteTarget | null, preserveDraft = false) => {
     accountCache.current = null
     // Owner-only contact so the profile and the requests screen show what is saved after a reload.
     void api.getContact().then(value => setContactValue(value ?? '')).catch(() => {})
     if (invite?.token) {
+      setEventError('')
       setPhase('joining')
       try {
         await api.joinEvent(invite.eventId, invite.token)
-        savePendingInvite(null)
-        setPendingInvite(null)
       } catch (error) {
         if (isApiError(error) && error.status === 401) {
-          setUser(null)
-          setPhase('auth')
-          setAuthError(formatApiError(error, locale, 'authService'))
+          redirectToLogin()
           return
         }
-        if (isInviteExpiredError(error)) {
+        if (isApiError(error) && (isInviteExpiredError(error) || error.code === 'event_closed')) {
+          switch (error.code) {
+            case 'event_closed': setInviteFailure('inviteClosed'); break
+            case 'invite_revoked': setInviteFailure('inviteRevoked'); break
+            case 'invite_expired': setInviteFailure('inviteExpired'); break
+            default: setInviteFailure('expiredTitle')
+          }
           savePendingInvite(null)
           setPendingInvite(null)
-          try {
-            const existingEvents = await api.listEvents()
-            setEvents(existingEvents)
-          } catch {
-            setEvents([])
-          }
           setPhase('expired')
           return
         }
-        setEventError(formatApiError(error, locale, 'general'))
+        setEventError(isApiError(error) && error.status >= 500
+          ? getMessages(locale).account.inviteUnavailable : formatApiError(error, locale, 'general'))
+        setPhase('inviteError')
+        return
       }
     }
 
-    setPhase('ready')
     try {
       const list = await api.listEvents()
       setEvents(list)
-      const preferredId = invite?.eventId && list.some(item => item.id === invite.eventId)
-        ? invite.eventId
-        : invite?.eventId && !invite.token
-          ? invite.eventId
-          : list[0]?.id ?? ''
+      const preferredId = invite?.eventId || list[0]?.id || ''
       if (preferredId) {
-        await loadEventWorkspace(preferredId, preserveDraft)
+        const loaded = await loadEventWorkspace(preferredId, preserveDraft)
+        if (!loaded && invite) {
+          setPhase('inviteError')
+          return
+        }
+        savePendingInvite(null)
+        setPendingInvite(null)
       } else {
         setActiveEventId('')
         setActiveEvent(null)
       }
+      setPhase('ready')
     } catch (error) {
       if (isApiError(error) && error.status === 401) {
-        setUser(null)
-        setPhase('auth')
-        setAuthError(formatApiError(error, locale, 'authService'))
+        redirectToLogin()
         return
       }
       setEventError(formatApiError(error, locale, 'general'))
+      setPhase(invite ? 'inviteError' : 'ready')
     }
-  }, [api, loadEventWorkspace, locale])
+  }, [api, loadEventWorkspace, locale, redirectToLogin])
 
   useEffect(() => {
     let cancelled = false
@@ -410,6 +425,7 @@ export function EventAccountFlow({
           return
         }
         setUser(me)
+        if (needsInviteLink) { setPhase('ready'); return }
         await enterAuthenticated(pendingInvite, false)
       } catch (error) {
         if (cancelled) return
@@ -497,12 +513,12 @@ export function EventAccountFlow({
       if (window.location.pathname !== targetPath || window.location.search) {
         window.history.replaceState(null, '', targetPath)
       }
-    } else if ((phase === 'ready' && user && !activeEventId) || phase === 'expired') {
+    } else if (!needsInviteLink && ((phase === 'ready' && user && !activeEventId) || phase === 'expired')) {
       if (/^\/(events|invite)\//.test(window.location.pathname)) {
         window.history.replaceState(null, '', '/?mode=account')
       }
     }
-  }, [activeEventId, phase, user])
+  }, [activeEventId, needsInviteLink, phase, user])
 
   function chooseAuthMode(createAccount: boolean) {
     setRegistering(createAccount)
@@ -544,35 +560,15 @@ export function EventAccountFlow({
     setLoggingOut(true)
     try {
       await api.logout()
-    } catch {
-      // Clear local session view even if session already expired.
-    } finally {
-      setLoggingOut(false)
-      setUser(null)
-      setEvents([])
-      setActiveEventId('')
-      setActiveEvent(null)
-      setRecommendations(null)
-      setIntroductions([])
-      setMeetings([])
-      setNotifications([])
-      setContactValue('')
-      setSlotsByIntroId({})
-      setSocialError('')
-      setSocialNotice('')
-      prevIntrosRef.current = []
-      prevMeetingsRef.current = []
-      socialInitializedRef.current = false
-      setDraft(emptyDraft())
-      setSavedBaseline(null)
-      setPendingLeaveAction(null)
-      setHasSavedProfile(false)
-      setShowErrors(false)
-      setSaveError('')
-      setSaveSuccess(false)
-      setAuthError('')
-      setPhase('auth')
+    } catch (error) {
+      if (!isApiError(error) || error.status !== 401) {
+        setLogoutError(formatApiError(error, locale, 'general'))
+        setLoggingOut(false)
+        return
+      }
     }
+    savePendingInvite(null)
+    redirectToLogin()
   }
 
   async function handleLeaveEvent(): Promise<string> {
@@ -643,9 +639,7 @@ export function EventAccountFlow({
       requestAnimationFrame(() => document.getElementById('results-title')?.focus({ preventScroll: true }))
     } catch (error) {
       if (isApiError(error) && error.status === 401) {
-        setUser(null)
-        setPhase('auth')
-        setAuthError(formatApiError(error, locale, 'authService'))
+        redirectToLogin()
         return
       }
       setEventError(formatApiError(error, locale, 'general'))
@@ -721,7 +715,7 @@ export function EventAccountFlow({
     }
   }
 
-  async function saveContactFromProfile(value: string): Promise<string> {
+  async function saveContact(value: string): Promise<string> {
     try {
       await api.saveContact(value)
       setContactValue(value)
@@ -837,22 +831,6 @@ export function EventAccountFlow({
     }
   }
 
-  async function handleSaveContact(value: string) {
-    setSavingContact(true)
-    setContactSaved(false)
-    setSocialError('')
-    try {
-      await api.saveContact(value)
-      setContactValue(value)
-      setContactSaved(true)
-      return true
-    } catch (error) {
-      setSocialError(formatApiError(error, locale, 'general'))
-      return false
-    } finally {
-      setSavingContact(false)
-    }
-  }
 
   async function handleToggleSlots(introId: string) {
     if (!activeEventId) return
@@ -938,9 +916,9 @@ export function EventAccountFlow({
   const activeMeetingsCount = countActionableMeetings(meetings)
   const eventTimeZone = activeEvent?.timeZone || 'Asia/Almaty'
   const activeEventSummary = events.find(item => item.id === activeEventId)
-  const isOrganizerOfActive = activeEventSummary?.role === 'organizer'
+  const isOrganizerOfActive = Boolean(user?.canCreateEvents) && activeEventSummary?.role === 'organizer'
   // The organizer cabinet is a separate view for people who may create or already run events, never for plain participants.
-  const canOrganize = Boolean(user?.canCreateEvents) || events.some(item => item.role === 'organizer')
+  const canOrganize = Boolean(user?.canCreateEvents)
 
   const matchedEventBooths = useMemo(() => {
     const published: PartnerBooth[] = eventBooths
@@ -978,6 +956,7 @@ export function EventAccountFlow({
   useEffect(() => {
     if (!hasUnsavedChanges) return
     const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (endingSession.current) return
       event.preventDefault()
       event.returnValue = ''
     }
@@ -998,8 +977,43 @@ export function EventAccountFlow({
   useEffect(() => {
     if (exitRequestSeq === lastExitSeqRef.current) return
     lastExitSeqRef.current = exitRequestSeq
-    guardNavigation(onExitToDemo)
-  }, [exitRequestSeq, guardNavigation, onExitToDemo])
+    if (user) { setLogoutError(''); setLogoutOpen(true) }
+    else guardNavigation(onExitToDemo)
+  }, [exitRequestSeq, guardNavigation, onExitToDemo, user])
+
+  const userId = user?.id
+  useEffect(() => { onAuthenticatedChange?.(Boolean(userId)) }, [onAuthenticatedChange, userId])
+  useEffect(() => {
+    if (!userId) return
+    let active = true
+    let revision = 0
+    async function refresh() {
+      const requested = ++revision
+      try {
+        const me = await api.getMe()
+        if (!active || requested !== revision) return
+        if (!me || me.id !== userId) {
+          redirectToLogin()
+          return
+        }
+        setUser(me)
+        if (!me.canCreateEvents) setTab(current => current === 'organizer' ? 'me' : current)
+      } catch { /* A temporary network failure leaves the server-enforced session intact. */ }
+    }
+    function refreshWhenVisible() {
+      if (!document.hidden) void refresh()
+    }
+    const timer = window.setInterval(refreshWhenVisible, 30_000)
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    return () => {
+      active = false
+      window.clearInterval(timer)
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
+  }, [api, redirectToLogin, userId])
+
 
   function handleStayOnProfile() {
     setPendingLeaveAction(null)
@@ -1022,9 +1036,19 @@ export function EventAccountFlow({
     setSaveSuccess(false)
   }
 
+  const dialogCopy = accountDialogCopy[locale]
+  const logoutDialog = user && logoutOpen && (
+    <ConfirmDialog title={dialogCopy.logoutTitle} confirmLabel={t.logout} cancelLabel={dialogCopy.cancel}
+      tone="neutral" busy={loggingOut} error={logoutError} onCancel={() => setLogoutOpen(false)}
+      onConfirm={() => void handleLogout()}>
+      <p>{dialogCopy.logoutBody}</p>
+    </ConfirmDialog>
+  )
+
   if (phase === 'checking' || phase === 'joining') {
     return (
       <main className="site-width account-main">
+        {logoutDialog}
         <div className="surface status-panel" role="status" aria-live="polite" aria-busy="true">
           <p>{phase === 'joining' ? t.joiningInvite : t.loadingSession}</p>
         </div>
@@ -1032,23 +1056,25 @@ export function EventAccountFlow({
     )
   }
 
-  if (phase === 'expired') {
+  if (needsInviteLink) {
+    return <main className="site-width account-main">{logoutDialog}
+      <section className="surface auth-card"><h1>{t.joinWithLink}</h1>
+        <InviteEntry locale={locale} />
+        <a className="text-button" href="/login">{user ? t.openMyEvents : t.signInTitle}</a>
+      </section>
+    </main>
+  }
+
+  if (phase === 'expired' || phase === 'inviteError') {
     return (
       <main className="site-width account-main">
+        {logoutDialog}
         <section className="surface status-panel" aria-labelledby="expired-invite-title">
-          <h1 id="expired-invite-title">{t.expiredTitle}</h1>
-          <p>{t.expiredBody}</p>
+          <h1 id="expired-invite-title">{phase === 'expired' ? t[inviteFailure] : eventError}</h1>
+          {phase === 'expired' && <p>{t.expiredBody}</p>}
+          {phase === 'inviteError' && <button className="primary-button" onClick={() => void enterAuthenticated(pendingInvite)}>{t.inviteRetry}</button>}
           <div className="status-actions">
-            {events.length > 0 && (
-              <button
-                type="button"
-                className="primary-button"
-                onClick={() => {
-                  setPhase('ready')
-                  void loadEventWorkspace(events[0].id)
-                }}
-              >{t.openMyEvents}</button>
-            )}
+            <a className="secondary-button" href="/account" onClick={() => savePendingInvite(null)}>{t.openMyEvents}</a>
             <button type="button" className="secondary-button" onClick={onExitToDemo}>{t.backToDemo}</button>
           </div>
         </section>
@@ -1057,131 +1083,87 @@ export function EventAccountFlow({
   }
 
   if (phase === 'auth' || !user) {
-    const authShowcase = locale === 'kk'
-      ? {
-          tag: 'Qazaq IT Community',
-          headline: 'Офлайн және гибрид IT-іс-шараларға арналған нетворкинг',
-          caption: 'QR-шақыру бойынша кіріп, ортақ стек пен мақсатқа сай мамандармен 1:1 кездесулер жоспарлаңыз.',
-          badges: ['Almaty · Astana', '1:1 кездесулер', 'QR-рұқсат'],
-        }
-      : locale === 'en'
-        ? {
-            tag: 'Qazaq IT Community',
-            headline: 'Structured networking for live IT meetups',
-            caption: 'Join with an organizer QR pass, match by engineering goals and stack, and book focused 1:1 meetings.',
-            badges: ['Almaty · Astana', '1:1 meetings', 'QR pass'],
-          }
-        : {
-            tag: 'Qazaq IT Community',
-            headline: 'Нетворкинг для живых IT-митапов и конференций',
-            caption: 'Входите по приглашению организатора, находите собеседников по целям и стеку и бронируйте 1:1 встречи.',
-            badges: ['Almaty · Astana', '1:1 встречи', 'QR-пропуск'],
-          }
     return (
       <main className="site-width account-main">
-        <div className="auth-split">
-          <section className="auth-card surface" aria-labelledby="auth-title">
-            <div className="page-heading">
-              <div>
-                <h1 id="auth-title">{t.signInTitle}</h1>
-                <p>{t.signInSubtitle}</p>
-              </div>
+        <section className="auth-card surface" aria-labelledby="auth-title">
+          <div className="page-heading">
+            <div>
+              <h1 id="auth-title">{t.signInTitle}</h1>
+              <p>{t.signInSubtitle}</p>
+            </div>
+          </div>
+
+          {pendingInvite && (
+            <div className="info-banner" role="status">
+              {t.inviteNotice}
+            </div>
+          )}
+
+          {authError && (
+            <div className="error-banner" role="alert">
+              {authError}
+            </div>
+          )}
+
+          <form noValidate onSubmit={handlePasswordSubmit} className="auth-form">
+            <div className="purpose-toggle" role="group" aria-label={t.signInTitle}>
+              <button type="button" aria-pressed={!registering} disabled={authBusy} onClick={() => chooseAuthMode(false)}>
+                {t.purposeLogin}
+              </button>
+              <button type="button" aria-pressed={registering} disabled={authBusy} onClick={() => chooseAuthMode(true)}>
+                {t.purposeRegister}
+              </button>
             </div>
 
-            {pendingInvite && (
-              <div className="info-banner" role="status">
-                {t.inviteNotice}
-              </div>
-            )}
-
-            {authError && (
-              <div className="error-banner" role="alert">
-                {authError}
-              </div>
-            )}
-
-            <form noValidate onSubmit={handlePasswordSubmit} className="auth-form">
-              <div className="purpose-toggle" role="group" aria-label={t.signInTitle}>
-                <button type="button" aria-pressed={!registering} disabled={authBusy} onClick={() => chooseAuthMode(false)}>
-                  {t.purposeLogin}
-                </button>
-                <button type="button" aria-pressed={registering} disabled={authBusy} onClick={() => chooseAuthMode(true)}>
-                  {t.purposeRegister}
-                </button>
-              </div>
-
-              <div className="field">
-                <label htmlFor={`${id}-username`}>{t.usernameLabel}</label>
-                <input
-                  id={`${id}-username`}
-                  name="username"
-                  autoComplete="username"
-                  autoCapitalize="none"
-                  spellCheck={false}
-                  maxLength={32}
-                  required
-                  value={username}
-                  disabled={authBusy}
-                  onChange={event => {
-                    setUsername(event.target.value)
-                    setAuthError('')
-                  }}
-                />
-              </div>
-
-              <div className="field">
-                <label htmlFor={`${id}-password`}>{t.passwordLabel}</label>
-                <input
-                  id={`${id}-password`}
-                  name="password"
-                  type="password"
-                  autoComplete={registering ? 'new-password' : 'current-password'}
-                  aria-describedby={registering ? `${id}-password-hint` : undefined}
-                  maxLength={512}
-                  required
-                  value={password}
-                  disabled={authBusy}
-                  onChange={event => {
-                    setPassword(event.target.value)
-                    setAuthError('')
-                  }}
-                />
-                {registering && <p id={`${id}-password-hint`} className="auth-hint">{t.passwordHint}</p>}
-              </div>
-
-              <div className="auth-actions">
-                <button type="submit" className="primary-button" disabled={authBusy}>
-                  {authBusy ? t.authSubmitting : registering ? t.purposeRegister : t.purposeLogin}
-                </button>
-                <button type="button" className="secondary-button" onClick={onExitToDemo}>
-                  {t.backToDemo}
-                </button>
-              </div>
-            </form>
-          </section>
-
-          <aside className="surface auth-showcase" aria-hidden="true">
-            <div className="auth-showcase__top">
-              <span className="showcase-pill">{authShowcase.tag}</span>
-              <strong className="auth-showcase__headline">{authShowcase.headline}</strong>
-              <p className="auth-showcase__caption">{authShowcase.caption}</p>
+            <div className="field">
+              <label htmlFor={`${id}-username`}>{t.usernameLabel}</label>
+              <input
+                id={`${id}-username`}
+                name="username"
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                maxLength={32}
+                required
+                value={username}
+                disabled={authBusy}
+                onChange={event => {
+                  setUsername(event.target.value)
+                  setAuthError('')
+                }}
+              />
             </div>
-            <div className="auth-circuit-box">
-              <div className="showcase-chip">
-                <TanysMark size={54} />
-                <span className="showcase-chip__sub">QR · 1:1</span>
-              </div>
-              <div className="auth-Showcase-grid">
-                {authShowcase.badges.map((badge, idx) => (
-                  <div key={badge} className="showcase-node">
-                    <span className="showcase-node__code">{idx === 0 ? 'KZ' : idx === 1 ? '1:1' : 'QR'}</span>
-                    <span className="showcase-node__label">{badge}</span>
-                  </div>
-                ))}
-              </div>
+
+            <div className="field">
+              <label htmlFor={`${id}-password`}>{t.passwordLabel}</label>
+              <input
+                id={`${id}-password`}
+                name="password"
+                type="password"
+                autoComplete={registering ? 'new-password' : 'current-password'}
+                aria-describedby={registering ? `${id}-password-hint` : undefined}
+                maxLength={512}
+                required
+                value={password}
+                disabled={authBusy}
+                onChange={event => {
+                  setPassword(event.target.value)
+                  setAuthError('')
+                }}
+              />
+              {registering && <p id={`${id}-password-hint`} className="auth-hint">{t.passwordHint}</p>}
             </div>
-          </aside>
-        </div>
+
+            <div className="auth-actions">
+              <button type="submit" className="primary-button" disabled={authBusy}>
+                {authBusy ? t.authSubmitting : registering ? t.purposeRegister : t.purposeLogin}
+              </button>
+              <button type="button" className="secondary-button" onClick={onExitToDemo}>
+                {t.backToDemo}
+              </button>
+            </div>
+          </form>
+        </section>
       </main>
     )
   }
@@ -1199,7 +1181,7 @@ export function EventAccountFlow({
             options={events.map(item => ({
               value: item.id,
               label: item.name || item.id,
-              badge: item.role === 'organizer' ? messages.organizer.navLabel : undefined,
+              badge: canOrganize && item.role === 'organizer' ? messages.organizer.navLabel : undefined,
             }))}
             onChange={nextId => {
               if (nextId === activeEventId) return
@@ -1218,6 +1200,7 @@ export function EventAccountFlow({
 
   return (
     <div className="site-width workspace">
+      {logoutDialog}
       <nav className="workspace-nav" aria-label={messages.nav.label}>
         <button
           type="button"
@@ -1301,7 +1284,7 @@ export function EventAccountFlow({
           </div>
         ) : tab === 'organizer' && canOrganize ? (
           <Suspense fallback={<div className="surface status-panel" role="status" aria-live="polite" aria-busy="true"><p>{t.loadingEvent}</p></div>}>
-            <OrganizerCabinet
+            <OrganizerCabinet key={activeEvent?.id ?? 'new-event'}
               api={api}
               locale={locale}
               activeEvent={activeEvent}
@@ -1337,14 +1320,12 @@ export function EventAccountFlow({
             source={eventLoading || !hasSavedProfile ? null : savedBaseline}
             eventName={activeEvent?.name}
             username={user.username}
-            isOrganizer={isOrganizerOfActive}
+            isOrganizer={activeEventSummary?.role === 'organizer'}
             organizesAnyEvent={events.some(item => item.role === 'organizer')}
             hasEvent={Boolean(activeEventId)}
-            contactValue={contactValue}
             handle={user.handle ?? null}
-            onSaveContact={saveContactFromProfile}
             onSaveHandle={saveHandle}
-            onLogout={handleLogout}
+            onLogout={() => { setLogoutError(''); setLogoutOpen(true) }}
             onLeaveEvent={handleLeaveEvent}
             onDeleteAccount={handleDeleteAccount}
             loggingOut={loggingOut}
@@ -1355,6 +1336,7 @@ export function EventAccountFlow({
           <section className="surface empty-state">
             <h1>{t.noEventsTitle}</h1>
             <p>{t.noEventsBody}</p>
+            <InviteEntry locale={locale} />
           </section>
         ) : tab === 'introductions' ? (
           <IntroductionsPanel
@@ -1367,11 +1349,13 @@ export function EventAccountFlow({
             slotsByIntroId={slotsByIntroId}
             loadingSlotsIntroId={loadingSlotsIntroId}
             proposingSlotKey={proposingSlotKey}
+            contactValue={contactValue}
             ownProfile={!hasSavedProfile ? 'missing' : savedBaseline?.visible ? 'visible' : 'hidden'}
             socialError={socialError}
             socialNotice={socialNotice}
             onRequest={handleRequestFromSearch}
             onOpenQuestionnaire={() => guardNavigation(() => setTab('profile'))}
+            onSaveContact={saveContact}
             onUpdateIntro={(introId, status) => void handleUpdateIntro(introId, status)}
             onToggleSlots={introId => void handleToggleSlots(introId)}
             onProposeMeeting={(introId, slotId) => void handleProposeMeeting(introId, slotId)}

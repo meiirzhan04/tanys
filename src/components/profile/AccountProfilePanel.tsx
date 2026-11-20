@@ -23,13 +23,10 @@ interface AccountProfilePanelProps {
   /** True when the user organizes any event: the server refuses to delete such an account. */
   organizesAnyEvent: boolean
   hasEvent: boolean
-  contactValue: string
   /** Public @handle, or null when not set yet. */
   handle: string | null
-  /** Both resolve with an error message, or '' once the server saved the value. */
-  onSaveContact: (value: string) => Promise<string>
   onSaveHandle: (value: string) => Promise<string>
-  onLogout: () => Promise<void>
+  onLogout: () => void
   /** Resolves with an error message, or an empty string after the server confirmed the action. */
   onLeaveEvent: () => Promise<string>
   onDeleteAccount: () => Promise<string>
@@ -49,9 +46,7 @@ export function AccountProfilePanel({
   isOrganizer,
   organizesAnyEvent,
   hasEvent,
-  contactValue,
   handle,
-  onSaveContact,
   onSaveHandle,
   onLogout,
   onLeaveEvent,
@@ -64,22 +59,18 @@ export function AccountProfilePanel({
   const messages = getMessages(locale)
   const d = accountDialogCopy[locale]
   const ic = identityCopy[locale]
-  const [editing, setEditing] = useState<'handle' | 'contact' | null>(null)
-  const [dialog, setDialog] = useState<'logout' | 'leave' | 'delete' | null>(null)
+  const [editingHandle, setEditingHandle] = useState(false)
+  const [dialog, setDialog] = useState<'leave' | 'delete' | null>(null)
   const [dialogError, setDialogError] = useState('')
   const busy = loggingOut || leavingEvent || deletingAccount
   const eventLabel = eventName || '—'
 
-  function openDialog(next: 'logout' | 'leave' | 'delete') {
+  function openDialog(next: 'leave' | 'delete') {
     setDialogError('')
     setDialog(next)
   }
 
   async function confirmDialog() {
-    if (dialog === 'logout') {
-      await onLogout()
-      return
-    }
     const error = dialog === 'leave' ? await onLeaveEvent() : await onDeleteAccount()
     if (error) setDialogError(error)
     else setDialog(null)
@@ -142,32 +133,15 @@ export function AccountProfilePanel({
           <section className="surface identity-card" aria-labelledby="me-handle-title">
             <div className="identity-card__head">
               <h2 id="me-handle-title">{ic.handleTitle}</h2>
-              <button type="button" className="icon-button" data-edit="handle" aria-label={ic.editHandle} onClick={() => setEditing('handle')}>
+              <button type="button" className="icon-button" data-edit="handle" aria-label={ic.editHandle} onClick={() => setEditingHandle(true)}>
                 <PencilIcon />
               </button>
             </div>
             <p className={`identity-card__value ${handle ? '' : 'identity-card__value--empty'}`}>{handle ? `@${handle}` : ic.handleNone}</p>
             <p className="identity-card__note">{ic.handleHint}</p>
           </section>
-          <section className="surface identity-card" aria-labelledby="me-contact-title">
-            <div className="identity-card__head">
-              <h2 id="me-contact-title">{ic.contactTitle}</h2>
-              <button type="button" className="icon-button" data-edit="contact" aria-label={ic.editContact} onClick={() => setEditing('contact')}>
-                <PencilIcon />
-              </button>
-            </div>
-            <p className={`identity-card__value ${contactValue ? '' : 'identity-card__value--empty'}`} data-contact-value>{contactValue || ic.contactNone}</p>
-            <p className="lock-note">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" /><path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="currentColor" strokeWidth="1.8" /></svg>
-              {ic.contactLock}
-            </p>
-            <details className="identity-card__help">
-              <summary>{ic.contactHelpSummary}</summary>
-              <p>{ic.contactHelp}</p>
-            </details>
-          </section>
         </div>
-        {editing === 'handle' && (
+        {editingHandle && (
           <EditFieldDialog
             title={ic.editHandle}
             label={ic.handleLabel}
@@ -179,23 +153,7 @@ export function AccountProfilePanel({
             saveLabel={ic.save}
             cancelLabel={ic.cancel}
             onSave={onSaveHandle}
-            onClose={() => setEditing(null)}
-          />
-        )}
-        {editing === 'contact' && (
-          <EditFieldDialog
-            title={ic.editContact}
-            label={ic.contactLabel}
-            name="profileContact"
-            initialValue={contactValue}
-            placeholder={ic.contactPlaceholder}
-            hint={<><p>{ic.contactLock}</p><p>{ic.contactHelp}</p></>}
-            maxLength={256}
-            saveLabel={ic.save}
-            cancelLabel={ic.cancel}
-            clearLabel={ic.remove}
-            onSave={onSaveContact}
-            onClose={() => setEditing(null)}
+            onClose={() => setEditingHandle(false)}
           />
         )}
       </div>
@@ -215,12 +173,12 @@ export function AccountProfilePanel({
         <h2 id="me-danger-title">{t.dangerTitle}</h2>
         <p>{t.dangerHint}</p>
         <div className="profile-danger__actions">
-          <button type="button" className="secondary-button account-action" data-action="logout" disabled={busy} onClick={() => openDialog('logout')}>
+          <button type="button" className="secondary-button account-action" data-action="logout" disabled={busy} onClick={onLogout}>
             <svg className="account-action__icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
               <path d="M13 4H6.5A1.5 1.5 0 0 0 5 5.5v13A1.5 1.5 0 0 0 6.5 20H13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M10 12h10m0 0-3.2-3.2M20 12l-3.2 3.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
-            {loggingOut ? messages.account.loggingOut : messages.account.logout}
+            {loggingOut ? messages.account.loggingOut : d.logoutAction}
           </button>
           {hasEvent && !isOrganizer && (
             <button type="button" className="danger-outline account-action" data-action="leave" disabled={busy} onClick={() => openDialog('leave')}>
@@ -234,20 +192,6 @@ export function AccountProfilePanel({
         </div>
       </section>
 
-      {dialog === 'logout' && (
-        <ConfirmDialog
-          title={d.logoutTitle}
-          confirmLabel={messages.account.logout}
-          cancelLabel={d.cancel}
-          tone="neutral"
-          busy={loggingOut}
-          onConfirm={() => void confirmDialog()}
-          onCancel={() => setDialog(null)}
-        >
-          <p className="qr-modal__hint">{d.logoutBody}</p>
-          <p className="qr-modal__hint">{d.logoutNote}</p>
-        </ConfirmDialog>
-      )}
       {dialog === 'leave' && (
         <ConfirmDialog
           title={d.leaveTitle(eventLabel)}

@@ -54,9 +54,14 @@ test('handle search finds the participant by any case or @, and never leaks emai
   const outsider = fixture(1).people[0]
   assert.equal((await raw(outsider, 'GET', `/events/${event}/participants?q=backend`)).status, 404)
 
+  const browse = () => raw(b, 'GET', `/events/${event}/participants?browse=1`)
+  const directory = await browse()
+  assert.deepEqual(new Set(directory.body.items.map(item => item.userId)), new Set([a.id, c.id]))
+  assert.equal(directory.text.includes(`private_${run}`), false)
   // A hidden questionnaire disappears from search.
   await call(a, 'PUT', '/profile', 200, { ...profile, visible: false })
   assert.deepEqual((await raw(b, 'GET', `/events/${event}/participants?q=${handle}`)).body.items, [])
+  assert.deepEqual((await browse()).body.items.map(item => item.userId), [c.id])
 })
 
 test('introduction: pending hides contacts, acceptance reveals them only to the pair, transitions stay consistent', async () => {

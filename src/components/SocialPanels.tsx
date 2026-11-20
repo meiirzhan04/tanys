@@ -1,3 +1,5 @@
+import { EditFieldDialog } from './profile/EditFieldDialog'
+import { identityCopy } from './profile/identityCopy'
 import { useId, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import type {
@@ -73,10 +75,13 @@ export interface IntroductionsPanelProps {
   loadingSlotsIntroId: string
   proposingSlotKey: string
   ownProfile: 'visible' | 'hidden' | 'missing'
+  /** The viewer's own contact (owner-only); revealed to a person only after both agree. */
+  contactValue: string
   socialError: string
   socialNotice: string
   onRequest: (userId: string, message: string) => Promise<string>
   onOpenQuestionnaire: () => void
+  onSaveContact: (value: string) => Promise<string>
   onUpdateIntro: (introId: string, status: Exclude<IntroductionStatus, 'pending'>) => void
   onToggleSlots: (introId: string) => void
   onProposeMeeting: (introId: string, slotId: string) => void
@@ -97,10 +102,12 @@ export function IntroductionsPanel({
   loadingSlotsIntroId,
   proposingSlotKey,
   ownProfile,
+  contactValue,
   socialError,
   socialNotice,
   onRequest,
   onOpenQuestionnaire,
+  onSaveContact,
   onUpdateIntro,
   onToggleSlots,
   onProposeMeeting,
@@ -108,6 +115,8 @@ export function IntroductionsPanel({
   refreshing,
 }: IntroductionsPanelProps) {
   const s = getMessages(locale).social
+  const ic = identityCopy[locale]
+  const [editingContact, setEditingContact] = useState(false)
   const c = connectionsCopy[locale]
   const incoming = introductions.filter(item => item.direction === 'incoming')
   const outgoing = introductions.filter(item => item.direction === 'outgoing')
@@ -287,6 +296,37 @@ export function IntroductionsPanel({
               <div className="requests__empty"><p>{tab === 'incoming' ? s.noIncoming : s.noOutgoing}</p></div>
             )}
           </div>
+        </section>
+        <section className="surface own-contact-card" aria-labelledby={`${tabsId}-contact`}>
+          <span className="own-contact-card__icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="1.8" /><path d="M8 11V8a4 4 0 1 1 8 0v3" stroke="currentColor" strokeWidth="1.8" /></svg>
+          </span>
+          <div className="own-contact-card__body">
+            <h3 id={`${tabsId}-contact`}>{c.contactTitle}</h3>
+            <p>{c.contactExplain}</p>
+            <p className="own-contact-card__value" data-contact-value>
+              {contactValue ? <strong>{contactValue}</strong> : <span>{c.contactNotSet}</span>}
+            </p>
+          </div>
+          <button type="button" className="secondary-button" data-edit="contact" onClick={() => setEditingContact(true)}>
+            {contactValue ? ic.editContact : c.contactAdd}
+          </button>
+        {editingContact && (
+          <EditFieldDialog
+            title={ic.editContact}
+            label={ic.contactLabel}
+            name="profileContact"
+            initialValue={contactValue}
+            placeholder={ic.contactPlaceholder}
+            hint={<><p>{ic.contactLock}</p><p>{ic.contactHelp}</p></>}
+            maxLength={256}
+            saveLabel={ic.save}
+            cancelLabel={ic.cancel}
+            clearLabel={ic.remove}
+            onSave={onSaveContact}
+            onClose={() => setEditingContact(false)}
+          />
+        )}
         </section>
       </div>
     </section>

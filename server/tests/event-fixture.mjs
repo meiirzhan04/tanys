@@ -37,7 +37,7 @@ export function fixture(size = 2) {
   const members = people
     .map(
       ({ id, token }, index) => `
-    INSERT INTO users(id,email) VALUES('${id}','${id}@participant.test');
+    INSERT INTO users(id,email,can_create_events) VALUES('${id}','${id}@participant.test',${index === 0});
     INSERT INTO sessions(digest,user_id) VALUES('${createHash('sha256').update(token).digest('hex')}','${id}');
     INSERT INTO memberships VALUES('${event}','${id}','${index ? 'participant' : 'organizer'}');`,
     )

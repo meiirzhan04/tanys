@@ -376,3 +376,30 @@ body:has([aria-modal='true']) .back-to-top { opacity: 0; pointer-events: none; }
   .people-option { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 12px; row-gap: 4px; }
   .people-option .status-badge { grid-column: 2; justify-self: start; }
 }
+
+/* Contact shared after a mutual introduction */
+.own-contact-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px 16px;
+  padding: clamp(16px, 2.2vw, 22px);
+}
+.own-contact-card__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.own-contact-card__body { display: grid; gap: 4px; min-width: 0; }
+.own-contact-card__body h3 { font-size: 16px; }
+.own-contact-card__body p { color: var(--muted); font-size: 13.5px; line-height: 1.5; }
+.own-contact-card__value { margin-top: 2px; overflow-wrap: anywhere; }
+.own-contact-card__value strong { color: var(--ink); font-weight: 650; }
+@media (max-width: 640px) {
+  .own-contact-card { grid-template-columns: auto minmax(0, 1fr); }
+  .own-contact-card > .secondary-button { grid-column: 1 / -1; width: 100%; }
+}

@@ -1,7 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { pool } from './db.js'
-import { viewer } from './auth.js'
+import { canCreateEvents, viewer } from './auth.js'
 import { HttpError, json, readBody, transaction, uuid } from './http.js'
 import { isQuarterHour } from './time-step.js'
 
@@ -37,8 +37,7 @@ async function collection(req: IncomingMessage, res: ServerResponse, user: strin
   if (req.method === 'POST') {
     const body = await readBody(req)
     const event = await transaction(async client => {
-      const owner = await client.query('SELECT can_create_events FROM users WHERE id=$1', [user])
-      if (!owner.rows[0]?.can_create_events) throw new HttpError(403, 'organizer_required')
+      if (!await canCreateEvents(user, client)) throw new HttpError(403, 'organizer_required')
       const args = fields(body)
       const result = await client.query(`INSERT INTO events AS e(name,time_zone,starts_at,ends_at)
         VALUES($1,$2,$3,$4) RETURNING ${columns}`, args)
@@ -79,8 +78,11 @@ export async function eventRoute(req: IncomingMessage, res: ServerResponse, path
     if (action === 'members/me' && req.method === 'PUT') {
       if (role) return { status:200, data:{ role } }
       if (typeof body.token !== 'string' || body.token.length !== 64) throw missing()
-      const invite = await client.query('SELECT 1 FROM event_invites WHERE event_id=$1 AND digest=$2 AND NOT revoked AND expires_at>now()', [event,digest(body.token)])
-      if (!invite.rowCount) throw missing()
+      const invite = await client.query('SELECT revoked, expires_at <= now() AS expired FROM event_invites WHERE event_id=$1 AND digest=$2', [event,digest(body.token)])
+      const invitation = invite.rows[0]
+      if (!invitation) throw missing()
+      if (invitation.revoked) throw new HttpError(404, 'invite_revoked')
+      if (invitation.expired) throw new HttpError(404, 'invite_expired')
       if (row.status === 'closed') throw new HttpError(409,'event_closed')
       await client.query("INSERT INTO memberships VALUES($1,$2,'participant')", [event,user])
       return { status:200,data:{ role:'participant' } }
@@ -92,7 +94,7 @@ export async function eventRoute(req: IncomingMessage, res: ServerResponse, path
       await client.query('DELETE FROM memberships WHERE event_id=$1 AND user_id=$2', [event,user])
       return { status:204 }
     }
-    if (role !== 'organizer') throw new HttpError(403,'organizer_required')
+    if (role !== 'organizer' || !await canCreateEvents(user, client)) throw new HttpError(403,'organizer_required')
     if (!action && req.method === 'PATCH') {
       if (row.status === 'closed') {
         if (Object.keys(body).length === 1 && body.status === 'closed') return { status:200,data:row }

@@ -33,6 +33,10 @@ export interface ConnectionsCopy {
   sendError: string
   close: string
   requestsTitle: string
+  contactTitle: string
+  contactExplain: string
+  contactNotSet: string
+  contactAdd: string
   messageFrom: string
   copy: string
   copied: string
@@ -75,6 +79,10 @@ export const connectionsCopy: Record<Locale, ConnectionsCopy> = {
     sendError: 'Запрос не отправлен. Попробуйте ещё раз.',
     close: 'Закрыть',
     requestsTitle: 'Запросы',
+    contactTitle: 'Контакт для обмена',
+    contactExplain: 'Его увидят только люди, с которыми вы взаимно согласились познакомиться. Без контакта собеседник не сможет с вами связаться.',
+    contactNotSet: 'Контакт не указан',
+    contactAdd: 'Добавить контакт',
     messageFrom: 'Сообщение',
     copy: 'Скопировать',
     copied: 'Скопировано',
@@ -115,6 +123,10 @@ export const connectionsCopy: Record<Locale, ConnectionsCopy> = {
     sendError: 'Сұрау жіберілмеді. Қайталап көріңіз.',
     close: 'Жабу',
     requestsTitle: 'Сұраулар',
+    contactTitle: 'Алмасуға арналған байланыс',
+    contactExplain: 'Оны тек өзара танысуға келіскен адамдар ғана көреді. Байланыс болмаса, әңгімелесуші сізбен хабарласа алмайды.',
+    contactNotSet: 'Байланыс көрсетілмеген',
+    contactAdd: 'Байланыс қосу',
     messageFrom: 'Хабарлама',
     copy: 'Көшіру',
     copied: 'Көшірілді',
@@ -155,6 +167,10 @@ export const connectionsCopy: Record<Locale, ConnectionsCopy> = {
     sendError: 'The request was not sent. Please try again.',
     close: 'Close',
     requestsTitle: 'Requests',
+    contactTitle: 'Contact to share',
+    contactExplain: 'Only people you have both agreed to meet will see it. Without a contact, they cannot reach you.',
+    contactNotSet: 'No contact yet',
+    contactAdd: 'Add contact',
     messageFrom: 'Message',
     copy: 'Copy',
     copied: 'Copied',

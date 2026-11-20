@@ -190,17 +190,6 @@
 .profile-account-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13.5px; min-width: 0; }
 .profile-account-row span:first-child { color: var(--muted); }
 .profile-account-row strong { font-weight: 620; overflow-wrap: anywhere; text-align: right; }
-.profile-contact-form { display: grid; gap: 8px; }
-.profile-contact-form input {
-  min-height: 44px;
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid var(--input-border);
-  border-radius: 12px;
-  background: var(--input-bg);
-  color: var(--ink);
-}
-.profile-contact-form input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .profile-danger { border-color: var(--danger-border); }
 .profile-danger__actions { display: grid; gap: 8px; }
 .profile-danger__actions button { width: 100%; justify-content: center; }
@@ -319,8 +308,6 @@
   border-top: 1px solid var(--line);
 }
 .account-save span { color: var(--success-text); font-size: 14px; }
-.account-settings .profile-contact-form { gap: 12px; }
-.account-settings .profile-contact-form button { justify-self: start; }
 .account-import__controls, .account-settings .profile-danger__actions {
   display: flex;
   align-items: center;

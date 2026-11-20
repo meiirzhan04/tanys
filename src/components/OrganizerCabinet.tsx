@@ -295,12 +295,14 @@ export function OrganizerCabinet({
 
   async function handleCopyInvite(invite: EventInvite) {
     if (!activeEvent) return
+    setError('')
     const url = buildInviteUrl(window.location.origin, activeEvent.id, invite.token)
     try {
       await navigator.clipboard.writeText(url)
       setCopiedInviteId(invite.id)
     } catch {
-      setCopiedInviteId(invite.id)
+      setCopiedInviteId('')
+      setError(messages.account.copyManually)
     }
   }
 
@@ -748,6 +750,7 @@ export function OrganizerCabinet({
             revoked={activeInvite.revoked}
             expiresAt={activeInvite.expiresAt}
             locale={locale}
+            copyError={error}
             copied={copiedInviteId === activeInvite.id}
             onCopy={() => void handleCopyInvite(activeInvite)}
             onClose={() => {

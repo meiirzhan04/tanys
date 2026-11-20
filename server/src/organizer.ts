@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { viewer } from './auth.js'
+import { canCreateEvents, viewer } from './auth.js'
 import { pool } from './db.js'
 import { HttpError, json, readBody, transaction, uuid } from './http.js'
 
@@ -56,10 +56,11 @@ export async function organizerRoute(req: IncomingMessage, res: ServerResponse, 
     [eventId, userId],
   )
   if (!membership.rowCount) throw missing()
-  const { role, status: eventStatus } = membership.rows[0] as { role: string; status: string }
+  const { role: membershipRole, status: eventStatus } = membership.rows[0]
+  const managesEvent = membershipRole === 'organizer' && await canCreateEvents(userId)
 
   if (action === 'members' && req.method === 'GET') {
-    if (role !== 'organizer') throw new HttpError(403, 'organizer_required')
+    if (!managesEvent) throw new HttpError(403, 'organizer_required')
     const query = new URL(req.url!, 'http://localhost').searchParams
     const limit = Number(query.get('limit') ?? 50)
     const cursor = query.get('cursor')
@@ -122,7 +123,7 @@ export async function organizerRoute(req: IncomingMessage, res: ServerResponse, 
   }
 
   if (action === 'interests' && req.method === 'GET') {
-    if (role !== 'organizer') throw new HttpError(403, 'organizer_required')
+    if (!managesEvent) throw new HttpError(403, 'organizer_required')
     const profilesExist = await hasProfilesTable()
     if (!profilesExist) {
       json(res, 200, { topics: [], profileCount: 0 })
@@ -153,7 +154,7 @@ export async function organizerRoute(req: IncomingMessage, res: ServerResponse, 
   }
 
   if (action === 'booths' && req.method === 'GET') {
-    const query = role === 'organizer'
+    const query = managesEvent
       ? `SELECT id, name, description, topics, published FROM event_booths WHERE event_id = $1 ORDER BY created_at ASC, id ASC`
       : `SELECT id, name, description, topics, published FROM event_booths WHERE event_id = $1 AND published = true ORDER BY created_at ASC, id ASC`
     const result = await pool.query(query, [eventId])
@@ -162,7 +163,7 @@ export async function organizerRoute(req: IncomingMessage, res: ServerResponse, 
   }
 
   if (action === 'booths' && req.method === 'POST') {
-    if (role !== 'organizer') throw new HttpError(403, 'organizer_required')
+    if (!managesEvent) throw new HttpError(403, 'organizer_required')
     if (eventStatus === 'closed') throw new HttpError(409, 'event_closed')
     const body = await readBody(req)
     const name = validateBoothName(body.name)
@@ -180,7 +181,7 @@ export async function organizerRoute(req: IncomingMessage, res: ServerResponse, 
   }
 
   if (isBoothItem && req.method === 'PATCH') {
-    if (role !== 'organizer') throw new HttpError(403, 'organizer_required')
+    if (!managesEvent) throw new HttpError(403, 'organizer_required')
     if (eventStatus === 'closed') throw new HttpError(409, 'event_closed')
     const boothId = suffix[1]
     const body = await readBody(req)

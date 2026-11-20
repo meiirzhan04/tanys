@@ -57,7 +57,8 @@ export async function participantRoute(req: IncomingMessage, res: ServerResponse
 
   const member = await pool.query('SELECT 1 FROM memberships WHERE event_id=$1 AND user_id=$2', [event, user])
   if (!member.rowCount) throw new HttpError(404, 'not_found')
-  if (query.length < MIN_QUERY || query.length > 64) {
+  const browse = !query && params.get('browse') === '1'
+  if ((!browse && query.length < MIN_QUERY) || query.length > 64) {
     json(res, 200, { items: [], query, minLength: MIN_QUERY })
     return true
   }
