@@ -1,5 +1,5 @@
 import { AvailabilityEditor } from './AvailabilityEditor'
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   defaultApiClient,
@@ -32,8 +32,40 @@ import type { Feedback } from '../matching/session'
 import type { Goal, Locale, Recommendation } from '../matching/types'
 import { CustomSelect } from './CustomSelect'
 import { getGoalLabels } from './goalLabels'
-import { OrganizerCabinet } from './OrganizerCabinet'
 import { PartnerBooths } from './PartnerBooths'
+
+const OrganizerCabinet = lazy(() =>
+  import('./OrganizerCabinet').then(m => ({ default: m.OrganizerCabinet })),
+)
+
+const ACCOUNT_UX_COPY: Record<
+  Locale,
+  {
+    findJobLabel: string
+    findJobPlaceholder: string
+    hrHint: string
+    hiddenWarning: string
+  }
+> = {
+  ru: {
+    findJobLabel: 'Желаемая роль или стек',
+    findJobPlaceholder: 'Backend, Python, FastAPI, стажировка',
+    hrHint: 'Укажите роль или стек, который ищете (например: Backend, Go, PostgreSQL), чтобы найти подходящих кандидатов.',
+    hiddenWarning: 'Анкета сейчас скрыта: другие участники не увидят вас в рекомендациях, пока вы не включите «Показывать мою анкету участникам этого мероприятия».',
+  },
+  kk: {
+    findJobLabel: 'Қалаған рөл немесе стек',
+    findJobPlaceholder: 'Backend, Python, FastAPI, тағылымдама',
+    hrHint: 'Лайықты кандидаттарды табу үшін іздеген рөлді немесе стекті көрсетіңіз (мысалы: Backend, Go, PostgreSQL).',
+    hiddenWarning: 'Анкета қазір жасырын: «Осы іс-шара қатысушыларына анкетамды көрсету» белгісін қоспайынша, басқа қатысушылар сізді ұсыныстардан көрмейді.',
+  },
+  en: {
+    findJobLabel: 'Target role or stack',
+    findJobPlaceholder: 'Backend, Python, FastAPI, internship',
+    hrHint: 'Specify the role or stack you are hiring for (e.g., Backend, Go, PostgreSQL) to match relevant candidates.',
+    hiddenWarning: 'Your profile is currently hidden: other attendees will not see you in matches until you enable "Show my profile to attendees of this event".',
+  },
+}
 import { hasUnsavedProfileChanges, parseProfileTopics } from './profileDirty'
 import type { EventProfileDraft } from './profileDirty'
 import { RecommendationResults } from './RecommendationResults'
@@ -409,16 +441,28 @@ export function EventAccountFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locale])
 
-  // Refresh introductions & meetings when returning to the browser tab.
+  // Refresh introductions, meetings & active recommendations when returning to the browser tab.
   useEffect(() => {
     if (phase !== 'ready' || !activeEventId) return
     const handleReturn = () => {
       if (document.visibilityState === 'visible') {
         void refreshSocialState(activeEventId, true)
+        if (tab === 'results' && hasSavedProfile) {
+          void api.getEventRecommendations(activeEventId, locale).then(items => {
+            setRecommendations(items)
+            setRecsMessage(items.length > 0 && items.length < 5 ? messages.results.partialMatches(items.length) : '')
+          }).catch(() => {})
+        }
       }
     }
     const handleWindowFocus = () => {
       void refreshSocialState(activeEventId, true)
+      if (tab === 'results' && hasSavedProfile) {
+        void api.getEventRecommendations(activeEventId, locale).then(items => {
+          setRecommendations(items)
+          setRecsMessage(items.length > 0 && items.length < 5 ? messages.results.partialMatches(items.length) : '')
+        }).catch(() => {})
+      }
     }
     document.addEventListener('visibilitychange', handleReturn)
     window.addEventListener('focus', handleWindowFocus)
@@ -426,7 +470,22 @@ export function EventAccountFlow({
       document.removeEventListener('visibilitychange', handleReturn)
       window.removeEventListener('focus', handleWindowFocus)
     }
-  }, [activeEventId, phase, refreshSocialState])
+  }, [activeEventId, api, hasSavedProfile, locale, messages.results, phase, refreshSocialState, tab])
+
+  // Sync browser URL to /events/{id} when an event is active, and clear stale /events or /invite path when no event is selected.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.history?.replaceState) return
+    if (phase === 'ready' && user && activeEventId) {
+      const targetPath = `/events/${encodeURIComponent(activeEventId)}`
+      if (window.location.pathname !== targetPath || window.location.search) {
+        window.history.replaceState(null, '', targetPath)
+      }
+    } else if ((phase === 'ready' && user && !activeEventId) || phase === 'expired') {
+      if (/^\/(events|invite)\//.test(window.location.pathname)) {
+        window.history.replaceState(null, '', '/?mode=account')
+      }
+    }
+  }, [activeEventId, phase, user])
 
   function chooseAuthMode(createAccount: boolean) {
     setRegistering(createAccount)
@@ -556,7 +615,10 @@ export function EventAccountFlow({
         setRecsMessage('')
       }
       setTab('results')
-      requestAnimationFrame(() => document.getElementById('results-title')?.focus())
+      if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+        window.scrollTo(0, 0)
+      }
+      requestAnimationFrame(() => document.getElementById('results-title')?.focus({ preventScroll: true }))
     } catch (error) {
       if (isApiError(error) && error.status === 401) {
         setUser(null)
@@ -575,7 +637,11 @@ export function EventAccountFlow({
     setSaving(true)
     setSaveError('')
     setSaveSuccess(false)
-    const showLookingFor = draft.goal === 'hire' || draft.goal === 'find_cofounder' || draft.goal === 'find_mentor'
+    const showLookingFor =
+      draft.goal === 'find_job' ||
+      draft.goal === 'hire' ||
+      draft.goal === 'find_cofounder' ||
+      draft.goal === 'find_mentor'
     try {
       const saved = await api.saveEventProfile(activeEventId, {
         name: draft.name.trim(),
@@ -836,7 +902,11 @@ export function EventAccountFlow({
   }, [draft.interests, draft.lookingFor, draft.skills, eventBooths, locale])
 
   const errors = showErrors ? validateDraft(draft, locale) : {}
-  const showLookingFor = draft.goal === 'hire' || draft.goal === 'find_cofounder' || draft.goal === 'find_mentor'
+  const showLookingFor =
+    draft.goal === 'find_job' ||
+    draft.goal === 'hire' ||
+    draft.goal === 'find_cofounder' ||
+    draft.goal === 'find_mentor'
   const isClosed = activeEvent?.status === 'closed'
   const hasUnsavedChanges = useMemo(
     () => phase === 'ready' && tab === 'profile' && hasUnsavedProfileChanges(savedBaseline, draft),
@@ -1068,7 +1138,7 @@ export function EventAccountFlow({
           aria-current={tab === 'results' ? 'page' : undefined}
           disabled={!activeEventId || !hasSavedProfile}
           onClick={event => guardNavigation(() => {
-            if (recommendations === null && activeEventId) {
+            if (activeEventId) {
               void loadRecommendations(activeEventId)
             } else {
               setTab('results')
@@ -1168,26 +1238,28 @@ export function EventAccountFlow({
             <p>{t.loadingEvent}</p>
           </div>
         ) : tab === 'organizer' ? (
-          <OrganizerCabinet
-            api={api}
-            locale={locale}
-            activeEvent={activeEvent}
-            isOrganizerOfActive={isOrganizerOfActive}
-            onEventCreated={async created => {
-              const list = await api.listEvents()
-              const merged = list.some(item => item.id === created.id)
-                ? list
-                : [{ id: created.id, name: created.name, role: 'organizer' as const, status: created.status, timeZone: created.timeZone }, ...list]
-              setEvents(merged)
-              await loadEventWorkspace(created.id)
-              setTab('organizer')
-            }}
-            onEventUpdated={updated => {
-              setActiveEvent(updated)
-              setEvents(current => current.map(item => (item.id === updated.id ? { ...item, name: updated.name, status: updated.status } : item)))
-            }}
-            onBoothsChanged={nextBooths => setEventBooths(nextBooths)}
-          />
+          <Suspense fallback={<div className="surface status-panel" role="status" aria-live="polite" aria-busy="true"><p>{t.loadingEvent}</p></div>}>
+            <OrganizerCabinet
+              api={api}
+              locale={locale}
+              activeEvent={activeEvent}
+              isOrganizerOfActive={isOrganizerOfActive}
+              onEventCreated={async created => {
+                const list = await api.listEvents()
+                const merged = list.some(item => item.id === created.id)
+                  ? list
+                  : [{ id: created.id, name: created.name, role: 'organizer' as const, status: created.status, timeZone: created.timeZone }, ...list]
+                setEvents(merged)
+                await loadEventWorkspace(created.id)
+                setTab('organizer')
+              }}
+              onEventUpdated={updated => {
+                setActiveEvent(updated)
+                setEvents(current => current.map(item => (item.id === updated.id ? { ...item, name: updated.name, status: updated.status } : item)))
+              }}
+              onBoothsChanged={nextBooths => setEventBooths(nextBooths)}
+            />
+          </Suspense>
         ) : !activeEventId ? (
           <section className="surface empty-state">
             <h1>{t.noEventsTitle}</h1>
@@ -1248,12 +1320,24 @@ export function EventAccountFlow({
             <>
               {socialError && <div className="error-banner" role="alert">{socialError}</div>}
               {socialNotice && <div className="info-banner" role="status">{socialNotice}</div>}
+              {!draft.visible && (
+                <div className="info-banner visibility-warning-banner" role="status">
+                  {ACCOUNT_UX_COPY[locale].hiddenWarning}
+                </div>
+              )}
               <RecommendationResults
                 recommendations={recommendations ?? []}
                 onEdit={() => {
                   setTab('profile')
-                  requestAnimationFrame(() => document.getElementById('event-profile-title')?.focus())
+                  if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+                    window.scrollTo(0, 0)
+                  }
+                  requestAnimationFrame(() => document.getElementById('event-profile-title')?.focus({ preventScroll: true }))
                 }}
+                onRefresh={() => {
+                  if (activeEventId) void loadRecommendations(activeEventId)
+                }}
+                refreshing={recsLoading}
                 onFeedback={(candidateId, response) => void handleServerFeedback(candidateId, response)}
                 onRequestIntro={candidateId => void handleRequestIntro(candidateId)}
                 introStatusByCandidate={introStatusByCandidate}
@@ -1404,14 +1488,25 @@ export function EventAccountFlow({
 
                 {showLookingFor && (
                   <label className="field field-full">
-                    <span>{formText.lookingForLabel} <small>{formText.optional}</small></span>
+                    <span>
+                      {draft.goal === 'find_job' ? ACCOUNT_UX_COPY[locale].findJobLabel : formText.lookingForLabel}{' '}
+                      <small>{formText.optional}</small>
+                    </span>
                     <input
+                      name="lookingFor"
                       maxLength={160}
                       disabled={saving || isClosed}
-                      placeholder={formText.lookingForPlaceholder}
+                      placeholder={
+                        draft.goal === 'find_job'
+                          ? ACCOUNT_UX_COPY[locale].findJobPlaceholder
+                          : formText.lookingForPlaceholder
+                      }
                       value={draft.lookingFor}
                       onChange={event => updateField('lookingFor', event.target.value)}
                     />
+                    {draft.goal === 'hire' && !draft.lookingFor.trim() && (
+                      <span className="field-hint">{ACCOUNT_UX_COPY[locale].hrHint}</span>
+                    )}
                   </label>
                 )}
 
@@ -1446,6 +1541,9 @@ export function EventAccountFlow({
                     <span>{t.visibilityToggleLabel}</span>
                   </label>
                   <p className="privacy-box__note">{t.visibilityNotice}</p>
+                  {!draft.visible && (
+                    <p className="field-hint privacy-box__warning">{ACCOUNT_UX_COPY[locale].hiddenWarning}</p>
+                  )}
                 </div>
 
                 <div className="field field-full">

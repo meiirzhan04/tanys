@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import {
   isAccountRoute,
   isAdminRoute,
@@ -7,7 +7,6 @@ import {
   savePendingInvite,
   syncAccountLocationUrl,
 } from './api/inviteRoute'
-import { AdminDashboard } from './components/AdminDashboard'
 import { EventAccountFlow } from './components/EventAccountFlow'
 import { InterestMap } from './components/InterestMap'
 import { SchedulePanel } from './components/MeetingSlots'
@@ -32,18 +31,32 @@ import { bookSlot, cancelSlotBooking, loadBookings, saveBookings } from './sched
 import type { MeetingBooking } from './scheduling/slots'
 import './styles.css'
 
+const AdminDashboard = lazy(() =>
+  import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })),
+)
+
 const candidates: readonly Candidate[] = resolveAppCandidates(profiles, previewProfiles)
 const interestSummary = summarizeInterests(parseCandidates(profiles))
 type View = 'profile' | 'results' | 'schedule' | 'interests'
 type Theme = 'light' | 'dark'
 const THEME_STORAGE_KEY = 'tanys.theme.v3'
 
-function resolveInitialTheme(): Theme {
+function readSavedThemePreference(): Theme | null {
   try {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(THEME_STORAGE_KEY) : null
     if (saved === 'light' || saved === 'dark') return saved
   } catch {
     // Ignore storage restrictions.
+  }
+  return null
+}
+
+function resolveInitialTheme(): Theme {
+  const saved = readSavedThemePreference()
+  if (saved) return saved
+  if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+    if (window.matchMedia('(prefers-color-scheme: light)').matches) return 'light'
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark'
   }
   return 'dark'
 }
@@ -126,7 +139,9 @@ const GCORE_HERO_COPY = {
   ru: {
     pill: '✦ Добро пожаловать в Tanys',
     headline: 'Умный 1:1 нетворкинг для живых IT-митапов',
-    subhead: 'Алгоритм соединяет инженеров, тимлидов, менторов и фаундеров по целям, стеку и свободным 20-минутным слотам.',
+    subhead: 'Алгоритм соединяет инженеров, тимлидов, менторов и фаундеров по целям, стеку и 20-минутным слотам.',
+    moreLabel: 'Как устроен подбор 1:1',
+    ctaForm: 'Заполнить анкету ↓',
     nodes: [
       { code: '1:1', label: 'Слоты 20 мин' },
       { code: 'QR', label: 'Инвайт-пропуск' },
@@ -145,6 +160,8 @@ const GCORE_HERO_COPY = {
     pill: '✦ Tanys платформасына қош келдіңіз',
     headline: 'IT-митаптар мен конференцияларға арналған 1:1 нетворкинг',
     subhead: 'Алгоритм инженерлерді, тимлидтерді, менторлар мен фаундерлерді мақсат, стек және 20 минуттық слоттар бойынша байланыстырады.',
+    moreLabel: '1:1 іріктеу қалай жұмыс істейді',
+    ctaForm: 'Анкетаны толтыру ↓',
     nodes: [
       { code: '1:1', label: '20 мин слоттар' },
       { code: 'QR', label: 'Шақыру рұқсаты' },
@@ -163,6 +180,8 @@ const GCORE_HERO_COPY = {
     pill: '✦ Welcome to Tanys',
     headline: 'Precision 1:1 Networking for Live Tech Events',
     subhead: 'Algorithmic matching connecting engineers, hiring leads, mentors, and founders by goals, stack, and 20-minute slots.',
+    moreLabel: 'How 1:1 matching works',
+    ctaForm: 'Fill profile ↓',
     nodes: [
       { code: '1:1', label: '20-min slots' },
       { code: 'QR', label: 'Instant pass' },
@@ -224,12 +243,31 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, theme)
-    } catch {
-      // Ignore storage restrictions.
-    }
   }, [theme])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const media = window.matchMedia('(prefers-color-scheme: light)')
+    const onChange = () => {
+      if (!readSavedThemePreference()) {
+        setTheme(media.matches ? 'light' : 'dark')
+      }
+    }
+    media.addEventListener?.('change', onChange)
+    return () => media.removeEventListener?.('change', onChange)
+  }, [])
+
+  function handleToggleTheme() {
+    setTheme(current => {
+      const next: Theme = current === 'dark' ? 'light' : 'dark'
+      try {
+        localStorage.setItem(THEME_STORAGE_KEY, next)
+      } catch {
+        // Ignore storage restrictions.
+      }
+      return next
+    })
+  }
 
   useEffect(() => {
     if (!langOpen) return
@@ -238,8 +276,15 @@ export default function App() {
         setLangOpen(false)
       }
     }
+    function onDocKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setLangOpen(false)
+    }
     document.addEventListener('mousedown', onDocMouseDown)
-    return () => document.removeEventListener('mousedown', onDocMouseDown)
+    document.addEventListener('keydown', onDocKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onDocMouseDown)
+      document.removeEventListener('keydown', onDocKeyDown)
+    }
   }, [langOpen])
 
   useEffect(() => {
@@ -249,20 +294,33 @@ export default function App() {
   }, [mode])
 
   useEffect(() => {
-    if (view === 'results') document.getElementById('results-title')?.focus()
-    if (view === 'interests') document.getElementById('interest-map-title')?.focus()
+    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+      if (view === 'results' || view === 'interests' || view === 'schedule') {
+        window.scrollTo(0, 0)
+      }
+    }
+    if (view === 'results') {
+      requestAnimationFrame(() => document.getElementById('results-title')?.focus({ preventScroll: true }))
+    }
+    if (view === 'interests') {
+      requestAnimationFrame(() => document.getElementById('interest-map-title')?.focus({ preventScroll: true }))
+    }
   }, [session?.input, view])
 
-  function handleLocaleChange(nextLocale: Locale) {
+  function handleLocaleChange(nextLocale: Locale, buttonEl?: HTMLButtonElement | null) {
     setLocale(nextLocale)
     saveLocalePreference(nextLocale)
     setSession(current => current && localizeRecommendationSession(current, nextLocale))
     setLangOpen(false)
+    buttonEl?.blur()
   }
 
   function handleEditProfile() {
     setView('profile')
-    requestAnimationFrame(() => document.getElementById('profile-title')?.focus())
+    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+      window.scrollTo(0, 0)
+    }
+    requestAnimationFrame(() => document.getElementById('profile-title')?.focus({ preventScroll: true }))
   }
 
   function submit(profile: ProfileInput) {
@@ -295,7 +353,10 @@ export default function App() {
   const hero = GCORE_HERO_COPY[locale]
   const activeLocaleMeta = LOCALE_META[locale]
 
-  function exitAdminToHome() {
+  function exitToDemoHome() {
+    savePendingInvite(null)
+    saveAccountModePreference(false)
+    syncAccountLocationUrl(false)
     if (typeof window !== 'undefined' && window.history?.replaceState) {
       window.history.replaceState(null, '', '/')
     }
@@ -320,10 +381,10 @@ export default function App() {
               aria-label={theme === 'dark' ? extra.toLight : extra.toDark}
               title={theme === 'dark' ? extra.toLight : extra.toDark}
               aria-pressed={theme === 'dark'}
-              onClick={() => setTheme(current => (current === 'dark' ? 'light' : 'dark'))}
+              onClick={handleToggleTheme}
             >
               {theme === 'dark' ? (
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.9" />
                   <path
                     d="M12 2.5V5M12 19V21.5M4.9 4.9L6.7 6.7M17.3 17.3L19.1 19.1M2.5 12H5M19 12H21.5M4.9 19.1L6.7 17.3M17.3 6.7L19.1 4.9"
@@ -333,7 +394,7 @@ export default function App() {
                   />
                 </svg>
               ) : (
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path
                     d="M20.4 14.8A8.5 8.5 0 0 1 9.2 3.6a8.5 8.5 0 1 0 11.2 11.2Z"
                     stroke="currentColor"
@@ -373,7 +434,7 @@ export default function App() {
                       lang={item.code}
                       aria-label={item.label}
                       aria-pressed={locale === item.code}
-                      onClick={() => handleLocaleChange(item.code)}
+                      onClick={event => handleLocaleChange(item.code, event.currentTarget)}
                     >
                       <FlagSvg locale={item.code} />
                       <span className="lang-option__code">{meta.code}</span>
@@ -402,26 +463,23 @@ export default function App() {
       </header>
 
       {mode === 'admin' ? (
-        <AdminDashboard
-          locale={locale}
-          onBack={exitAdminToHome}
-          onOpenAccount={() => {
-            saveAccountModePreference(true)
-            syncAccountLocationUrl(true)
-            setMode('account')
-          }}
-        />
+        <Suspense fallback={null}>
+          <AdminDashboard
+            locale={locale}
+            onBack={exitToDemoHome}
+            onOpenAccount={() => {
+              saveAccountModePreference(true)
+              syncAccountLocationUrl(true)
+              setMode('account')
+            }}
+          />
+        </Suspense>
       ) : mode === 'account' ? (
         <EventAccountFlow
           locale={locale}
           initialInvite={initialInvite}
           exitRequestSeq={exitRequestSeq}
-          onExitToDemo={() => {
-            savePendingInvite(null)
-            saveAccountModePreference(false)
-            syncAccountLocationUrl(false)
-            setMode('demo')
-          }}
+          onExitToDemo={exitToDemoHome}
         />
       ) : (
         <div className="site-width workspace">
@@ -441,62 +499,78 @@ export default function App() {
           <main className="main-content">
             <div hidden={view !== 'profile'}>
               <div className="gcore-hero surface" aria-hidden="true">
-                <div className="gcore-hero__top">
+                <div className="gcore-hero__compact">
                   <div className="welcome-emblem">
                     <span className="welcome-emblem__ring" />
-                    <TanysLogoMark size={46} />
+                    <TanysLogoMark size={38} />
                   </div>
-                  <span className="gcore-pill">{hero.pill}</span>
-                  <strong className="gcore-hero__title">{hero.headline}</strong>
-                  <p className="gcore-hero__sub">{hero.subhead}</p>
-                </div>
-
-                <div className="gcore-circuit">
-                  <svg className="gcore-circuit__svg" viewBox="0 0 760 210" fill="none" preserveAspectRatio="none">
-                    <path className="trace-base" d="M120 42 H270 L320 92 H380" />
-                    <path className="trace-pulse" d="M120 42 H270 L320 92 H380" />
-                    <path className="trace-base" d="M84 105 H380" />
-                    <path className="trace-pulse trace-pulse--d2" d="M84 105 H380" />
-                    <path className="trace-base" d="M120 168 H270 L320 118 H380" />
-                    <path className="trace-pulse trace-pulse--d3" d="M120 168 H270 L320 118 H380" />
-                    <path className="trace-base" d="M640 42 H490 L440 92 H380" />
-                    <path className="trace-pulse trace-pulse--d2" d="M640 42 H490 L440 92 H380" />
-                    <path className="trace-base" d="M676 105 H380" />
-                    <path className="trace-pulse trace-pulse--d3" d="M676 105 H380" />
-                    <path className="trace-base" d="M640 168 H490 L440 118 H380" />
-                    <path className="trace-pulse" d="M640 168 H490 L440 118 H380" />
-                  </svg>
-                  <div className="gcore-nodes-col">
-                    {hero.nodes.slice(0, 3).map(n => (
-                      <div key={n.code} className="gcore-node">
-                        <span className="gcore-node__code">{n.code}</span>
-                        <span className="gcore-node__label">{n.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="gcore-chip">
-                    <TanysLogoMark size={34} />
-                    <span className="gcore-chip__sub">TANYS</span>
-                  </div>
-                  <div className="gcore-nodes-col gcore-nodes-col--right">
-                    {hero.nodes.slice(3, 6).map(n => (
-                      <div key={n.code} className="gcore-node">
-                        <span className="gcore-node__code">{n.code}</span>
-                        <span className="gcore-node__label">{n.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="welcome-pillars">
-                  {hero.pillars.map(p => (
-                    <div key={p.step} className="welcome-pillar">
-                      <span className="welcome-pillar__step">{p.step}</span>
-                      <strong>{p.title}</strong>
-                      <p>{p.desc}</p>
+                  <div className="gcore-hero__copy">
+                    <div className="gcore-hero__badges">
+                      <span className="gcore-pill">{hero.pill}</span>
                     </div>
-                  ))}
+                    <strong className="gcore-hero__title">{hero.headline}</strong>
+                    <p className="gcore-hero__sub">{hero.subhead}</p>
+                  </div>
+                  <span
+                    className="gcore-hero__cta"
+                    onClick={() => {
+                      const el = document.querySelector<HTMLElement>('.profile-form select, .profile-form input')
+                      el?.focus()
+                    }}
+                  >
+                    {hero.ctaForm}
+                  </span>
                 </div>
+
+                <details className="gcore-hero__details">
+                  <summary className="gcore-hero__summary">{hero.moreLabel}</summary>
+                  <div className="gcore-circuit">
+                    <svg className="gcore-circuit__svg" viewBox="0 0 760 210" fill="none" preserveAspectRatio="none">
+                      <path className="trace-base" d="M120 42 H270 L320 92 H380" />
+                      <path className="trace-pulse" d="M120 42 H270 L320 92 H380" />
+                      <path className="trace-base" d="M84 105 H380" />
+                      <path className="trace-pulse trace-pulse--d2" d="M84 105 H380" />
+                      <path className="trace-base" d="M120 168 H270 L320 118 H380" />
+                      <path className="trace-pulse trace-pulse--d3" d="M120 168 H270 L320 118 H380" />
+                      <path className="trace-base" d="M640 42 H490 L440 92 H380" />
+                      <path className="trace-pulse trace-pulse--d2" d="M640 42 H490 L440 92 H380" />
+                      <path className="trace-base" d="M676 105 H380" />
+                      <path className="trace-pulse trace-pulse--d3" d="M676 105 H380" />
+                      <path className="trace-base" d="M640 168 H490 L440 118 H380" />
+                      <path className="trace-pulse" d="M640 168 H490 L440 118 H380" />
+                    </svg>
+                    <div className="gcore-nodes-col">
+                      {hero.nodes.slice(0, 3).map(n => (
+                        <div key={n.code} className="gcore-node">
+                          <span className="gcore-node__code">{n.code}</span>
+                          <span className="gcore-node__label">{n.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="gcore-chip">
+                      <TanysLogoMark size={30} />
+                      <span className="gcore-chip__sub">TANYS</span>
+                    </div>
+                    <div className="gcore-nodes-col gcore-nodes-col--right">
+                      {hero.nodes.slice(3, 6).map(n => (
+                        <div key={n.code} className="gcore-node">
+                          <span className="gcore-node__code">{n.code}</span>
+                          <span className="gcore-node__label">{n.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="welcome-pillars">
+                    {hero.pillars.map(p => (
+                      <div key={p.step} className="welcome-pillar">
+                        <span className="welcome-pillar__step">{p.step}</span>
+                        <strong>{p.title}</strong>
+                        <p>{p.desc}</p>
+                      </div>
+                    ))}
+                  </div>
+                </details>
               </div>
               <ProfileForm onSubmit={submit} example={sampleProfile} locale={locale} />
             </div>
