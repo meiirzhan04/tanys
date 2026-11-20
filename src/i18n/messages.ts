@@ -26,6 +26,14 @@ export interface Messages {
     participants: string
     empty: string
   }
+  booths: {
+    title: string
+    subtitle: string
+    demoBadge: string
+    topicsAriaLabel: string
+    emptyTitle: string
+    emptyBody: string
+  }
   goals: Record<Goal, string>
   form: {
     title: string
@@ -228,6 +236,14 @@ export const messagesByLocale: Record<Locale, Messages> = {
       topic: 'Тема',
       participants: 'Участники',
       empty: 'В анкетах пока нет указанных интересов.',
+    },
+    booths: {
+      title: 'Стенды партнёров',
+      subtitle: 'Демонстрационная подборка стендов по вашим интересам и навыкам.',
+      demoBadge: 'Демо-стенд',
+      topicsAriaLabel: 'Совпавшие темы стенда',
+      emptyTitle: 'Тематических совпадений по стендам пока нет',
+      emptyBody: 'Добавьте больше навыков или интересов в анкете — рекомендации людей выше остаются доступны.',
     },
     goals: {
       find_job: 'Найти работу',
@@ -437,6 +453,14 @@ export const messagesByLocale: Record<Locale, Messages> = {
       participants: 'Қатысушылар',
       empty: 'Анкеталарда қызығушылықтар әлі көрсетілмеген.',
     },
+    booths: {
+      title: 'Серіктес стендтері',
+      subtitle: 'Қызығушылықтарыңыз бен дағдыларыңызға сәйкес демонстрациялық стендтер.',
+      demoBadge: 'Демо-стенд',
+      topicsAriaLabel: 'Стендтің сәйкес тақырыптары',
+      emptyTitle: 'Стендтер бойынша тақырыптық сәйкестік табылмады',
+      emptyBody: 'Анкетаға қосымша дағдылар немесе қызығушылықтар қосыңыз — жоғарыдағы адамдар ұсынымы сақталады.',
+    },
     goals: {
       find_job: 'Жұмыс табу',
       hire: 'Маман жалдау',
@@ -644,6 +668,14 @@ export const messagesByLocale: Record<Locale, Messages> = {
       topic: 'Topic',
       participants: 'Participants',
       empty: 'The profiles do not list any interests yet.',
+    },
+    booths: {
+      title: 'Partner booths',
+      subtitle: 'Demonstration booths matched to your skills and interests.',
+      demoBadge: 'Demo booth',
+      topicsAriaLabel: 'Matched booth topics',
+      emptyTitle: 'No thematic booth matches yet',
+      emptyBody: 'Add more skills or interests to your profile — your people matches above stay unchanged.',
     },
     goals: {
       find_job: 'Find a job',
