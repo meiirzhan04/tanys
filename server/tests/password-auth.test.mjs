@@ -15,7 +15,7 @@ function call(path, method = 'GET', body, cookie) {
 }
 
 test('password signup, normalization, session, logout, and login throttling', async () => {
-  const invalid = await call('/auth/register', 'POST', { username, password: 'too-short' })
+  const invalid = await call('/auth/register', 'POST', { username, password: '12345' })
   assert.equal(invalid.status, 400)
 
   const signup = await call('/auth/register', 'POST', { username: username.toUpperCase(), password })
@@ -39,7 +39,7 @@ test('password signup, normalization, session, logout, and login throttling', as
   assert.equal(login.status, 200)
   assert.equal((await login.json()).id, id)
 
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 10; i++) {
     assert.equal((await call('/auth/password', 'POST', { username, password: password + 'x' })).status, 401)
   }
   const limited = await call('/auth/password', 'POST', { username, password })

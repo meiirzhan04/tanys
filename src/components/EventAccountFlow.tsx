@@ -440,7 +440,7 @@ export function EventAccountFlow({
       setAuthError(t.errors.usernameInvalid)
       return
     }
-    if (!password || (registering && Array.from(password).length < 15)) {
+    if (!password || (registering && Array.from(password).length < 6)) {
       setAuthError(registering ? t.errors.passwordTooShort : t.errors.passwordRequired)
       return
     }

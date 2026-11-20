@@ -143,7 +143,7 @@ async function authenticatePassword(req: IncomingMessage, res: ServerResponse, r
   const password = body.password
   if (!/^[a-z0-9_-]{3,32}$/.test(username)) throw new HttpError(400, 'invalid_username')
   if (typeof password !== 'string' || !password || password.length > 512 ||
-      (registration && Array.from(password).length < 15)) {
+      (registration && Array.from(password).length < 6)) {
     throw new HttpError(400, 'invalid_password')
   }
 
@@ -180,6 +180,7 @@ async function authenticatePassword(req: IncomingMessage, res: ServerResponse, r
       SELECT $1,id FROM users WHERE id=$2 AND password_hash=$3 RETURNING user_id`,
     [digest, user.id, user.password_hash])
     if (!inserted.rowCount) throw new HttpError(401, 'invalid_credentials')
+    await pool.query('DELETE FROM password_attempts WHERE bucket_key=$1', [sha(`password:username:${username}`)])
     userId = user.id
   }
   res.setHeader('Set-Cookie', cookie(session, 7 * 86400))

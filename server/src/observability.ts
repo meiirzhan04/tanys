@@ -229,6 +229,20 @@ function isHttpErrorLike(error: unknown): error is HttpErrorLike {
   )
 }
 
+function isLoopbackHttpOrigin(origin: string): boolean {
+  try {
+    const url = new URL(origin)
+    return url.protocol === 'http:' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1')
+  } catch {
+    return false
+  }
+}
+
+function isAllowedOrigin(requestOrigin: string | undefined, appOrigin: string): boolean {
+  if (!requestOrigin || requestOrigin === appOrigin) return true
+  return isLoopbackHttpOrigin(appOrigin) && isLoopbackHttpOrigin(requestOrigin)
+}
+
 function writeJson(response: ServerResponse, status: number, payload: unknown) {
   response.writeHead(status, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
   response.end(JSON.stringify(payload))
@@ -274,7 +288,7 @@ export function createObservedRequestHandler(options: ObservedServerOptions) {
       let errorCode: string | undefined
 
       try {
-        if (method !== 'GET' && request.headers.origin && request.headers.origin !== options.appOrigin) {
+        if (method !== 'GET' && !isAllowedOrigin(request.headers.origin, options.appOrigin)) {
           errorCode = 'invalid_origin'
           writeJson(response, 403, { error: { code: errorCode } })
         } else {

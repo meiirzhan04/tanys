@@ -3,7 +3,6 @@ name: Vercel Deploy
 on:
   push:
     branches: [main]
-  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -15,7 +14,6 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -29,23 +27,12 @@ jobs:
           node-version: '22'
       - name: Install Vercel CLI
         run: npm install --global vercel@latest
-      - name: Pull and build preview artifacts
-        if: github.event_name == 'pull_request'
-        run: |
-          vercel pull --yes --environment=preview --token="$VERCEL_TOKEN"
-          vercel build --token="$VERCEL_TOKEN"
       - name: Deploy to Vercel
         run: |
           set +e
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            vercel deploy --prebuilt --token="$VERCEL_TOKEN" >/tmp/deploy.out 2>/tmp/deploy.err
-            STATUS=$?
-            TITLE="### Vercel Preview"
-          else
-            vercel deploy --prod --yes --token="$VERCEL_TOKEN" >/tmp/deploy.out 2>/tmp/deploy.err
-            STATUS=$?
-            TITLE="### Vercel Production"
-          fi
+          vercel deploy --prod --yes --token="$VERCEL_TOKEN" >/tmp/deploy.out 2>/tmp/deploy.err
+          STATUS=$?
+          TITLE="### Vercel Production"
           set -e
           cat /tmp/deploy.err >&2
           cat /tmp/deploy.out

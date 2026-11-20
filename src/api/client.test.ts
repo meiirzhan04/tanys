@@ -309,4 +309,22 @@ describe('createTanysApiClient', () => {
       'PATCH /api/v1/events/e-1/reports/rep-1',
     ])
   })
+
+  it('throws api_unavailable when server responds with HTML fallback instead of JSON', async () => {
+    const htmlFetch: typeof fetch = async () =>
+      new Response('<!doctype html><html></html>', {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      })
+    const api = createTanysApiClient('/api/v1', htmlFetch)
+
+    await assert.rejects(
+      () => api.signInWithPassword('meiirzhan', 'secret12'),
+      (error: unknown) => error instanceof ApiError && error.status === 503 && error.code === 'api_unavailable',
+    )
+    await assert.rejects(
+      () => api.getMe(),
+      (error: unknown) => error instanceof ApiError && error.status === 503 && error.code === 'api_unavailable',
+    )
+  })
 })
