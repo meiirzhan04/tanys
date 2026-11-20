@@ -423,6 +423,90 @@ function createMemoryDatabase() {
       return { rowCount: 1, rows: [] }
     }
 
+    // Admin routes
+    if (sql.startsWith('SELECT u.can_create_events, EXISTS(SELECT 1 FROM users WHERE can_create_events)')) {
+      const u = users.get(params[0])
+      if (!u) return { rowCount: 0, rows: [] }
+      const hasAny = [...users.values()].some((item) => item.canCreateEvents)
+      return { rowCount: 1, rows: [{ can_create_events: u.canCreateEvents, has_any_organizer: hasAny }] }
+    }
+    if (sql.startsWith('SELECT u.id, u.username, u.can_create_events AS "canCreateEvents"')) {
+      const rows = [...users.values()].map((u) => ({
+        id: u.id,
+        username: u.username ?? null,
+        canCreateEvents: u.canCreateEvents,
+        createdAt: new Date(),
+        eventsCount: [...memberships.values()].filter((m) => m.userId === u.id).length,
+        profilesCount: [...profiles.values()].filter((p) => p.userId === u.id).length,
+      }))
+      return { rowCount: rows.length, rows }
+    }
+    if (sql.startsWith('SELECT e.id, e.name, e.time_zone AS "timeZone"')) {
+      const rows = [...events.values()].map((e) => ({
+        id: e.id,
+        name: e.name,
+        timeZone: e.timeZone,
+        startsAt: e.startsAt,
+        endsAt: e.endsAt,
+        status: e.status,
+        memberCount: [...memberships.values()].filter((m) => m.eventId === e.id).length,
+        profileCount: [...profiles.values()].filter((p) => p.eventId === e.id).length,
+      }))
+      return { rowCount: rows.length, rows }
+    }
+    if (sql.startsWith('SELECT p.event_id AS "eventId", e.name AS "eventName"')) {
+      const rows = [...profiles.values()].map((p) => ({
+        eventId: p.eventId,
+        eventName: events.get(p.eventId)?.name ?? '',
+        userId: p.userId,
+        username: users.get(p.userId)?.username ?? null,
+        name: p.name,
+        role: p.role,
+        goal: p.goal,
+        skills: p.skills,
+        interests: p.interests,
+        experienceYears: p.experienceYears,
+        visible: p.visible,
+      }))
+      return { rowCount: rows.length, rows }
+    }
+    if (sql.startsWith('SELECT i.id, i.event_id AS "eventId", e.name AS "eventName"')) {
+      const rows = [...introductions.values()].map((i) => ({
+        id: i.id,
+        eventId: i.eventId,
+        eventName: events.get(i.eventId)?.name ?? '',
+        status: i.status,
+        createdAt: i.createdAt,
+        senderName: profiles.get(memberKey(i.eventId, i.sender))?.name ?? users.get(i.sender)?.username ?? i.sender,
+        recipientName: profiles.get(memberKey(i.eventId, i.recipient))?.name ?? users.get(i.recipient)?.username ?? i.recipient,
+      }))
+      return { rowCount: rows.length, rows }
+    }
+    if (sql.startsWith('SELECT m.id, i.event_id AS "eventId", e.name AS "eventName"')) {
+      return { rowCount: 0, rows: [] }
+    }
+    if (sql.startsWith('SELECT r.id, r.event_id AS "eventId", e.name AS "eventName"')) {
+      const rows = [...reports.values()].map((r) => ({
+        id: r.id,
+        eventId: r.eventId,
+        eventName: events.get(r.eventId)?.name ?? '',
+        reason: r.reason,
+        details: r.details,
+        status: r.status,
+        action: r.action,
+        createdAt: r.createdAt,
+        reporterName: profiles.get(memberKey(r.eventId, r.reporterId))?.name ?? users.get(r.reporterId)?.username ?? r.reporterId,
+        subjectName: profiles.get(memberKey(r.eventId, r.subjectId))?.name ?? users.get(r.subjectId)?.username ?? r.subjectId,
+      }))
+      return { rowCount: rows.length, rows }
+    }
+    if (sql.startsWith('UPDATE users SET can_create_events=$1 WHERE id=$2')) {
+      const u = users.get(params[1])
+      if (!u) return { rowCount: 0, rows: [] }
+      u.canCreateEvents = params[0]
+      return { rowCount: 1, rows: [{ id: u.id, username: u.username, canCreateEvents: u.canCreateEvents }] }
+    }
+
     if (/^(DELETE FROM (auth_challenges|user_contacts|availability|event_feedback|event_blocks|introductions|meetings|memberships|event_reports|moderation_actions|event_restrictions|event_profiles|password_attempts)|UPDATE event_reports SET resolved_by=NULL)/.test(sql)) {
       if (sql.includes('user_contacts')) contacts.delete(params[0])
       return { rowCount: 0, rows: [] }
@@ -485,6 +569,7 @@ async function createMatrixHarness() {
     { authRoute },
     { eventRoute },
     { organizerRoute },
+    { adminRoute },
     { moderationRoute },
     { profileRoute },
     { createMetricsTracker, createObservedRequestHandler },
@@ -495,6 +580,7 @@ async function createMatrixHarness() {
     import('../dist/auth.js'),
     import('../dist/events.js'),
     import('../dist/organizer.js'),
+    import('../dist/admin.js'),
     import('../dist/moderation.js'),
     import('../dist/profiles.js'),
     import('../dist/observability.js'),
@@ -503,7 +589,7 @@ async function createMatrixHarness() {
   const logs = []
   const handler = createObservedRequestHandler({
     appOrigin,
-    routes: [meetingRoute, introductionRoute, recommendationRoute, authRoute, eventRoute, organizerRoute, moderationRoute, profileRoute],
+    routes: [adminRoute, meetingRoute, introductionRoute, recommendationRoute, authRoute, eventRoute, organizerRoute, moderationRoute, profileRoute],
     checkReady: async () => true,
     metrics: createMetricsTracker(),
     log: (line) => logs.push(line),
@@ -757,6 +843,22 @@ test('security and event isolation matrix across guest, participants, and cross-
     assert.equal((await api(orgA.cookie, 'POST', `/events/${evA}/invites`, { expiresAt: inviteExp })).status, 409)
     assert.equal((await api(orgA.cookie, 'POST', `/events/${evA}/booths`, { name: 'AfterClose', topics: ['AI'] })).status, 409)
     assert.equal((await api(partA1.cookie, 'POST', `/events/${evA}/introductions`, { recipientId: partA2.id })).status, 409)
+
+    // 5b. Admin dashboard access controls & PII hygiene
+    assert.equal((await api(null, 'GET', '/admin/overview')).status, 401)
+    assert.equal((await api(partA1.cookie, 'GET', '/admin/overview')).status, 403)
+    assert.equal((await api(partA1.cookie, 'PATCH', `/admin/users/${partA3.id}`, { canCreateEvents: true })).status, 403)
+    const overview = await api(orgA.cookie, 'GET', '/admin/overview')
+    assert.equal(overview.status, 200)
+    assert.ok(overview.body.stats.usersCount >= 6)
+    assert.ok(overview.body.events.length >= 2)
+    assert.equal(overview.raw.includes('email'), false)
+    assert.equal(overview.raw.includes('passwordHash'), false)
+    for (const c of secretContacts) assert.equal(overview.raw.includes(c), false)
+    const promoted = await api(orgA.cookie, 'PATCH', `/admin/users/${partB1.id}`, { canCreateEvents: true })
+    assert.equal(promoted.status, 200)
+    assert.equal(promoted.body.canCreateEvents, true)
+    assert.equal((await api(orgA.cookie, 'PATCH', `/admin/users/${partB1.id}`, { canCreateEvents: false })).status, 200)
 
     // 6. Log secret/PII redaction and sanitized 500 error check (CI handler mode)
     if (!env.isLive) {

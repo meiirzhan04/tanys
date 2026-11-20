@@ -223,44 +223,46 @@ export function IntroductionsPanel({
       {socialError && <div className="error-banner" role="alert">{socialError}</div>}
       {socialNotice && <div className="info-banner" role="status">{socialNotice}</div>}
 
-      <form className="surface contact-panel" onSubmit={submitContact}>
-        <label className="field">
-          <span>{s.contactLabel}</span>
-          <div className="contact-row">
-            <input
-              name="contact"
-              maxLength={160}
-              placeholder={s.contactPlaceholder}
-              value={contactInput}
-              disabled={savingContact}
-              onChange={event => setContactInput(event.target.value)}
-            />
-            <button type="submit" className="secondary-button" disabled={savingContact || !contactInput.trim()}>
-              {savingContact ? s.savingContact : s.saveContact}
-            </button>
-          </div>
-        </label>
-        <p className="privacy-box__note">{s.contactNotice}</p>
-        {contactSaved && <p className="copy-status" role="status">{s.contactSaved}</p>}
-        {contactValue && <p className="contact-reveal"><strong>{s.currentContact}</strong> {contactValue}</p>}
-      </form>
+      <div className="bento-grid social-bento-grid">
+        <form className="surface contact-panel bento-card--wide" onSubmit={submitContact}>
+          <label className="field">
+            <span>{s.contactLabel}</span>
+            <div className="contact-row">
+              <input
+                name="contact"
+                maxLength={160}
+                placeholder={s.contactPlaceholder}
+                value={contactInput}
+                disabled={savingContact}
+                onChange={event => setContactInput(event.target.value)}
+              />
+              <button type="submit" className="secondary-button" disabled={savingContact || !contactInput.trim()}>
+                {savingContact ? s.savingContact : s.saveContact}
+              </button>
+            </div>
+          </label>
+          <p className="privacy-box__note">{s.contactNotice}</p>
+          {contactSaved && <p className="copy-status" role="status">{s.contactSaved}</p>}
+          {contactValue && <p className="contact-reveal"><strong>{s.currentContact}</strong> {contactValue}</p>}
+        </form>
 
-      <div className="social-group">
-        <h2>{s.incomingHeading}</h2>
-        {incoming.length ? (
-          <div className="social-list">{incoming.map(renderIntroCard)}</div>
-        ) : (
-          <div className="surface empty-state"><p>{s.noIncoming}</p></div>
-        )}
-      </div>
+        <div className="social-group bento-card">
+          <h2>{s.incomingHeading}</h2>
+          {incoming.length ? (
+            <div className="social-list">{incoming.map(renderIntroCard)}</div>
+          ) : (
+            <div className="surface empty-state"><p>{s.noIncoming}</p></div>
+          )}
+        </div>
 
-      <div className="social-group">
-        <h2>{s.outgoingHeading}</h2>
-        {outgoing.length ? (
-          <div className="social-list">{outgoing.map(renderIntroCard)}</div>
-        ) : (
-          <div className="surface empty-state"><p>{s.noOutgoing}</p></div>
-        )}
+        <div className="social-group bento-card">
+          <h2>{s.outgoingHeading}</h2>
+          {outgoing.length ? (
+            <div className="social-list">{outgoing.map(renderIntroCard)}</div>
+          ) : (
+            <div className="surface empty-state"><p>{s.noOutgoing}</p></div>
+          )}
+        </div>
       </div>
     </section>
   )

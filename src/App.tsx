@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import {
   isAccountRoute,
+  isAdminRoute,
   parseInviteLocation,
   saveAccountModePreference,
   savePendingInvite,
   syncAccountLocationUrl,
 } from './api/inviteRoute'
+import { AdminDashboard } from './components/AdminDashboard'
 import { EventAccountFlow } from './components/EventAccountFlow'
 import { InterestMap } from './components/InterestMap'
 import { SchedulePanel } from './components/MeetingSlots'
@@ -33,6 +35,24 @@ import './styles.css'
 const candidates: readonly Candidate[] = resolveAppCandidates(profiles, previewProfiles)
 const interestSummary = summarizeInterests(parseCandidates(profiles))
 type View = 'profile' | 'results' | 'schedule' | 'interests'
+type Theme = 'light' | 'dark'
+const THEME_STORAGE_KEY = 'tanys.theme.v1'
+
+function resolveInitialTheme(): Theme {
+  try {
+    const saved = typeof localStorage !== 'undefined' ? localStorage.getItem(THEME_STORAGE_KEY) : null
+    if (saved === 'light' || saved === 'dark') return saved
+  } catch {
+    // Ignore storage restrictions.
+  }
+  return 'dark'
+}
+
+const HEADER_EXTRA = {
+  ru: { admin: 'Админ', toDark: 'Тёмная', toLight: 'Светлая' },
+  kk: { admin: 'Әкімші', toDark: 'Қараңғы', toLight: 'Жарық' },
+  en: { admin: 'Admin', toDark: 'Dark', toLight: 'Light' },
+} as const
 
 function getResultsMessage(session: RecommendationSession, locale: Locale): string {
   const t = getMessages(locale).results
@@ -48,9 +68,18 @@ function getResultsMessage(session: RecommendationSession, locale: Locale): stri
 
 export default function App() {
   const [initialInvite] = useState(() => parseInviteLocation(window.location.pathname, window.location.search))
-  const [mode, setMode] = useState<'demo' | 'account'>(() =>
-    isAccountRoute(window.location.pathname, window.location.search) ? 'account' : 'demo',
+  const [mode, setMode] = useState<'demo' | 'account' | 'admin'>(() =>
+    isAdminRoute(window.location.pathname, window.location.search)
+      ? 'admin'
+      : isAccountRoute(window.location.pathname, window.location.search)
+        ? 'account'
+        : 'demo',
   )
+  const [theme, setTheme] = useState<Theme>(() => {
+    const initial = resolveInitialTheme()
+    if (typeof document !== 'undefined') document.documentElement.dataset.theme = initial
+    return initial
+  })
   const [exitRequestSeq, setExitRequestSeq] = useState(0)
   const [locale, setLocale] = useState<Locale>(() => {
     const initial = resolveInitialLocale()
@@ -65,6 +94,44 @@ export default function App() {
   useEffect(() => {
     document.documentElement.lang = locale
   }, [locale])
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, theme)
+    } catch {
+      // Ignore storage restrictions.
+    }
+  }, [theme])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    let raf = 0
+    let lastX = 0
+    let lastY = 0
+    const schedule = () => {
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        const style = document.documentElement.style
+        style.setProperty('--parallax-y', `${Math.round(window.scrollY * -0.07)}px`)
+        style.setProperty('--mouse-x', `${Math.round(lastX)}px`)
+        style.setProperty('--mouse-y', `${Math.round(lastY)}px`)
+      })
+    }
+    const onPointerMove = (event: PointerEvent) => {
+      lastX = (event.clientX / Math.max(window.innerWidth, 1) - 0.5) * 24
+      lastY = (event.clientY / Math.max(window.innerHeight, 1) - 0.5) * 24
+      schedule()
+    }
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('pointermove', onPointerMove, { passive: true })
+    return () => {
+      if (raf) cancelAnimationFrame(raf)
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('pointermove', onPointerMove)
+    }
+  }, [])
 
   useEffect(() => {
     if (mode !== 'account') return
@@ -114,14 +181,48 @@ export default function App() {
     })
   }
 
+  const extra = HEADER_EXTRA[locale]
+
+  function openAdminMode() {
+    saveAccountModePreference(false)
+    if (typeof window !== 'undefined' && window.history?.replaceState) {
+      window.history.replaceState(null, '', '/admin')
+    }
+    setMode('admin')
+  }
+
+  function exitAdminToDemo() {
+    if (typeof window !== 'undefined' && window.history?.replaceState) {
+      window.history.replaceState(null, '', '/')
+    }
+    setMode('demo')
+  }
+
   return (
-    <>
+    <div className="app-shell">
+      <div className="ambient-bg" aria-hidden="true">
+        <span className="ambient-orb ambient-orb--1" />
+        <span className="ambient-orb ambient-orb--2" />
+        <span className="ambient-orb ambient-orb--3" />
+      </div>
       <header className="site-header">
         <div className="site-width header-inner">
           <span className="brand"><span className="brand-mark" aria-hidden="true">T</span>Tanys</span>
           <span className="header-context">{messages.header.context}</span>
           <div className="header-actions">
             {mode === 'demo' && <span className="demo-status">{messages.header.demoStatus}</span>}
+            <button
+              type="button"
+              className="header-theme-btn"
+              aria-pressed={theme === 'dark'}
+              onClick={() => setTheme(current => (current === 'dark' ? 'light' : 'dark'))}
+            >{theme === 'dark' ? `☀️ ${extra.toLight}` : `🌙 ${extra.toDark}`}</button>
+            <button
+              type="button"
+              className="header-admin-btn"
+              aria-pressed={mode === 'admin'}
+              onClick={() => (mode === 'admin' ? exitAdminToDemo() : openAdminMode())}
+            >{extra.admin}</button>
             <button
               type="button"
               className="header-link-btn"
@@ -151,7 +252,17 @@ export default function App() {
         </div>
       </header>
 
-      {mode === 'account' ? (
+      {mode === 'admin' ? (
+        <AdminDashboard
+          locale={locale}
+          onBack={exitAdminToDemo}
+          onOpenAccount={() => {
+            saveAccountModePreference(true)
+            syncAccountLocationUrl(true)
+            setMode('account')
+          }}
+        />
+      ) : mode === 'account' ? (
         <EventAccountFlow
           locale={locale}
           initialInvite={initialInvite}
@@ -206,6 +317,6 @@ export default function App() {
           </main>
         </div>
       )}
-    </>
+    </div>
   )
 }

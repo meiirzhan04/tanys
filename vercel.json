@@ -8,6 +8,7 @@
     { "source": "/invite/:eventId/:token?", "destination": "/index.html" },
     { "source": "/events/:eventId?", "destination": "/index.html" },
     { "source": "/login", "destination": "/index.html" },
-    { "source": "/account", "destination": "/index.html" }
+    { "source": "/account", "destination": "/index.html" },
+    { "source": "/admin", "destination": "/index.html" }
   ]
 }
