@@ -140,10 +140,39 @@ function normalizeTopic(value: string): string {
   return value.trim().toLowerCase()
 }
 
-function normalizeSkill(value: string): string {
+function isOneEditAway(a: string, b: string): boolean {
+  if (Math.abs(a.length - b.length) > 1) return false
+  let start = 0
+  while (start < a.length && start < b.length && a[start] === b[start]) start++
+  let aEnd = a.length
+  let bEnd = b.length
+  while (aEnd > start && bEnd > start && a[aEnd - 1] === b[bEnd - 1]) {
+    aEnd--
+    bEnd--
+  }
+  const aRest = aEnd - start
+  const bRest = bEnd - start
+  return Math.max(aRest, bRest) === 1 ||
+    (aRest === 2 && bRest === 2 && a[start] === b[start + 1] && a[start + 1] === b[start])
+}
+
+export function normalizeSkill(value: string): string {
   const key = normalizeTopic(value.normalize('NFKC')).replace(/\s+/g, ' ')
   const compactRole = key.replace(/[\s_\u2010-\u2015-]+/g, '')
-  return skillAliases.get(key) ?? roleAliases.get(compactRole) ?? key
+  const exact = skillAliases.get(key) ?? roleAliases.get(compactRole)
+  if (exact) return exact
+
+  // Only correct a single edit of a known, unambiguous role label.
+  if (compactRole.length >= 6 && /^\p{L}+$/u.test(compactRole)) {
+    let match: string | undefined
+    for (const [alias, role] of roleAliases) {
+      if (alias.length < 6 || !isOneEditAway(compactRole, alias)) continue
+      if (match && match !== role) return key
+      match = role
+    }
+    if (match) return match
+  }
+  return key
 }
 
 function makeIcebreaker(goal: Goal, candidate: Candidate, locale: Locale, topic?: string): string {
@@ -162,10 +191,15 @@ function matchingTopics(
   return values.map(value => value.trim()).filter(value => pending.delete(normalize(value)))
 }
 
-function scoreCandidate(input: ProfileInput, candidate: Candidate, templates: RecommendationTemplates) {
-  const candidateNeeds = matchingTopics(input.skills, candidate.lookingFor ?? [], normalizeSkill)
-  const participantNeeds = matchingTopics(candidate.skills, input.lookingFor ?? [], normalizeSkill)
-  const sharedSkills = matchingTopics(candidate.skills, input.skills, normalizeSkill)
+function scoreCandidate(
+  input: ProfileInput,
+  candidate: Candidate,
+  templates: RecommendationTemplates,
+  skillKey: (value: string) => string,
+) {
+  const candidateNeeds = matchingTopics(input.skills, candidate.lookingFor ?? [], skillKey)
+  const participantNeeds = matchingTopics(candidate.skills, input.lookingFor ?? [], skillKey)
+  const sharedSkills = matchingTopics(candidate.skills, input.skills, skillKey)
 
   // Apply the employer's skill criteria in both directions before ranking job matches.
   let hiringMatch: string[] | undefined
@@ -202,6 +236,7 @@ export function recommend(
   input: ProfileInput,
   candidates: readonly Candidate[],
   locale: Locale = 'ru',
+  skillKey = normalizeSkill,
 ): Recommendation[] {
   const templates = templatesByLocale[locale]
   const seen = new Set<string>()
@@ -209,7 +244,7 @@ export function recommend(
 
   for (const candidate of candidates) {
     if (candidate.goal !== reciprocalGoals[input.goal] || seen.has(candidate.id)) continue
-    const scored = scoreCandidate(input, candidate, templates)
+    const scored = scoreCandidate(input, candidate, templates, skillKey)
     if (!scored) continue
     seen.add(candidate.id)
     ranked.push(scored)
