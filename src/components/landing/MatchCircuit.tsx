@@ -42,7 +42,7 @@ export function MatchCircuit({ copy }: { copy: LandingCopy['circuit'] }) {
         <div className="circuit__chip">
           <span className="circuit__chip-ring" />
           <span className="circuit__chip-ring circuit__chip-ring--late" />
-          <TanysMark size={46} />
+          <TanysMark size={62} />
           <span className="circuit__chip-caption">{copy.chipCaption}</span>
         </div>
 

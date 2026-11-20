@@ -300,11 +300,11 @@ export default function App() {
         <div className="site-width header-inner">
           {mode === 'demo' ? (
             <button type="button" className="brand" aria-label="Tanys" onClick={handleGoHome}>
-              <TanysWordmark size={32} />
+              <TanysWordmark size={28} />
             </button>
           ) : (
             <span className="brand">
-              <TanysWordmark size={32} />
+              <TanysWordmark size={28} />
             </span>
           )}
 

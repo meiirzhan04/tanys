@@ -1,42 +1,85 @@
 import { useId } from 'react'
 
-/**
- * Tanys mark: two overlapping circles (two people) with the shared lens filled —
- * the "common ground" a reciprocal match is built on.
- */
-export function TanysMark({ size = 32, className = '' }: { size?: number; className?: string }) {
-  const gradientId = `tanys-mark-${useId().replace(/:/g, '')}`
+// Brand artwork from the design files (tanys-icon.svg / tanys-logo.svg): two heads joined into one body,
+// with a light "bridge" between them — two people meeting.
+const BODY = 'M330,425 L329,504 L330,508 L335,514 L343,517 L389,516 L404,512 L418,506 L442,490 L486,448 L511,430 L540,417 L571,411 L593,412 L612,416 L642,429 L671,450 L715,492 L728,501 L745,510 L771,517 L806,517 L814,516 L818,514 L822,510 L824,505 L823,424 L816,399 L807,382 L796,367 L771,346 L748,334 L732,329 L716,326 L703,325 L683,326 L651,332 L614,346 L578,366 L527,340 L492,329 L474,326 L449,325 L417,330 L400,336 L383,345 L368,356 L357,367 L346,382 L339,395 L334,408 Z'
+const BRIDGE = 'M 578,365 C 538,390 509,424 484,451 C 517,425 549,405 578,405 C 612,405 646,427 676,454 C 643,412 616,389 578,365 Z'
+const WORD = 'M1669,269 L1620,269 L1618,271 L1616,279 L1614,282 L1612,290 L1604,309 L1595,336 L1591,344 L1588,355 L1584,363 L1581,374 L1578,379 L1571,398 L1569,396 L1569,394 L1555,365 L1552,356 L1547,347 L1543,336 L1538,327 L1538,325 L1533,316 L1533,314 L1528,305 L1528,303 L1522,292 L1522,290 L1513,271 L1511,269 L1460,269 L1458,271 L1462,282 L1465,286 L1465,288 L1470,297 L1470,299 L1472,301 L1472,303 L1478,314 L1478,316 L1481,320 L1481,322 L1491,341 L1491,343 L1501,362 L1501,364 L1509,379 L1509,381 L1518,398 L1518,400 L1546,458 L1541,469 L1541,471 L1535,480 L1525,489 L1517,493 L1510,495 L1488,495 L1487,494 L1481,494 L1480,495 L1480,506 L1479,507 L1478,529 L1477,530 L1477,536 L1479,538 L1486,540 L1491,540 L1492,541 L1516,541 L1517,540 L1523,540 L1524,539 L1528,539 L1538,536 L1550,530 L1560,523 L1569,514 L1576,505 L1586,487 L1588,480 L1594,468 L1594,466 L1612,423 L1613,418 L1626,387 L1628,379 L1631,374 L1634,364 L1636,361 L1636,359 L1650,326 L1651,321 L1657,308 L1658,303 L1662,295 L1666,282 L1670,274 L1670,270 Z M1427,284 L1414,275 L1397,268 L1389,267 L1388,266 L1382,266 L1381,265 L1365,265 L1364,266 L1359,266 L1358,267 L1351,268 L1335,275 L1323,284 L1316,292 L1314,286 L1315,284 L1314,271 L1312,269 L1271,269 L1268,272 L1268,463 L1271,466 L1314,466 L1317,464 L1318,462 L1318,352 L1319,351 L1319,347 L1323,335 L1330,325 L1340,317 L1354,312 L1372,312 L1385,317 L1397,328 L1402,337 L1404,343 L1404,348 L1405,349 L1405,463 L1410,466 L1451,466 L1454,464 L1455,462 L1455,352 L1454,351 L1453,332 L1452,331 L1452,327 L1450,320 L1442,302 L1434,291 Z M1075,288 L1062,301 L1062,304 L1068,310 L1078,317 L1092,329 L1108,316 L1121,310 L1124,310 L1129,308 L1135,308 L1136,307 L1153,307 L1154,308 L1159,308 L1168,311 L1175,315 L1185,326 L1188,334 L1188,341 L1187,342 L1123,342 L1122,343 L1110,344 L1089,350 L1079,355 L1069,362 L1058,375 L1052,390 L1052,394 L1051,395 L1051,415 L1052,416 L1052,420 L1056,432 L1062,442 L1074,454 L1082,459 L1096,465 L1099,465 L1103,467 L1108,467 L1109,468 L1128,469 L1129,468 L1138,468 L1139,467 L1144,467 L1145,466 L1152,465 L1174,455 L1190,442 L1191,443 L1191,462 L1193,465 L1195,466 L1233,466 L1235,465 L1237,462 L1237,337 L1236,336 L1235,324 L1231,311 L1225,300 L1219,292 L1208,282 L1190,272 L1173,267 L1162,266 L1161,265 L1132,265 L1131,266 L1124,266 L1123,267 L1108,270 L1086,280 Z M1101,407 L1101,399 L1105,390 L1109,386 L1120,380 L1128,379 L1129,378 L1134,378 L1135,377 L1187,377 L1188,378 L1188,392 L1183,404 L1172,416 L1159,423 L1149,425 L1148,426 L1142,426 L1141,427 L1131,427 L1130,426 L1120,425 L1110,420 L1104,414 Z M1741,265 L1740,266 L1728,268 L1713,274 L1702,281 L1691,292 L1684,304 L1681,313 L1681,318 L1680,319 L1680,330 L1681,331 L1681,336 L1684,345 L1690,355 L1699,364 L1717,374 L1741,381 L1778,387 L1790,392 L1797,400 L1798,403 L1797,413 L1788,423 L1778,427 L1775,427 L1774,428 L1751,428 L1750,427 L1741,426 L1727,420 L1716,413 L1702,400 L1699,400 L1682,416 L1669,427 L1669,429 L1677,439 L1689,449 L1703,458 L1705,458 L1714,463 L1726,467 L1739,469 L1740,470 L1746,470 L1747,471 L1774,471 L1775,470 L1781,470 L1782,469 L1792,468 L1807,463 L1817,458 L1827,451 L1839,437 L1844,427 L1846,417 L1847,416 L1847,395 L1843,381 L1837,371 L1827,361 L1821,357 L1809,351 L1797,347 L1794,347 L1785,344 L1781,344 L1780,343 L1775,343 L1774,342 L1769,342 L1763,340 L1753,339 L1743,336 L1737,333 L1732,328 L1731,326 L1731,318 L1733,314 L1737,310 L1743,307 L1750,305 L1756,305 L1757,304 L1766,304 L1767,305 L1780,306 L1792,310 L1804,317 L1812,324 L1814,324 L1827,313 L1842,298 L1842,295 L1834,287 L1824,280 L1810,273 L1799,269 L1796,269 L1787,266 L1775,265 L1774,264 L1750,264 L1749,265 Z M926,222 L924,224 L924,267 L922,269 L891,269 L889,271 L889,309 L891,311 L922,311 L924,313 L924,403 L925,404 L925,409 L926,410 L927,418 L931,429 L938,441 L948,452 L956,458 L966,463 L975,466 L985,467 L986,468 L1002,468 L1003,467 L1010,467 L1011,466 L1019,465 L1033,460 L1035,457 L1033,452 L1033,448 L1031,443 L1031,439 L1030,438 L1026,419 L1024,417 L1010,421 L999,421 L998,420 L991,419 L987,417 L978,408 L975,402 L974,395 L973,394 L973,312 L974,311 L1030,311 L1032,309 L1032,272 L1029,269 L974,269 L973,268 L973,225 L971,222 Z'
+
+const MARK_VIEWBOX = '312 168 529 370'
+const LOGO_VIEWBOX = '300 160 1580 420'
+const MARK_RATIO = 370 / 529
+const LOGO_RATIO = 1580 / 420
+
+function MarkShapes({ orange, bridge }: { orange: string; bridge: string }) {
+  return (
+    <>
+      <defs>
+        <linearGradient id={orange} x1="0%" y1="50%" x2="100%" y2="50%">
+          <stop offset="0%" stopColor="#FF5A14" />
+          <stop offset="48%" stopColor="#FF701D" />
+          <stop offset="100%" stopColor="#FF9A54" />
+        </linearGradient>
+        <linearGradient id={bridge} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FFB46C" stopOpacity="0.65" />
+          <stop offset="100%" stopColor="#FF8A40" stopOpacity="0.18" />
+        </linearGradient>
+      </defs>
+      <path className="tanys-mark__body" d={BODY} fill={`url(#${orange})`} />
+      <path className="tanys-mark__bridge" d={BRIDGE} fill={`url(#${bridge})`} />
+      <circle className="tanys-mark__head tanys-mark__head--left" cx="457.5" cy="247.5" r="60.5" fill="#FF6917" />
+      <circle className="tanys-mark__head tanys-mark__head--right" cx="706" cy="247.5" r="60.5" fill="#FF9853" />
+    </>
+  )
+}
+
+function useGradientIds() {
+  const id = useId().replace(/:/g, '')
+  return { orange: `tanys-orange-${id}`, bridge: `tanys-bridge-${id}` }
+}
+
+/** The tanys mark. `size` is its width in px; the artwork is wider than tall. */
+export function TanysMark({ size = 32, className = '', animated = true }: { size?: number; className?: string; animated?: boolean }) {
+  const ids = useGradientIds()
   return (
     <svg
-      className={`tanys-mark ${className}`.trim()}
+      className={`tanys-mark ${animated ? 'tanys-anim' : ''} ${className}`.trim()}
       width={size}
-      height={size}
-      viewBox="0 0 40 40"
-      fill="none"
+      height={Math.round(size * MARK_RATIO)}
+      viewBox={MARK_VIEWBOX}
       aria-hidden="true"
       focusable="false"
     >
-      <defs>
-        <linearGradient id={gradientId} x1="4" y1="2" x2="36" y2="38" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#FF8A3D" />
-          <stop offset="0.55" stopColor="#F2500F" />
-          <stop offset="1" stopColor="#B83200" />
-        </linearGradient>
-      </defs>
-      <rect x="1" y="1" width="38" height="38" rx="11" fill={`url(#${gradientId})`} />
-      <rect x="1.5" y="1.5" width="37" height="37" rx="10.5" stroke="#FFFFFF" strokeOpacity="0.22" />
-      <circle className="tanys-mark__ring tanys-mark__ring--left" cx="15.5" cy="20" r="7.5" stroke="#FFFFFF" strokeWidth="2.6" />
-      <circle className="tanys-mark__ring tanys-mark__ring--right" cx="24.5" cy="20" r="7.5" stroke="#FFFFFF" strokeWidth="2.6" />
-      <path className="tanys-mark__lens" d="M20 14.08A7.5 7.5 0 0 1 20 25.92A7.5 7.5 0 0 1 20 14.08Z" fill="#FFFFFF" />
+      <MarkShapes {...ids} />
     </svg>
   )
 }
 
+/** Full logo: mark plus the "tanys" word, which follows the current text colour (light and dark themes). */
+export function TanysLogo({ height = 28, className = '', animated = true }: { height?: number; className?: string; animated?: boolean }) {
+  const ids = useGradientIds()
+  return (
+    <svg
+      className={`tanys-logo ${animated ? 'tanys-anim' : ''} ${className}`.trim()}
+      width={Math.round(height * LOGO_RATIO)}
+      height={height}
+      viewBox={LOGO_VIEWBOX}
+      role="img"
+      aria-label="tanys"
+      focusable="false"
+    >
+      <MarkShapes {...ids} />
+      <path className="tanys-logo__word" d={WORD} fill="currentColor" fillRule="evenodd" />
+    </svg>
+  )
+}
+
+/** Header and footer lockup: the full logo, collapsing to the mark alone on the narrowest screens. */
 export function TanysWordmark({ size = 30 }: { size?: number }) {
   return (
     <span className="brand-lockup">
-      <TanysMark size={size} />
-      <span className="brand-word">tanys</span>
+      <TanysLogo height={size} className="brand-lockup__full" />
+      <TanysMark size={Math.round(size * 1.35)} className="brand-lockup__compact" />
     </span>
   )
 }

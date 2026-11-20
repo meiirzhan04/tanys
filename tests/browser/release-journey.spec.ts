@@ -347,13 +347,14 @@ test('full 2-participant server journey: invite, network retry, intro, contact e
     await pageA.locator('input[name="consent"]').check()
 
     await pageA.locator('form button[type="submit"]').click()
-    await expect(pageA.locator('.error-banner')).toBeVisible()
+    // The simulated outage can also fail a background request; assert the form's own save error with Retry.
+    await expect(pageA.locator('form .error-banner--actions')).toBeVisible()
     // Network failure preserves user input on screen
     await expect(pageA.locator('input[name="name"]')).toHaveValue('Алия')
     await expect(pageA.locator('input[name="role"]')).toHaveValue('Backend-разработчик')
 
     // Retry succeeds and loads first recommendations
-    await pageA.locator('.error-banner button').click()
+    await pageA.locator('form .error-banner--actions button').click()
     await expect(pageA.locator('#results-title')).toBeVisible()
     await assertNoHorizontalOverflow(pageA)
 

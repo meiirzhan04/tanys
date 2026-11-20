@@ -1,13 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">
-  <defs>
-    <linearGradient id="g" x1="4" y1="2" x2="36" y2="38" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FF8A3D"/>
-      <stop offset="0.55" stop-color="#F2500F"/>
-      <stop offset="1" stop-color="#B83200"/>
-    </linearGradient>
-  </defs>
-  <rect x="1" y="1" width="38" height="38" rx="11" fill="url(#g)"/>
-  <circle cx="15.5" cy="20" r="7.5" stroke="#fff" stroke-width="2.6"/>
-  <circle cx="24.5" cy="20" r="7.5" stroke="#fff" stroke-width="2.6"/>
-  <path d="M20 14.08A7.5 7.5 0 0 1 20 25.92A7.5 7.5 0 0 1 20 14.08Z" fill="#fff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="312 168 529 370" role="img" aria-label="tanys icon">
+<defs><linearGradient id="orange" x1="0%" y1="50%" x2="100%" y2="50%"><stop offset="0%" stop-color="#FF5A14"/><stop offset="48%" stop-color="#FF701D"/><stop offset="100%" stop-color="#FF9A54"/></linearGradient><linearGradient id="bridge" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#FFB46C" stop-opacity="0.65"/><stop offset="100%" stop-color="#FF8A40" stop-opacity="0.18"/></linearGradient></defs>
+<circle cx="457.5" cy="247.5" r="60.5" fill="#FF6917"/><circle cx="706" cy="247.5" r="60.5" fill="#FF9853"/><path d="M330,425 L329,504 L330,508 L335,514 L343,517 L389,516 L404,512 L418,506 L442,490 L486,448 L511,430 L540,417 L571,411 L593,412 L612,416 L642,429 L671,450 L715,492 L728,501 L745,510 L771,517 L806,517 L814,516 L818,514 L822,510 L824,505 L823,424 L816,399 L807,382 L796,367 L771,346 L748,334 L732,329 L716,326 L703,325 L683,326 L651,332 L614,346 L578,366 L527,340 L492,329 L474,326 L449,325 L417,330 L400,336 L383,345 L368,356 L357,367 L346,382 L339,395 L334,408 Z" fill="url(#orange)"/><path d="M 578,365 C 538,390 509,424 484,451 C 517,425 549,405 578,405 C 612,405 646,427 676,454 C 643,412 616,389 578,365 Z" fill="url(#bridge)"/>
 </svg>
