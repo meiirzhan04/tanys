@@ -25,8 +25,9 @@ async function mockApi(context: BrowserContext, { role = 'participant', canCreat
     { id: 'evt-a', name: 'Almaty Meetup', role, status: 'active', timeZone: 'Asia/Almaty' },
     { id: 'evt-b', name: 'Astana Conf', role: 'participant', status: 'active', timeZone: 'Asia/Almaty' },
   ]
-  const day = new Date(Date.now() + 86400000)
-  day.setHours(9, 0, 0, 0)
+  // 09:00 tomorrow on the Almaty clock (UTC+5), independent of the browser's device zone.
+  const tomorrow = new Date(Date.now() + 86400000)
+  const day = new Date(Date.UTC(tomorrow.getUTCFullYear(), tomorrow.getUTCMonth(), tomorrow.getUTCDate(), 4))
   const startsAt = new Date(+day - 3600000).toISOString()
   const endsAt = new Date(+day + 10 * 3600000).toISOString()
   const legacy = { start: new Date(+day + 46 * 60000).toISOString(), end: new Date(+day + 106 * 60000).toISOString() }
@@ -138,8 +139,13 @@ test('an organizer sees the cabinet but cannot leave their event or delete the a
 })
 
 test('availability times offer only 15-minute steps and flag a saved off-grid slot (#time)', async ({ browser }, testInfo) => {
-  const context = await browser.newContext({ viewport: testInfo.project.use.viewport ?? { width: 1280, height: 860 }, locale: 'en-US' })
+  // A device in Berlin still enters the Almaty event's own times.
+  const context = await browser.newContext({ viewport: testInfo.project.use.viewport ?? { width: 1280, height: 860 }, locale: 'en-US', timezoneId: 'Europe/Berlin' })
   await mockApi(context, { legacySlot: true })
+  const saved: Array<{ slots: Array<{ start: string; end: string }> }> = []
+  context.on('request', request => {
+    if (request.method() === 'PUT' && request.url().endsWith('/availability/me')) saved.push(request.postDataJSON())
+  })
   try {
     const page = await context.newPage()
     await page.goto('/?mode=account')
@@ -155,7 +161,9 @@ test('availability times offer only 15-minute steps and flag a saved off-grid sl
     expect(values).toContain('09:15')
     expect(values).not.toContain('07:45')
     expect(values).not.toContain('09:46')
-    await expect(page.locator('[data-event-window]')).toBeVisible()
+    await expect(page.locator('[data-event-window]')).toContainText('08:00')
+    await expect(page.locator('[data-event-window]')).toContainText('19:00')
+    await expect(page.locator('.availability-panel')).toContainText('Asia/Almaty')
     await expect(page.locator('.legacy-time-hint')).toContainText('outside the 15-minute steps')
 
     await start.click()
@@ -177,6 +185,9 @@ test('availability times offer only 15-minute steps and flag a saved off-grid sl
     await page.locator('select[name="availabilityEndTime"]').selectOption('12:30')
     await page.getByRole('button', { name: 'Add interval' }).click()
     await expect(page.locator('.availability-slots li')).toHaveCount(2)
+    // 12:00–12:30 on the Almaty clock is 07:00–07:30 UTC, even from a Berlin device.
+    const added = saved.at(-1)?.slots.find(slot => slot.start.endsWith('T07:00:00.000Z'))
+    expect(added?.end.endsWith('T07:30:00.000Z')).toBe(true)
     await start.selectOption('12:15')
     await page.locator('select[name="availabilityEndTime"]').selectOption('13:00')
     await page.getByRole('button', { name: 'Add interval' }).click()
