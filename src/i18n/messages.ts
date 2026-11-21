@@ -365,7 +365,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
     },
     booths: {
       title: 'Стенды партнёров',
-      subtitle: 'Демонстрационная подборка стендов по вашим интересам и навыкам.',
+      subtitle: 'Стенд — место компании или сообщества на площадке мероприятия. Подсказываем, к каким стендам подойти, по темам из вашей анкеты.',
       demoBadge: 'Демо-стенд',
       topicsAriaLabel: 'Совпавшие темы стенда',
       emptyTitle: 'Тематических совпадений по стендам пока нет',
@@ -714,7 +714,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
     },
     booths: {
       title: 'Серіктес стендтері',
-      subtitle: 'Қызығушылықтарыңыз бен дағдыларыңызға сәйкес демонстрациялық стендтер.',
+      subtitle: 'Стенд — іс-шара алаңындағы компанияның немесе қауымдастықтың орны. Сауалнамаңыздағы тақырыптар бойынша қай стендке бару керегін ұсынамыз.',
       demoBadge: 'Демо-стенд',
       topicsAriaLabel: 'Стендтің сәйкес тақырыптары',
       emptyTitle: 'Стендтер бойынша тақырыптық сәйкестік табылмады',
@@ -1063,7 +1063,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
     },
     booths: {
       title: 'Partner booths',
-      subtitle: 'Demonstration booths matched to your skills and interests.',
+      subtitle: 'A booth is a company or community spot at the event venue. We suggest which booths to visit based on the topics in your questionnaire.',
       demoBadge: 'Demo booth',
       topicsAriaLabel: 'Matched booth topics',
       emptyTitle: 'No thematic booth matches yet',

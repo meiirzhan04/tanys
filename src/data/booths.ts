@@ -1,3 +1,4 @@
+import { normalizeSkill } from '../../server/src/matching/recommend.ts'
 import type { Locale, ProfileInput } from '../matching/types'
 
 export interface PartnerBooth {
@@ -101,9 +102,10 @@ export function recommendBooths(
   locale: Locale = 'ru',
   limit = 3,
 ): BoothRecommendation[] {
+  // Same normalisation as people matching: case, aliases (Golang → Go, k8s → Kubernetes) and typos.
   const participantTerms = new Set(
     [...input.interests, ...input.skills, ...(input.lookingFor ?? [])]
-      .map(term => term.trim().toLowerCase())
+      .map(term => normalizeSkill(term))
       .filter(Boolean),
   )
 
@@ -115,7 +117,7 @@ export function recommendBooths(
     const seenTopic = new Set<string>()
     const matchedTopics: string[] = []
     for (const topic of booth.topics) {
-      const key = topic.trim().toLowerCase()
+      const key = normalizeSkill(topic)
       if (!key || seenTopic.has(key) || !participantTerms.has(key)) continue
       seenTopic.add(key)
       matchedTopics.push(topic.trim())

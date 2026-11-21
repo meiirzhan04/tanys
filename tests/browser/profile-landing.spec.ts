@@ -222,6 +222,8 @@ test('active session picks up organizer grants and revocations on return', async
   await page.goto('/login')
   await expect(page.locator('.nav-profile-btn')).toBeVisible()
   await expect(page.locator('.nav-organizer-btn')).toHaveCount(0)
+  // Let the initial session load finish, so its older /me answer cannot overwrite the grant below.
+  await page.waitForLoadState('networkidle')
   account.canCreateEvents = true
   await page.evaluate(() => window.dispatchEvent(new Event('focus')))
   await page.locator('.nav-organizer-btn').click()
