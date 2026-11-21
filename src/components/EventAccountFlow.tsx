@@ -225,8 +225,17 @@ export function EventAccountFlow({
   const prevIntrosRef = useRef<readonly IntroductionItem[]>([])
   const prevMeetingsRef = useRef<readonly ServerMeeting[]>([])
   const socialInitializedRef = useRef(false)
+  // The event the screen is meant to show, plus per-kind request counters. A response is applied only when it
+  // belongs to that event and is the newest of its kind, so a slow answer for a previous event cannot overwrite it.
+  const showingEventRef = useRef('')
+  const workspaceSeq = useRef(0)
+  const socialSeq = useRef(0)
+  const recsSeq = useRef(0)
+  const isShowing = useCallback((eventId: string) => eventId === showingEventRef.current, [])
 
   const refreshSocialState = useCallback(async (eventId: string, detectDiffs: boolean) => {
+    const seq = ++socialSeq.current
+    const current = () => seq === socialSeq.current && isShowing(eventId)
     setSocialRefreshing(true)
     try {
       const [rawIntros, nextMeetings] = await Promise.all([
@@ -249,6 +258,7 @@ export function EventAccountFlow({
         }),
       )
 
+      if (!current()) return
       if (detectDiffs && socialInitializedRef.current) {
         const fresh = diffSocialEvents(prevIntrosRef.current, nextIntros, prevMeetingsRef.current, nextMeetings)
         if (fresh.length) {
@@ -271,9 +281,9 @@ export function EventAccountFlow({
       }
       // Keep existing state intact if background refresh fails (e.g., backend #52/#53 not yet mounted).
     } finally {
-      setSocialRefreshing(false)
+      if (seq === socialSeq.current) setSocialRefreshing(false)
     }
-  }, [api, locale, redirectToLogin])
+  }, [api, isShowing, locale, redirectToLogin])
 
   const accountCache = useRef<Promise<AccountProfile> | null>(null)
   const readAccount = useCallback(() => {
@@ -288,6 +298,12 @@ export function EventAccountFlow({
   }, [api])
 
   const loadEventWorkspace = useCallback(async (eventId: string, preserveDraft = false, nextTab: EventTab = 'profile') => {
+    const seq = ++workspaceSeq.current
+    // A newer load replaced this one: stop quietly and report no failure, the newer load owns the screen.
+    const stale = () => seq !== workspaceSeq.current
+    showingEventRef.current = eventId
+    // Answers still in flight for the previous event are dropped from here on.
+    recsSeq.current++
     setEventLoading(true)
     setEventError('')
     setSaveError('')
@@ -304,6 +320,7 @@ export function EventAccountFlow({
         api.getEvent(eventId),
         api.getEventProfile(eventId),
       ])
+      if (stale()) return true
       setActiveEventId(eventId)
       setActiveEvent(details)
       const membershipRole = details.role
@@ -321,9 +338,10 @@ export function EventAccountFlow({
             const account = await readAccount()
             Object.assign(next, { name: account.name, role: account.profession, about: account.about })
           } catch (error) {
-            setEventError(formatApiError(error, locale, 'general'))
+            if (!stale()) setEventError(formatApiError(error, locale, 'general'))
           }
         }
+        if (stale()) return true
         setDraft(next)
         setShowErrors(false)
       }
@@ -333,9 +351,10 @@ export function EventAccountFlow({
       setTab(nextTab)
       await refreshSocialState(eventId, false)
       try {
-        setEventBooths(await api.listEventBooths(eventId))
+        const booths = await api.listEventBooths(eventId)
+        if (!stale()) setEventBooths(booths)
       } catch {
-        setEventBooths([])
+        if (!stale()) setEventBooths([])
       }
       return true
     } catch (error) {
@@ -343,10 +362,11 @@ export function EventAccountFlow({
         redirectToLogin()
         return
       }
+      if (stale()) return true
       setEventError(isApiError(error) && error.status === 404 ? getMessages(locale).account.expiredBody : formatApiError(error, locale, 'general'))
       return false
     } finally {
-      setEventLoading(false)
+      if (!stale()) setEventLoading(false)
     }
   }, [api, locale, readAccount, redirectToLogin, refreshSocialState])
 
@@ -406,7 +426,7 @@ export function EventAccountFlow({
         savePendingInvite(null)
         setPendingInvite(null)
       } else {
-        setActiveEventId('')
+        setActiveEventId(''); showingEventRef.current = ''
         setActiveEvent(null)
         if (!openOrganizer) setTab('profile')
       }
@@ -456,8 +476,10 @@ export function EventAccountFlow({
     async function reloadLocalizedRecs() {
       setRecsLoading(true)
       try {
-        const items = await api.getEventRecommendations(activeEventId, locale)
-        if (!cancelled) setRecommendations(items)
+        const eventId = activeEventId
+        const seq = ++recsSeq.current
+        const items = await api.getEventRecommendations(eventId, locale)
+        if (!cancelled && seq === recsSeq.current && isShowing(eventId)) setRecommendations(items)
       } catch {
         // Keep current recommendations visible if locale reload fails.
       } finally {
@@ -470,28 +492,28 @@ export function EventAccountFlow({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locale])
 
+  /** Background refresh of matches; dropped if the user switched events or a newer request started. */
+  const refreshRecommendations = useCallback((eventId: string) => {
+    const seq = ++recsSeq.current
+    void api.getEventRecommendations(eventId, locale).then(items => {
+      if (seq !== recsSeq.current || !isShowing(eventId)) return
+      setRecommendations(items)
+      setRecsMessage(items.length > 0 && items.length < 5 ? messages.results.partialMatches(items.length) : '')
+    }).catch(() => {})
+  }, [api, isShowing, locale, messages.results])
+
   // Refresh introductions, meetings & active recommendations when returning to the browser tab.
   useEffect(() => {
     if (phase !== 'ready' || !activeEventId) return
     const handleReturn = () => {
       if (document.visibilityState === 'visible') {
         void refreshSocialState(activeEventId, true)
-        if (tab === 'results' && hasSavedProfile) {
-          void api.getEventRecommendations(activeEventId, locale).then(items => {
-            setRecommendations(items)
-            setRecsMessage(items.length > 0 && items.length < 5 ? messages.results.partialMatches(items.length) : '')
-          }).catch(() => {})
-        }
+        if (tab === 'results' && hasSavedProfile) refreshRecommendations(activeEventId)
       }
     }
     const handleWindowFocus = () => {
       void refreshSocialState(activeEventId, true)
-      if (tab === 'results' && hasSavedProfile) {
-        void api.getEventRecommendations(activeEventId, locale).then(items => {
-          setRecommendations(items)
-          setRecsMessage(items.length > 0 && items.length < 5 ? messages.results.partialMatches(items.length) : '')
-        }).catch(() => {})
-      }
+      if (tab === 'results' && hasSavedProfile) refreshRecommendations(activeEventId)
     }
     document.addEventListener('visibilitychange', handleReturn)
     window.addEventListener('focus', handleWindowFocus)
@@ -499,20 +521,17 @@ export function EventAccountFlow({
       document.removeEventListener('visibilitychange', handleReturn)
       window.removeEventListener('focus', handleWindowFocus)
     }
-  }, [activeEventId, api, hasSavedProfile, locale, messages.results, phase, refreshSocialState, tab])
+  }, [activeEventId, hasSavedProfile, phase, refreshRecommendations, refreshSocialState, tab])
 
   // While the results tab stays open, pick up participants who join or update their profile later.
   useEffect(() => {
     if (phase !== 'ready' || !activeEventId || tab !== 'results' || !hasSavedProfile) return
     const timer = window.setInterval(() => {
       if (document.visibilityState !== 'visible') return
-      void api.getEventRecommendations(activeEventId, locale).then(items => {
-        setRecommendations(items)
-        setRecsMessage(items.length > 0 && items.length < 5 ? messages.results.partialMatches(items.length) : '')
-      }).catch(() => {})
+      refreshRecommendations(activeEventId)
     }, RECOMMENDATIONS_REFRESH_MS)
     return () => window.clearInterval(timer)
-  }, [activeEventId, api, hasSavedProfile, locale, messages.results, phase, tab])
+  }, [activeEventId, hasSavedProfile, phase, refreshRecommendations, tab])
 
   // Sync browser URL to /events/{id} when an event is active, and clear stale /events or /invite path when no event is selected.
   useEffect(() => {
@@ -607,7 +626,7 @@ export function EventAccountFlow({
       if (remaining[0]) {
         await loadEventWorkspace(remaining[0].id)
       } else {
-        setActiveEventId('')
+        setActiveEventId(''); showingEventRef.current = ''
         setActiveEvent(null)
         setRecommendations(null)
         setDraft(emptyDraft())
@@ -629,7 +648,7 @@ export function EventAccountFlow({
       await api.deleteAccount({ confirm: true })
       setUser(null)
       setEvents([])
-      setActiveEventId('')
+      setActiveEventId(''); showingEventRef.current = ''
       setActiveEvent(null)
       setRecommendations(null)
       setDraft(emptyDraft())
@@ -645,10 +664,13 @@ export function EventAccountFlow({
   }
 
   async function loadRecommendations(eventId: string, afterFeedback = false) {
+    const seq = ++recsSeq.current
+    const stale = () => seq !== recsSeq.current || !isShowing(eventId)
     setRecsLoading(true)
     setEventError('')
     try {
       const items = await api.getEventRecommendations(eventId, locale)
+      if (stale()) return
       setRecommendations(items)
       if (afterFeedback) {
         setRecsMessage(messages.results.feedbackSaved(items.length))
@@ -667,9 +689,9 @@ export function EventAccountFlow({
         redirectToLogin()
         return
       }
-      setEventError(formatApiError(error, locale, 'general'))
+      if (!stale()) setEventError(formatApiError(error, locale, 'general'))
     } finally {
-      setRecsLoading(false)
+      if (seq === recsSeq.current) setRecsLoading(false)
     }
   }
 
