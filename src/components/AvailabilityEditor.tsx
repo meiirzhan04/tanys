@@ -1,23 +1,16 @@
 import { useEffect, useState } from 'react'
-import type { FormEvent, MouseEvent } from 'react'
+import type { FormEvent } from 'react'
 import type { TanysApiClient } from '../api/client'
 import { getMessages } from '../i18n/messages'
 import type { Locale } from '../matching/types'
 import { formatMeetingInterval } from './socialHelpers'
 import { TimeSelect } from './TimeSelect'
+import { AvailabilityDatePicker } from './AvailabilityDatePicker'
 import { QUARTER_HOUR_MS, fromLocalParts, isQuarterHourInstant, isQuarterHourTime, toLocalParts } from '../scheduling/timeStep'
 
 type Slot = { start: string; end: string }
 type ErrorKind = 'request' | 'invalid' | 'step' | 'beforeEvent' | 'afterEvent' | 'tooShort' | 'tooLong' | 'overlap'
 const maximumDuration = 24 * 60 * 60 * 1000
-
-function openDatePicker(event: MouseEvent<HTMLInputElement>) {
-  try {
-    event.currentTarget.showPicker?.()
-  } catch {
-    // The browser's native date control remains available.
-  }
-}
 
 function parseInstant(value?: string): Date | undefined {
   const date = value ? new Date(value) : undefined
@@ -37,6 +30,8 @@ const labels = {
     intro: 'Отметьте, когда вы готовы к встречам 1:1 на мероприятии. Собеседник увидит общее свободное время и сможет предложить встречу.',
     example: 'Например: свободны в обед — укажите 12:00–13:00; ещё и после докладов — добавьте второй интервал 16:30–17:30.',
     window: (from: string, until: string) => `Мероприятие идёт: ${from} — ${until}. Время можно выбрать только внутри этого периода.`,
+    start: 'Начало',
+    end: 'Окончание',
     startDate: 'Дата начала',
     endDate: 'Дата окончания',
     startTime: 'Время начала',
@@ -64,6 +59,8 @@ const labels = {
     intro: 'Іс-шарада 1:1 кездесуге дайын уақытыңызды белгілеңіз. Әңгімелесуші ортақ бос уақытты көріп, кездесу ұсына алады.',
     example: 'Мысалы: түскі үзілісте бос болсаңыз — 12:00–13:00 көрсетіңіз; баяндамалардан кейін де бос болсаңыз — 16:30–17:30 екінші аралығын қосыңыз.',
     window: (from: string, until: string) => `Іс-шара уақыты: ${from} — ${until}. Уақытты тек осы аралықтан таңдауға болады.`,
+    start: 'Басталуы',
+    end: 'Аяқталуы',
     startDate: 'Басталу күні',
     endDate: 'Аяқталу күні',
     startTime: 'Басталу уақыты',
@@ -91,6 +88,8 @@ const labels = {
     intro: 'Mark when you are free for 1:1 meetings at the event. The other person sees your shared free time and can propose a meeting.',
     example: 'For example: free at lunch — add 12:00–13:00; also free after the talks — add a second interval 16:30–17:30.',
     window: (from: string, until: string) => `The event runs ${from} — ${until}. Times can only be picked inside this period.`,
+    start: 'Start',
+    end: 'End',
     startDate: 'Start date',
     endDate: 'End date',
     startTime: 'Start time',
@@ -268,51 +267,48 @@ export function AvailabilityEditor({
       )}
       <p className="field-hint availability-example">{t.example}</p>
       <form className="availability-form" onSubmit={add}>
-        <div className="form-fields">
-          <label className="field">
-            <span>{t.startDate}</span>
-            <input required disabled={busy} type="date" name="availabilityStartDate" min={firstDay} max={lastDay} value={startDate}
-              onClick={openDatePicker}
-              onChange={e => changeStartDate(e.target.value)}
+        <div className="availability-range">
+          <fieldset>
+            <legend>{t.start}</legend>
+            <AvailabilityDatePicker label={t.startDate} locale={locale} disabled={busy} min={firstDay} max={lastDay} value={startDate}
+              onChange={changeStartDate}
             />
-          </label>
-          <label className="field">
-            <span>{t.startTime}</span>
-            <TimeSelect
-              name="availabilityStartTime"
-              required
-              disabled={busy}
-              value={startTime}
-              placeholder={t.timePlaceholder}
-              legacyLabel={t.legacyOption}
-              isAllowed={startAllowed}
-              onChange={changeStartTime}
-            />
-          </label>
-          <label className="field">
-            <span>{t.endDate}</span>
-            <input required disabled={busy} type="date" name="availabilityEndDate" min={startDate || firstDay} max={lastDay}
-              value={endDay} onClick={openDatePicker}
-              onChange={e => { setEndDate(e.target.value); setEndTime(''); setError(undefined) }}
-            />
-          </label>
-          <label className="field">
-            <span>{t.endTime}</span>
-            <TimeSelect
-              name="availabilityEndTime"
-              required
-              disabled={busy}
-              value={endTime}
-              placeholder={t.timePlaceholder}
-              legacyLabel={t.legacyOption}
-              isAllowed={endAllowed}
-              onChange={time => { setEndTime(time); setError(undefined) }}
-            />
-          </label>
+            <label className="field">
+              <span>{t.startTime}</span>
+              <TimeSelect
+                name="availabilityStartTime"
+                required
+                disabled={busy}
+                value={startTime}
+                placeholder={t.timePlaceholder}
+                legacyLabel={t.legacyOption}
+                isAllowed={startAllowed}
+                onChange={changeStartTime}
+              />
+            </label>
+          </fieldset>
+          <fieldset>
+            <legend>{t.end}</legend>
+            <AvailabilityDatePicker label={t.endDate} locale={locale} disabled={busy} min={startDate || firstDay} max={lastDay}
+              value={endDay} onChange={date => { setEndDate(date); setEndTime(''); setError(undefined) }} />
+            <label className="field">
+              <span>{t.endTime}</span>
+              <TimeSelect
+                name="availabilityEndTime"
+                required
+                disabled={busy}
+                value={endTime}
+                placeholder={t.timePlaceholder}
+                legacyLabel={t.legacyOption}
+                isAllowed={endAllowed}
+                onChange={time => { setEndTime(time); setError(undefined) }}
+              />
+            </label>
+          </fieldset>
         </div>
         <p className="field-hint">{t.step} {t.local} · {Intl.DateTimeFormat().resolvedOptions().timeZone}</p>
         <div className="social-card__actions">
-          <button className="secondary-button" type="submit" disabled={!slots || busy}>
+          <button className="primary-button" type="submit" disabled={!slots || busy}>
             {t.add}
           </button>
         </div>

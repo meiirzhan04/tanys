@@ -184,6 +184,12 @@ export function IntroductionsPanel({
 
         {item.status === 'accepted' && (
           <div className="social-card__accepted">
+            {item.icebreaker && (
+              <div className="request-card__message">
+                <strong>{getMessages(locale).results.icebreakerTitle}</strong>
+                <p>{item.icebreaker}</p>
+              </div>
+            )}
             <div className="contact-reveal">
               <strong>{s.sharedContactLabel}</strong>
               {item.contact?.trim() ? <ContactValue value={item.contact} locale={locale} /> : <span className="lock-note">{c.noContact}</span>}
@@ -359,7 +365,7 @@ export function ServerMeetingsPanel({
   const s = getMessages(locale).social
 
   return (
-    <section className="social-section" aria-labelledby="server-meetings-title">
+    <section className={meetings.length ? 'social-section meetings-panel' : 'social-section meetings-panel meetings-panel--empty'} aria-labelledby="server-meetings-title">
       <div className="page-heading">
         <h1 id="server-meetings-title" tabIndex={-1}>{s.meetingsTitle}</h1>
         <button type="button" className="secondary-button" disabled={refreshing} onClick={onRefresh}>
@@ -371,7 +377,7 @@ export function ServerMeetingsPanel({
       {socialNotice && <div className="info-banner" role="status">{socialNotice}</div>}
 
       {meetings.length === 0 ? (
-        <div className="surface empty-state"><p>{s.noMeetings}</p></div>
+        <p className="meeting-empty-note">{s.noMeetings}</p>
       ) : (
         <div className="social-list">
           {meetings.map(meeting => {

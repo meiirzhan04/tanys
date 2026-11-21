@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { FormEvent, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { getMessages } from '../../i18n/messages'
 import type { Locale } from '../../matching/types'
 import type { AccountProfile } from '../../api/client'
@@ -8,7 +8,9 @@ import type { EventProfileDraft } from '../profileDirty'
 import { profileCopy } from './profileCopy'
 import { accountDialogCopy } from './accountDialogCopy'
 import { ConfirmDialog } from './ConfirmDialog'
-import { EditFieldDialog } from './EditFieldDialog'
+import { EventEditor, IdentityEditor, PersonalEditor } from './AccountEditors'
+import { profileEditorCopy } from './profileEditorCopy'
+import { getGoalLabels } from '../goalLabels'
 import { identityCopy } from './identityCopy'
 
 interface AccountProfilePanelProps {
@@ -17,6 +19,12 @@ interface AccountProfilePanelProps {
   readAccount: () => Promise<AccountProfile>
   saveAccount: (profile: AccountProfile) => Promise<AccountProfile>
   source: EventProfileDraft | null
+  eventDraft: EventProfileDraft | null
+  saveEvent: (draft: EventProfileDraft) => Promise<void>
+  contact: string
+  contactState: 'loading' | 'error' | 'ready'
+  retryContact: () => void
+  onSaveContact: (value: string) => Promise<string>
   username?: string
   eventName?: string
   isOrganizer: boolean
@@ -40,7 +48,7 @@ export function AccountProfilePanel({
   eventToolbar,
   readAccount,
   saveAccount,
-  source,
+  source, eventDraft, saveEvent, contact, contactState, retryContact, onSaveContact,
   username,
   eventName,
   isOrganizer,
@@ -59,7 +67,14 @@ export function AccountProfilePanel({
   const messages = getMessages(locale)
   const d = accountDialogCopy[locale]
   const ic = identityCopy[locale]
-  const [editingHandle, setEditingHandle] = useState(false)
+  const copy = profileEditorCopy[locale]
+  const [editor, setEditor] = useState<'personal' | 'contact' | 'handle' | 'event' | null>(null)
+  const [initialPersonal, setInitialPersonal] = useState<AccountProfile | null>(null)
+  const [notice, setNotice] = useState('')
+  const open = (section: NonNullable<typeof editor>) => {
+    setNotice('')
+    setEditor(section)
+  }
   const [dialog, setDialog] = useState<'leave' | 'delete' | null>(null)
   const [dialogError, setDialogError] = useState('')
   const busy = loggingOut || leavingEvent || deletingAccount
@@ -78,24 +93,25 @@ export function AccountProfilePanel({
 
 
   const labels = accountLabels[locale]
-  const [draft, setDraft] = useState<AccountProfile | null>(null)
-  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [profile, setProfile] = useState<AccountProfile | null>(null)
+  const [loadError, setLoadError] = useState(false)
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     let active = true
-    readAccount().then(profile => { if (active) setDraft(profile) })
-      .catch(() => { if (active) setStatus('error') })
+    setLoadError(false)
+    readAccount().then(value => { if (active) setProfile(value) })
+      .catch(() => { if (active) setLoadError(true) })
     return () => { active = false }
   }, [readAccount, attempt])
 
-  async function submit(event: FormEvent) {
-    event.preventDefault()
-    if (!draft || status === 'saving') return
-    setStatus('saving')
-    try {
-      setDraft(await saveAccount(draft))
-      setStatus('saved')
-    } catch { setStatus('error') }
+  function editPersonal(initial: AccountProfile) {
+    setInitialPersonal(initial)
+    open('personal')
+  }
+
+  function editButton(kind: NonNullable<typeof editor>, label: string, action: () => void) {
+    return <button type="button" className="icon-button" data-edit={kind} aria-label={label}
+      onClick={event => { event.currentTarget.focus(); action() }}><PencilIcon /></button>
   }
 
   return (
@@ -109,65 +125,83 @@ export function AccountProfilePanel({
       </header>
 
       <div className="account-settings__grid">
-        <form className="surface profile-card account-profile-form" onSubmit={submit}>
-          <h2>{labels.details}</h2>
-          <p>{labels.scope}</p>
-          {draft && <fieldset disabled={status === 'saving'}>
-            <label className="field"><span>{labels.name}</span><input name="accountName" required maxLength={80} value={draft.name}
-              onChange={e => { setDraft({ ...draft, name: e.target.value }); setStatus('idle') }} /></label>
-            <label className="field"><span>{labels.profession}</span><input name="accountProfession" maxLength={80} value={draft.profession}
-              onChange={e => { setDraft({ ...draft, profession: e.target.value }); setStatus('idle') }} /></label>
-            <label className="field field-full"><span>{t.about}</span><textarea name="accountAbout" rows={4} maxLength={400} value={draft.about}
-              onChange={e => { setDraft({ ...draft, about: e.target.value }); setStatus('idle') }} /></label>
-            <div className="account-save">
-              <button type="submit" className="primary-button">{labels.save}</button>
-              {status === 'saved' && <span role="status">{labels.saved}</span>}
-            </div>
-          </fieldset>}
-          {status === 'error' && <p role="alert">{labels.error} {!draft && <button type="button" onClick={() => {
-            setStatus('idle')
-            setAttempt(value => value + 1)
-          }}>{labels.retry}</button>}</p>}
-        </form>
+        <section className="surface profile-card account-personal" aria-labelledby="me-details-title">
+          <div className="identity-card__head">
+            <h2 id="me-details-title">{labels.details}</h2>
+            {profile && editButton('personal', copy.personal, () => editPersonal(profile))}
+          </div>
+          {profile ? <>
+            <dl className="account-facts">
+              <div><dt>{labels.name}</dt><dd>{profile.name || t.noValue}</dd></div>
+              <div><dt>{labels.profession}</dt><dd>{profile.profession || t.noValue}</dd></div>
+              <div><dt>{t.about}</dt><dd>{profile.about || t.noValue}</dd></div>
+            </dl>
+            <p className="identity-card__note account-scope">{labels.scope}</p>
+          </> : loadError ? <p role="alert">{labels.error}{' '}
+            <button type="button" className="text-button" onClick={() => setAttempt(value => value + 1)}>{labels.retry}</button>
+          </p> : <p role="status">{copy.loading}</p>}
+        </section>
         <div className="identity-cards">
+          <section className="surface identity-card" aria-labelledby="me-contact-title">
+            <div className="identity-card__head">
+              <h2 id="me-contact-title">{t.contactTitle}</h2>
+              {contactState === 'ready' && editButton('contact', ic.editContact, () => open('contact'))}
+            </div>
+            {contactState === 'error' ? <p role="alert">{copy.contactError}{' '}
+              <button type="button" className="text-button" onClick={retryContact}>{labels.retry}</button></p>
+              : <p className={contact ? 'identity-card__value' : 'identity-card__value--empty'} data-contact-value>
+                {contactState === 'loading' ? copy.loading : contact || ic.contactNone}
+              </p>}
+            <p className="identity-card__note">{ic.contactLock}</p>
+          </section>
           <section className="surface identity-card" aria-labelledby="me-handle-title">
             <div className="identity-card__head">
               <h2 id="me-handle-title">{ic.handleTitle}</h2>
-              <button type="button" className="icon-button" data-edit="handle" aria-label={ic.editHandle} onClick={() => setEditingHandle(true)}>
-                <PencilIcon />
-              </button>
+              {editButton('handle', ic.editHandle, () => open('handle'))}
             </div>
-            <p className={`identity-card__value ${handle ? '' : 'identity-card__value--empty'}`}>{handle ? `@${handle}` : ic.handleNone}</p>
+            <p className={handle ? 'identity-card__value' : 'identity-card__value--empty'}>{handle ? `@${handle}` : ic.handleNone}</p>
             <p className="identity-card__note">{ic.handleHint}</p>
           </section>
         </div>
-        {editingHandle && (
-          <EditFieldDialog
-            title={ic.editHandle}
-            label={ic.handleLabel}
-            name="handle"
-            initialValue={handle ?? ''}
-            placeholder="parasat"
-            hint={ic.handleRules}
-            maxLength={33}
-            saveLabel={ic.save}
-            cancelLabel={ic.cancel}
-            onSave={onSaveHandle}
-            onClose={() => setEditingHandle(false)}
-          />
-        )}
       </div>
 
       {eventToolbar && <section className="surface profile-card account-import">
-        <h2>{labels.event}</h2>
+        <div className="identity-card__head">
+          <h2>{labels.event}</h2>
+          {eventDraft && editButton('event', t.editProfile, () => open('event'))}
+        </div>
         <div className="account-import__controls">
           {eventToolbar}
-          {source && draft && <button type="button" disabled={status === 'saving'} className="secondary-button" onClick={() => {
-            setDraft({ name: source.name, profession: source.role, about: source.about })
-            setStatus('idle')
-          }} aria-label={`${labels.copy} · ${eventName}`}>{labels.copy}</button>}
+          {source && profile && <button type="button" className="secondary-button" data-copy-profile
+            onClick={event => {
+              event.currentTarget.focus()
+              editPersonal({ name: source.name, profession: source.role, about: source.about })
+            }} aria-label={`${labels.copy} · ${eventName}`}>{labels.copy}</button>}
         </div>
+        {source ? <div className="account-event-summary">
+          <strong>{source.name}</strong>
+          <span>{[source.role, source.goal && getGoalLabels(locale)[source.goal]].filter(Boolean).join(' · ')}</span>
+          <span className="identity-card__note">{source.visible ? t.visible : t.hidden}</span>
+        </div> : <p className="identity-card__note">{copy.noEventProfile}</p>}
       </section>}
+
+      {notice && <p className="account-notice" role="status">{notice}</p>}
+      {editor === 'personal' && initialPersonal && profile && <PersonalEditor locale={locale} initial={initialPersonal} saved={profile}
+        onClose={() => setEditor(null)} onSave={async next => {
+          setProfile(await saveAccount(next))
+          setNotice(labels.saved)
+        }} />}
+      {(editor === 'contact' || editor === 'handle') && <IdentityEditor locale={locale} kind={editor}
+        initial={editor === 'contact' ? contact : handle ?? ''} onClose={() => setEditor(null)} onSave={async value => {
+          const error = await (editor === 'contact' ? onSaveContact : onSaveHandle)(value)
+          if (!error) setNotice(editor === 'contact' ? messages.social.contactSaved : copy.saved)
+          return error
+        }} />}
+      {editor === 'event' && eventDraft && <EventEditor locale={locale} eventName={eventName} initial={eventDraft}
+        onClose={() => setEditor(null)} onSave={async value => {
+          await saveEvent(value)
+          setNotice(copy.saved)
+        }} />}
 
       <section className="surface profile-card profile-danger" aria-labelledby="me-danger-title">
         <h2 id="me-danger-title">{t.dangerTitle}</h2>
