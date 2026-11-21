@@ -582,3 +582,47 @@ test('matches a "<technology> Developer" request against the dataset like the pl
     assert.ok(results.every(item => item.candidate.skills.some(skill => /python/i.test(skill))), request)
   }
 })
+
+// Audit «Правила подбора»: what is required ranks strictly above what is only partly met.
+test('an employer asking for Backend + Python + PostgreSQL sees full matches first and the gap named for partial ones', () => {
+  const employer: ProfileInput = {
+    role: 'Тимлид', skills: ['Python', 'PostgreSQL'], experienceYears: 8, interests: [], about: '',
+    goal: 'hire', lookingFor: ['Backend', 'Python', 'PostgreSQL'],
+  }
+  const partial = candidate('partial', 'find_job', { role: 'Backend-разработчик', skills: ['Python', 'FastAPI', 'Docker', 'Redis'], interests: ['API'] })
+  const full = candidate('full', 'find_job', { role: 'Backend-разработчик', skills: ['Python', 'PostgreSQL'] })
+  const results = recommend(employer, [partial, full], 'ru')
+  assert.deepEqual(results.map(item => item.candidate.id), ['full', 'partial'])
+  assert.doesNotMatch(results[0].explanation, /не указано/)
+  assert.match(results[1].explanation, /не указано: PostgreSQL/)
+  assert.ok(results[1].explanation.split(/(?<=[.!?])\s/).length <= 2, results[1].explanation)
+  for (const locale of ['kk', 'en'] as const) {
+    assert.match(recommend(employer, [partial], locale)[0].explanation, /PostgreSQL/)
+  }
+})
+
+test('a job seeker who wants Go sees employers using Go before employers without it', () => {
+  const seeker: ProfileInput = { ...input, skills: ['Python', 'Go'], lookingFor: ['Go'] }
+  const noGo = candidate('no-go', 'hire', { role: 'CTO', skills: ['Python', 'FastAPI'], lookingFor: ['Python'], interests: ['API'] })
+  const withGo = candidate('with-go', 'hire', { role: 'CTO', skills: ['Go'], lookingFor: ['Python'] })
+  const results = recommend(seeker, [noGo, withGo], 'ru')
+  assert.deepEqual(results.map(item => item.candidate.id), ['with-go', 'no-go'])
+  assert.match(results[1].explanation, /Go/)
+})
+
+test('a mentee with nine years never gets a one-year mentor through a shared interest only', () => {
+  const mentee: ProfileInput = {
+    role: 'Backend-разработчик', skills: ['Python'], experienceYears: 9, interests: ['API'], about: '',
+    goal: 'find_mentor', lookingFor: ['Kubernetes'],
+  }
+  const junior = candidate('junior', 'be_mentor', { role: 'Backend', skills: ['Kubernetes'], experienceYears: 1, interests: ['API'] })
+  const offTopic = candidate('off-topic', 'be_mentor', { role: 'Architect', skills: ['Java'], experienceYears: 15, interests: ['API'] })
+  const fit = candidate('fit', 'be_mentor', { role: 'SRE', skills: ['Kubernetes'], experienceYears: 12, interests: [] })
+  assert.deepEqual(recommend(mentee, [junior, offTopic, fit], 'ru').map(item => item.candidate.id), ['fit'])
+  // The same rules from the mentor's side.
+  const mentor: ProfileInput = { role: 'SRE', skills: ['Kubernetes'], experienceYears: 3, interests: ['API'], about: '', goal: 'be_mentor' }
+  const senior = candidate('senior', 'find_mentor', { skills: ['Python'], experienceYears: 9, lookingFor: ['Kubernetes'] })
+  const wantsJava = candidate('wants-java', 'find_mentor', { skills: ['Python'], experienceYears: 1, lookingFor: ['Java'], interests: ['API'] })
+  const learner = candidate('learner', 'find_mentor', { skills: ['Python'], experienceYears: 1, lookingFor: ['Kubernetes'] })
+  assert.deepEqual(recommend(mentor, [senior, wantsJava, learner], 'ru').map(item => item.candidate.id), ['learner'])
+})
