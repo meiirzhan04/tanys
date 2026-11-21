@@ -121,6 +121,7 @@ export interface Messages {
     purposeRegister: string
     usernameLabel: string
     passwordLabel: string
+    passwordConfirmationLabel: string
     passwordHint: string
     authSubmitting: string
     expiredTitle: string
@@ -169,6 +170,8 @@ export interface Messages {
       usernameInvalid: string
       passwordRequired: string
       passwordTooShort: string
+      passwordConfirmationRequired: string
+      passwordMismatch: string
       usernameUnavailable: string
       invalidCredentials: string
       nameRequired: string
@@ -472,6 +475,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       purposeRegister: 'Создать аккаунт',
       usernameLabel: 'Логин',
       passwordLabel: 'Пароль',
+      passwordConfirmationLabel: 'Повторите пароль',
       passwordHint: 'Минимум 6 символов. Сохраните пароль в менеджере паролей.',
       authSubmitting: 'Подождите…',
       expiredTitle: 'Ссылка-приглашение недействительна или истекла',
@@ -520,6 +524,8 @@ export const messagesByLocale: Record<Locale, Messages> = {
         usernameInvalid: 'Логин должен содержать 3–32 латинские буквы, цифры, дефисы или подчёркивания.',
         passwordRequired: 'Введите пароль.',
         passwordTooShort: 'Пароль должен содержать минимум 6 символов.',
+        passwordConfirmationRequired: 'Введите пароль ещё раз.',
+        passwordMismatch: 'Пароли не совпадают.',
         usernameUnavailable: 'Этот логин уже занят.',
         invalidCredentials: 'Неверный логин или пароль.',
         nameRequired: 'Укажите ваше имя.',
@@ -821,6 +827,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       purposeRegister: 'Аккаунт ашу',
       usernameLabel: 'Логин',
       passwordLabel: 'Құпиясөз',
+      passwordConfirmationLabel: 'Құпиясөзді қайталаңыз',
       passwordHint: 'Кемінде 6 таңба. Құпиясөзді құпиясөздер менеджеріне сақтаңыз.',
       authSubmitting: 'Күте тұрыңыз…',
       expiredTitle: 'Шақыру сілтемесі жарамсыз немесе мерзімі өткен',
@@ -869,6 +876,8 @@ export const messagesByLocale: Record<Locale, Messages> = {
         usernameInvalid: 'Логинге 3–32 латын әрпін, цифр, дефис немесе астыңғы сызық енгізіңіз.',
         passwordRequired: 'Құпиясөзді енгізіңіз.',
         passwordTooShort: 'Құпиясөз кемінде 6 таңбадан тұруы керек.',
+        passwordConfirmationRequired: 'Құпиясөзді тағы бір рет енгізіңіз.',
+        passwordMismatch: 'Құпиясөздер сәйкес келмейді.',
         usernameUnavailable: 'Бұл логин бос емес.',
         invalidCredentials: 'Логин немесе құпиясөз қате.',
         nameRequired: 'Атыңызды көрсетіңіз.',
@@ -1170,6 +1179,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       purposeRegister: 'Create account',
       usernameLabel: 'Username',
       passwordLabel: 'Password',
+      passwordConfirmationLabel: 'Confirm password',
       passwordHint: 'Use at least 6 characters and save your password in a password manager.',
       authSubmitting: 'Please wait…',
       expiredTitle: 'Invite link is invalid or expired',
@@ -1218,6 +1228,8 @@ export const messagesByLocale: Record<Locale, Messages> = {
         usernameInvalid: 'Use 3–32 Latin letters, digits, hyphens, or underscores for the username.',
         passwordRequired: 'Enter your password.',
         passwordTooShort: 'Use a password with at least 6 characters.',
+        passwordConfirmationRequired: 'Enter your password again.',
+        passwordMismatch: 'Passwords do not match.',
         usernameUnavailable: 'This username is already taken.',
         invalidCredentials: 'Incorrect username or password.',
         nameRequired: 'Enter your name.',
