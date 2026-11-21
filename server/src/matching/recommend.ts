@@ -21,6 +21,12 @@ interface RecommendationTemplates {
   moreExperienced: string
   lessExperienced: string
   sharedInterests: (items: string) => string
+  /** Employer requirements the applicant has not listed (shown to the employer). */
+  applicantMissing: (items: string) => string
+  /** Employer requirements the job seeker has not listed (shown to the job seeker). */
+  requirementMissing: (items: string) => string
+  /** Technologies the job seeker wants that the employer does not list. */
+  wishMissing: (items: string) => string
   joinExplanation: (goalReason: string, details: string) => string
   formatIcebreaker: (greetingName: string, detail: string, question: string) => string
 }
@@ -51,6 +57,9 @@ const templatesByLocale: Record<Locale, RecommendationTemplates> = {
     moreExperienced: 'у ментора больше лет опыта',
     lessExperienced: 'у будущего менти меньше лет опыта',
     sharedInterests: items => `общие интересы: ${items}`,
+    applicantMissing: items => `в анкете не указано: ${items}`,
+    requirementMissing: items => `из требований работодателя у вас не указано: ${items}`,
+    wishMissing: items => `в стеке работодателя не указано: ${items}`,
     joinExplanation: (goalReason, details) => `${goalReason} Совпадения — ${details}.`,
     formatIcebreaker: (greetingName, detail, question) => `Привет, ${greetingName} В вашей анкете указано «${detail}». ${question}`,
   },
@@ -79,6 +88,9 @@ const templatesByLocale: Record<Locale, RecommendationTemplates> = {
     moreExperienced: 'ментордың тәжірибесі көбірек',
     lessExperienced: 'болашақ ментидің тәжірибесі азырақ',
     sharedInterests: items => `ортақ қызығушылықтар: ${items}`,
+    applicantMissing: items => `сауалнамада көрсетілмеген: ${items}`,
+    requirementMissing: items => `жұмыс берушінің талаптарынан сізде көрсетілмеген: ${items}`,
+    wishMissing: items => `жұмыс берушінің стегінде көрсетілмеген: ${items}`,
     joinExplanation: (goalReason, details) => `${goalReason} Сәйкестіктер — ${details}.`,
     formatIcebreaker: (greetingName, detail, question) => `Сәлем, ${greetingName} Сауалнамаңызда «${detail}» көрсетілген екен. ${question}`,
   },
@@ -107,6 +119,9 @@ const templatesByLocale: Record<Locale, RecommendationTemplates> = {
     moreExperienced: 'the mentor has more years of experience',
     lessExperienced: 'the mentee has fewer years of experience',
     sharedInterests: items => `shared interests: ${items}`,
+    applicantMissing: items => `not listed in the profile: ${items}`,
+    requirementMissing: items => `of the employer's requirements you have not listed: ${items}`,
+    wishMissing: items => `not in the employer's stack: ${items}`,
     joinExplanation: (goalReason, details) => `${goalReason} Matches — ${details}.`,
     formatIcebreaker: (greetingName, detail, question) => `Hi ${greetingName} I saw "${detail}" in your profile. ${question}`,
   },
@@ -390,6 +405,45 @@ function scoreCandidate(
     if (hiringMatch?.some(skill => normalizeSkill(skill) === roleKey)) roleMatch = undefined
   }
 
+  // Mentorship: the mentor is not less experienced, and when the mentee names what to learn, the mentor's
+  // skills must cover it. A shared interest alone is not enough. Years are total experience, not in this topic.
+  // Topics are compared as written (like skills), so "UX-исследования" matches the same skill label.
+  const coversTopics = (skills: readonly string[], wanted: readonly string[] = []) =>
+    !wanted.some(value => value.trim()) || matchingTopics(skills, wanted, skillKey).length > 0
+  if (input.goal === 'find_mentor') {
+    if (candidate.experienceYears < input.experienceYears) return null
+    if (!coversTopics(candidate.skills, input.lookingFor)) return null
+  }
+  if (input.goal === 'be_mentor') {
+    if (candidate.experienceYears > input.experienceYears) return null
+    if (!coversTopics(input.skills, candidate.lookingFor)) return null
+  }
+
+  // Hiring: every requested technology is a requirement. Full matches rank first; partial ones stay visible
+  // (a small event may have few people) but come after them, with the gap named in the explanation.
+  const gaps: string[] = []
+  let requirementGap = 0
+  if (isHiring) {
+    const employerSide = input.goal === 'hire'
+    const employerRequest = employerSide ? inputRequest : candidateRequest
+    const seekerRequest = employerSide ? candidateRequest : inputRequest
+    const applicantSkills = employerSide ? candidate.skills : input.skills
+    const employerSkills = employerSide ? input.skills : candidate.skills
+    const lacks = (have: readonly string[]) => (wanted: string) => !matchingTopics(have, [wanted], skillKey, undefined, true).length
+    // Parsed technologies are lower-cased; show them as the person wrote them.
+    const asWritten = (raw: readonly string[] = []) => (technology: string) =>
+      raw.map(value => value.trim()).find(value => value.toLowerCase().includes(technology)) ?? technology
+    const employerRaw = (employerSide ? input : candidate).lookingFor
+    const seekerRaw = (employerSide ? candidate : input).lookingFor
+    const missingRequired = employerRequest.technologies.filter(lacks(applicantSkills)).map(asWritten(employerRaw))
+    const missingWish = seekerRequest.technologies.filter(lacks([...employerSkills, ...employerRequest.technologies])).map(asWritten(seekerRaw))
+    requirementGap = missingRequired.length + missingWish.length
+    if (missingRequired.length) {
+      gaps.push((employerSide ? templates.applicantMissing : templates.requirementMissing)(missingRequired.slice(0, 3).join(', ')))
+    }
+    if (missingWish.length) gaps.push(templates.wishMissing(missingWish.slice(0, 3).join(', ')))
+  }
+
   const sharedInterests = matchingTopics(candidate.interests, input.interests, normalizeInterest)
   const topic = (isCofounder ? participantNeeds[0] : hiringMatch?.[0] ?? roleMatch) ??
     candidateNeeds[0] ?? participantNeeds[0] ?? sharedSkills[0] ?? sharedInterests[0]
@@ -424,7 +478,7 @@ function scoreCandidate(
   if (sharedInterests.length) reasons.push(templates.sharedInterests(sharedInterests.slice(0, 2).join(', ')))
 
   const cofounderNeeds = isCofounder ? participantNeeds.length : 0
-  return { candidate, score, cofounderNeeds, reasons, topic }
+  return { candidate, score, cofounderNeeds, requirementGap, gaps, reasons, topic }
 }
 
 export function recommend(
@@ -446,11 +500,12 @@ export function recommend(
   }
 
   return ranked
-    .sort((a, b) => b.cofounderNeeds - a.cofounderNeeds || b.score - a.score ||
+    .sort((a, b) => a.requirementGap - b.requirementGap || b.cofounderNeeds - a.cofounderNeeds || b.score - a.score ||
       (a.candidate.id < b.candidate.id ? -1 : Number(a.candidate.id > b.candidate.id)))
     .slice(0, 5)
-    .map(({ candidate, reasons, topic }) => {
-      const details = reasons.slice(0, 2).join(', ')
+    .map(({ candidate, reasons, gaps, topic }) => {
+      // Gaps join the "matches" sentence, so the explanation stays within two sentences.
+      const details = [reasons.slice(0, 2).join(', '), gaps.join('; ')].filter(Boolean).join('; ')
       const goalReason = templates.goalReasons[input.goal]
       const explanation = details ? templates.joinExplanation(goalReason, details) : goalReason
       return { candidate, explanation, icebreaker: makeIcebreaker(input.goal, candidate, locale, topic) }
