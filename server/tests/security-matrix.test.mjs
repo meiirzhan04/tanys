@@ -103,9 +103,9 @@ function createMemoryDatabase() {
       const u = [...users.values()].find((item) => item.username === params[0])
       return u ? { rowCount: 1, rows: [{ id: u.id, password_hash: u.passwordHash }] } : { rowCount: 0, rows: [] }
     }
-    if (sql.startsWith('SELECT username,handle,can_create_events FROM users WHERE id=$1')) {
+    if (sql.startsWith('SELECT username,handle,can_create_events,is_admin FROM users WHERE id=$1')) {
       const u = users.get(params[0])
-      return u ? { rowCount: 1, rows: [{ username: u.username ?? null, handle: u.handle ?? null, can_create_events: u.canCreateEvents }] } : { rowCount: 0, rows: [] }
+      return u ? { rowCount: 1, rows: [{ username: u.username ?? null, handle: u.handle ?? null, can_create_events: u.canCreateEvents, is_admin: u.isAdmin === true }] } : { rowCount: 0, rows: [] }
     }
     if (sql.startsWith('INSERT INTO request_buckets AS bucket')) {
       return { rowCount: 1, rows: [{ bucket_key: params[0] }] }
@@ -918,6 +918,9 @@ test('security and event isolation matrix across guest, participants, and cross-
     assert.equal((await api(partA1.cookie, 'PATCH', `/admin/users/${partA3.id}`, { canCreateEvents: true })).status, 403)
     assert.equal((await api(orgA.cookie, 'GET', '/admin/overview')).status, 403)
     env.grantAdmin(orgA.id)
+    // Only an administrator's /me carries the flag that leads the UI to /admin
+    assert.equal((await api(orgA.cookie, 'GET', '/me')).body.isAdmin, true)
+    assert.equal('isAdmin' in (await api(partA1.cookie, 'GET', '/me')).body, false)
     const overview = await api(orgA.cookie, 'GET', '/admin/overview')
     assert.equal(overview.status, 200)
     assert.ok(overview.body.stats.usersCount >= 6)

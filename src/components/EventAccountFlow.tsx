@@ -1357,6 +1357,9 @@ export function EventAccountFlow({
             {messages.organizer.navLabel}
           </button>
         )}
+        {user?.isAdmin && (
+          <a className="nav-admin-btn" href="/admin">{profileCopy[locale].adminLink}</a>
+        )}
         <button
           type="button"
           className="nav-profile-btn"

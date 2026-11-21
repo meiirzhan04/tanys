@@ -253,6 +253,8 @@ export interface AuthUser {
   canCreateEvents?: boolean
   /** Public handle other participants can search for, e.g. "parasat" (shown as @parasat). */
   handle?: string | null
+  /** Platform administrator: may open /admin. Absent for everyone else. */
+  isAdmin?: boolean
 }
 
 export interface EventSummary {

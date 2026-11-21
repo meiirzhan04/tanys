@@ -4,6 +4,7 @@ export type ProfileCheckKey = 'goal' | 'role' | 'experience' | 'skills' | 'inter
 
 export interface ProfileCopy {
   navLabel: string
+  adminLink: string
   title: string
   subtitle: string
   emptyTitle: string
@@ -50,6 +51,7 @@ export interface ProfileCopy {
 export const profileCopy: Record<Locale, ProfileCopy> = {
   ru: {
     navLabel: 'Мой профиль',
+    adminLink: 'Админка',
     title: 'Мой профиль',
     subtitle: 'Ваша карточка, полнота анкеты и активность на событии.',
     emptyTitle: 'Профиль появится после анкеты',
@@ -102,6 +104,7 @@ export const profileCopy: Record<Locale, ProfileCopy> = {
   },
   kk: {
     navLabel: 'Менің профилім',
+    adminLink: 'Әкімші панелі',
     title: 'Менің профилім',
     subtitle: 'Карточкаңыз, анкетаның толықтығы және іс-шарадағы белсенділік.',
     emptyTitle: 'Профиль анкетадан кейін пайда болады',
@@ -154,6 +157,7 @@ export const profileCopy: Record<Locale, ProfileCopy> = {
   },
   en: {
     navLabel: 'My profile',
+    adminLink: 'Admin',
     title: 'My profile',
     subtitle: 'Your card, profile completeness and activity at the event.',
     emptyTitle: 'Your profile appears after the form',
