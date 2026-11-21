@@ -1434,6 +1434,7 @@ export function EventAccountFlow({
           </section>
         ) : tab === 'introductions' ? (
           <IntroductionsPanel
+            readOnly={isClosed}
             api={api}
             eventId={activeEventId}
             introductions={introductions}
@@ -1470,6 +1471,7 @@ export function EventAccountFlow({
             />
           )}
           <ServerMeetingsPanel
+            readOnly={isClosed}
             meetings={meetings}
             locale={locale}
             timeZone={eventTimeZone}
@@ -1490,6 +1492,7 @@ export function EventAccountFlow({
             <>
               {socialError && <div className="error-banner" role="alert">{socialError}</div>}
               {socialNotice && <div className="info-banner" role="status">{socialNotice}</div>}
+              {isClosed && <div className="info-banner" role="status" data-closed-banner>{t.closedReadOnly}</div>}
               {!draft.visible && (
                 <div className="info-banner visibility-warning-banner" role="status">
                   {t.hiddenProfileWarning}
@@ -1509,7 +1512,7 @@ export function EventAccountFlow({
                 }}
                 refreshing={recsLoading}
                 onFeedback={(candidateId, response) => void handleServerFeedback(candidateId, response)}
-                onRequestIntro={candidateId => void handleRequestIntro(candidateId)}
+                onRequestIntro={isClosed ? undefined : candidateId => void handleRequestIntro(candidateId)}
                 introStatusByCandidate={introStatusByCandidate}
                 requestingIntroId={requestingIntroId}
                 onBlockParticipant={candidateId => void handleBlockParticipant(candidateId)}

@@ -262,7 +262,11 @@ export function OrganizerCabinet({
       onEventUpdated(updated)
       setNotice(o.eventSaved)
     } catch (err) {
-      setError(isApiError(err) && err.code === 'invalid_time_step' ? tc.invalidStep : messages.account.errors.genericRequest)
+      if (isApiError(err) && err.code === 'meetings_outside_window') {
+        setError(o.meetingsOutsideWindow(Number.parseInt(err.message, 10) || 1))
+      } else {
+        setError(isApiError(err) && err.code === 'invalid_time_step' ? tc.invalidStep : messages.account.errors.genericRequest)
+      }
     } finally {
       setSavingEvent(false)
     }
@@ -535,6 +539,7 @@ export function OrganizerCabinet({
               />
             </div>
             <p className="field-hint" data-zone-hint>{tc.zoneHint(activeZone)}</p>
+            {!isClosed && <p className="social-card__hint" data-bounds-hint>{o.boundsHint}</p>}
             {[editStart.time, editEnd.time].filter(time => time && !/:(00|15|30|45)$/.test(time)).map(time => (
               <p key={time} className="field-hint legacy-time-hint" role="note">{tc.legacyEventTime(time)}</p>
             ))}

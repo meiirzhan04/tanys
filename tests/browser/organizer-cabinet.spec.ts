@@ -291,3 +291,32 @@ test('event times follow the event zone, not the organizer device zone', async (
     await ctx.close()
   }
 })
+
+test('moving event bounds over active meetings explains what to do instead of a generic error', async ({ browser }, testInfo) => {
+  const backend = createOrganizerBackend()
+  const ctx = await browser.newContext({ viewport: testInfo.project.use.viewport ?? { width: 1280, height: 860 } })
+  await backend.attach(ctx)
+  try {
+    const page = await ctx.newPage()
+    await page.goto('/?mode=account')
+    await page.locator('input[name="username"]').fill('org')
+    await page.locator('input[name="password"]').fill('browser-test-password')
+    await page.locator('.auth-form button[type="submit"]').click()
+    await page.locator('.workspace-nav button', { hasText: 'Организатор' }).click()
+    await page.locator('input[name="eventName"]').fill('Bounds Meetup')
+    await page.locator('button', { hasText: 'Создать событие' }).click()
+    await expect(page.locator('[data-bounds-hint]')).toBeVisible()
+    // The server refuses: two active meetings would fall outside the new end.
+    await ctx.route('**/api/v1/events/evt-1', route => route.request().method() === 'PATCH'
+      ? route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ error: { code: 'meetings_outside_window', message: '2', count: 2 } }) })
+      : route.fallback())
+    const end = page.locator('select[name="editEventEndTime"]')
+    const options = await end.locator('option:not([disabled])').evaluateAll(items => items.map(item => (item as HTMLOptionElement).value))
+    const current = await end.inputValue()
+    await end.selectOption(options[Math.max(0, options.indexOf(current) - 4)])
+    await page.locator('button', { hasText: 'Сохранить изменения' }).click()
+    await expect(page.getByRole('alert').filter({ hasText: '2 активн' })).toBeVisible()
+  } finally {
+    await ctx.close()
+  }
+})
