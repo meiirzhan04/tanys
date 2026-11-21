@@ -50,6 +50,13 @@ test('организаторы управляют своими событиям�
   await request(guest,'PATCH',path,403,{ status:'closed' })
   await request(guest,'DELETE',path+'/members/me',204)
   await request(first,'DELETE',path+'/invites/'+invite.id,204)
+  // The cabinet can list invites after a reload: issue date, expiry and status, but never the link.
+  const listed = await request(first,'GET',path+'/invites',200)
+  const row = listed.items.find(item => item.id === invite.id)
+  assert.equal(row.status,'revoked')
+  assert.ok(Date.parse(row.createdAt) > 0 && Date.parse(row.expiresAt) > Date.parse(row.createdAt))
+  assert.ok(!JSON.stringify(listed).includes(invite.token))
+  await request(guest,'GET',path+'/invites',404)
   await request(guest,'PUT',path+'/members/me',404,{ token:invite.token })
   const next = await request(first,'POST',path+'/invites',201,{ expiresAt:iso(3600000) })
   await request(first,'PATCH',path,200,{ status:'closed' })

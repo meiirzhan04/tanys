@@ -4,7 +4,7 @@ import type { BrowserContext, Page } from '@playwright/test'
 
 function createInviteQrBackend() {
   const eventId = 'evt-qr-1'
-  const invites = new Map<string, { id: string; token: string; revoked: boolean }>()
+  const invites = new Map<string, { id: string; token: string; revoked: boolean; createdAt: string; expiresAt: string }>()
   const authByContext = new Map<BrowserContext, string | null>()
   let seq = 0
 
@@ -47,8 +47,16 @@ function createInviteQrBackend() {
       if (method === 'POST' && path === `/events/${eventId}/invites`) {
         const id = `inv-${++seq}`
         const token = `${'f'.repeat(60)}${String(seq).padStart(4, '0')}`
-        invites.set(id, { id, token, revoked: false })
-        return respond(201, { id, token })
+        const createdAt = new Date().toISOString()
+        const expiresAt = String(body.expiresAt)
+        invites.set(id, { id, token, revoked: false, createdAt, expiresAt })
+        return respond(201, { id, token, createdAt, expiresAt })
+      }
+      if (method === 'GET' && path === `/events/${eventId}/invites`) {
+        if (viewerId !== 'org-1') return respond(403, { error: { code: 'organizer_required' } })
+        // Like the server: the list never carries the token.
+        const items = [...invites.values()].reverse().map(({ token: _token, ...item }) => ({ ...item, status: item.revoked ? 'revoked' : 'active' }))
+        return respond(200, { items })
       }
       if (method === 'DELETE' && path.startsWith(`/events/${eventId}/invites/`)) {
         const id = path.slice(`/events/${eventId}/invites/`.length)
@@ -300,3 +308,51 @@ for (const locale of ['kk', 'ru', 'en'] as const) {
     }
   }
 }
+
+test('issued invites survive a reload: the list shows them and reissuing brings back a working QR', async ({ browser }, testInfo) => {
+  const backend = createInviteQrBackend()
+  const viewport = testInfo.project.use.viewport ?? { width: 360, height: 800 }
+  const orgCtx = await browser.newContext({ viewport, locale: 'ru-RU' })
+  const guestCtx = await browser.newContext({ viewport, locale: 'ru-RU' })
+  await backend.attach(orgCtx)
+  await backend.attach(guestCtx)
+  try {
+    const page = await orgCtx.newPage()
+    await page.goto('/?mode=account')
+    await page.locator('input[name="username"]').fill('org')
+    await page.locator('input[name="password"]').fill('browser-test-password')
+    await page.locator('.auth-form button[type="submit"]').click()
+    await page.locator('.workspace-nav button', { hasText: 'Организатор' }).click()
+    await page.locator('button', { hasText: 'Выпустить приглашение' }).click()
+    await expect(page.locator('.invite-url')).toHaveCount(1)
+    await expect(page.getByText('после перезагрузки страницы ссылку показать нельзя')).toBeVisible()
+    const firstUrl = (await page.locator('.invite-url').innerText()).trim()
+
+    await page.reload()
+    await page.locator('.workspace-nav button', { hasText: 'Организатор' }).click()
+    const row = page.locator('.invite-row').first()
+    await expect(row.locator('[data-invite-hidden]')).toContainText('перевыпустите приглашение')
+    await expect(row.locator('.invite-meta')).toContainText('Выпущено')
+    await expect(page.locator('.invite-url')).toHaveCount(0)
+
+    await row.locator('[data-action="reissue"]').click()
+    const dialog = page.getByRole('dialog')
+    await expect(dialog).toBeVisible()
+    await expect(dialog.locator('svg').first()).toBeVisible()
+    const freshUrl = (await page.locator('.invite-url').first().innerText()).trim()
+    expect(freshUrl).not.toBe(firstUrl)
+    await page.keyboard.press('Escape')
+    await expect(page.locator('.invite-row').nth(1)).toContainText('Отозвано')
+
+    // The old link no longer works, the reissued one does.
+    const guest = await guestCtx.newPage()
+    await guest.goto(new URL(firstUrl).pathname)
+    await guest.locator('input[name="username"]').fill('guest')
+    await guest.locator('input[name="password"]').fill('browser-test-password')
+    await guest.locator('.auth-form button[type="submit"]').click()
+    await expect(guest.getByText(/отозвал|отозвано/i).first()).toBeVisible()
+  } finally {
+    await orgCtx.close()
+    await guestCtx.close()
+  }
+})

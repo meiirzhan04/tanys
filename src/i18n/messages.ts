@@ -277,6 +277,10 @@ export interface Messages {
     qrClose: string
     qrGenerating: string
     qrUnavailableNotice: string
+    inviteLinkHidden: string
+    reissueInvite: string
+    inviteSaveNow: string
+    inviteIssuedAt: (issued: string, expires: string) => string
     noInvites: string
     membersTitle: string
     memberNameCol: string
@@ -631,6 +635,10 @@ export const messagesByLocale: Record<Locale, Messages> = {
       qrClose: 'Закрыть',
       qrGenerating: 'Формируем QR-код…',
       qrUnavailableNotice: 'Приглашение отозвано или истекло. Сервер отклонит вход даже по ранее сохранённому QR-коду.',
+      inviteLinkHidden: 'Ссылка показывается только сразу после выпуска — сервер не хранит саму ссылку. Чтобы снова показать QR, перевыпустите приглашение: старое отзовётся.',
+      reissueInvite: 'Перевыпустить',
+      inviteSaveNow: 'Приглашение выпущено. Скопируйте ссылку или скачайте QR сейчас — после перезагрузки страницы ссылку показать нельзя.',
+      inviteIssuedAt: (issued, expires) => `Выпущено ${issued} · действует до ${expires}`,
       noInvites: 'Выпустите ссылку-приглашение, чтобы пригласить участников в это событие.',
       membersTitle: 'Участники события',
       memberNameCol: 'Участник',
@@ -983,6 +991,10 @@ export const messagesByLocale: Record<Locale, Messages> = {
       qrClose: 'Жабу',
       qrGenerating: 'QR-код жасалуда…',
       qrUnavailableNotice: 'Шақыру қайтарып алынған немесе мерзімі өткен. Ескі QR-кодпен де кіруді сервер қабылдамайды.',
+      inviteLinkHidden: 'Сілтеме тек шығарылғаннан кейін бірден көрсетіледі — сервер сілтеменің өзін сақтамайды. QR-ды қайта көрсету үшін шақыруды қайта шығарыңыз: ескісі кері қайтарылады.',
+      reissueInvite: 'Қайта шығару',
+      inviteSaveNow: 'Шақыру шығарылды. Сілтемені көшіріңіз немесе QR-ды қазір жүктеп алыңыз — бетті жаңартқаннан кейін сілтемені көрсету мүмкін емес.',
+      inviteIssuedAt: (issued, expires) => `Шығарылды ${issued} · ${expires} дейін жарамды`,
       noInvites: 'Қатысушыларды шақыру үшін шақыру сілтемесін шығарыңыз.',
       membersTitle: 'Іс-шара қатысушылары',
       memberNameCol: 'Қатысушы',
@@ -1335,6 +1347,10 @@ export const messagesByLocale: Record<Locale, Messages> = {
       qrClose: 'Close',
       qrGenerating: 'Generating QR code…',
       qrUnavailableNotice: 'This invite was revoked or expired. Even a previously saved QR screenshot will be rejected by the server.',
+      inviteLinkHidden: 'The link is shown only right after issuing — the server does not keep the link itself. To show the QR again, reissue the invite: the old one is revoked.',
+      reissueInvite: 'Reissue',
+      inviteSaveNow: 'Invite issued. Copy the link or download the QR now — after a page reload the link cannot be shown again.',
+      inviteIssuedAt: (issued, expires) => `Issued ${issued} · valid until ${expires}`,
       noInvites: 'Issue an invite link to invite participants into this event.',
       membersTitle: 'Event participants',
       memberNameCol: 'Participant',

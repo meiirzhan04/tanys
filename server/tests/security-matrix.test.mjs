@@ -224,8 +224,16 @@ function createMemoryDatabase() {
     // Invites
     if (sql.startsWith('INSERT INTO event_invites(event_id,digest,expires_at)')) {
       const id = randomUUID()
-      invites.set(id, { id, eventId: params[0], digest: params[1], expiresAt: params[2], revoked: false })
-      return { rowCount: 1, rows: [{ id }] }
+      const createdAt = new Date()
+      invites.set(id, { id, eventId: params[0], digest: params[1], expiresAt: params[2], revoked: false, createdAt })
+      return { rowCount: 1, rows: [{ id, createdAt, expiresAt: params[2] }] }
+    }
+    if (sql.startsWith('SELECT id,created_at AS "createdAt",expires_at AS "expiresAt",revoked,')) {
+      const rows = [...invites.values()].filter(i => i.eventId === params[0]).map(i => ({
+        id: i.id, createdAt: i.createdAt, expiresAt: i.expiresAt, revoked: i.revoked,
+        status: i.revoked ? 'revoked' : +i.expiresAt <= Date.now() ? 'expired' : 'active',
+      }))
+      return { rowCount: rows.length, rows }
     }
     if (sql.startsWith('SELECT revoked, expires_at <= now() AS expired FROM event_invites')) {
       const invite = [...invites.values()].find(i => i.eventId === params[0] && i.digest === params[1])
@@ -784,6 +792,16 @@ test('security and event isolation matrix across guest, participants, and cross-
     // Now partA1 is a participant in Event A: must still get 403 on organizer invite actions
     assert.equal((await api(partA1.cookie, 'POST', `/events/${evA}/invites`, { expiresAt: inviteExp })).status, 403)
     assert.equal((await api(partA1.cookie, 'DELETE', `/events/${evA}/invites/${invA.body.id}`)).status, 403)
+
+    // Invite list: organizer of this event only; never a token or digest
+    assert.equal((await api(partA1.cookie, 'GET', `/events/${evA}/invites`)).status, 403)
+    assert.equal((await api(orgB.cookie, 'GET', `/events/${evA}/invites`)).status, 404)
+    assert.equal((await api(null, 'GET', `/events/${evA}/invites`)).status, 401)
+    const listed = await api(orgA.cookie, 'GET', `/events/${evA}/invites`)
+    assert.equal(listed.status, 200)
+    assert.deepEqual(listed.body.items.map(item => item.status).sort(), ['active', 'revoked'])
+    for (const item of listed.body.items) assert.deepEqual(Object.keys(item).sort(), ['createdAt', 'expiresAt', 'id', 'revoked', 'status'])
+    assert.ok(!JSON.stringify(listed.body).includes(invA.body.token))
 
     // 3. Profiles, visibility, organizer booths/members/interests, & cross-event organizer isolation
     const baseProfile = {
