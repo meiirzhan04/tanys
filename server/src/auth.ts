@@ -217,12 +217,14 @@ export async function authRoute(req: IncomingMessage, res: ServerResponse, path:
   }
   else if (req.method === 'GET' && path === '/me') {
     const id = await viewer(req)
-    const row = await pool.query<{ username: string | null; handle: string | null; can_create_events: boolean | null }>(
-      'SELECT username,handle,can_create_events FROM users WHERE id=$1', [id])
+    const row = await pool.query<{ username: string | null; handle: string | null; can_create_events: boolean | null; is_admin: boolean | null }>(
+      'SELECT username,handle,can_create_events,is_admin FROM users WHERE id=$1', [id])
     const username = row.rows[0]?.username
     const handle = row.rows[0]?.handle ?? null
     const canCreateEvents = row.rows[0]?.can_create_events === true
-    json(res, 200, username ? { id, username, handle, canCreateEvents } : { id, handle, canCreateEvents })
+    // Only administrators see the flag, so it shows them the way to /admin; the server still checks every call.
+    const admin = row.rows[0]?.is_admin === true ? { isAdmin: true } : {}
+    json(res, 200, username ? { id, username, handle, canCreateEvents, ...admin } : { id, handle, canCreateEvents, ...admin })
   }
   else if (req.method === 'PUT' && path === '/me/handle') {
     // The public handle changes independently of the login username; old @handles simply stop resolving.

@@ -29,6 +29,16 @@ try {
     if (!granted.rowCount) throw new Error('Account not found for ORGANIZER_LOGIN: ' + organizerLogin)
     console.log('Granted organizer permission to', organizerLogin)
   }
+  // Platform administrator for /admin. An existing account keeps its own password; nothing is created here.
+  const adminLogin = (process.env.ADMIN_LOGIN ?? '').trim().toLowerCase()
+  if (adminLogin) {
+    const granted = await client.query(
+      'UPDATE users SET is_admin=true, can_create_events=true WHERE username=$1 OR email=$1 RETURNING id',
+      [adminLogin],
+    )
+    if (!granted.rowCount) throw new Error('Account not found for ADMIN_LOGIN: ' + adminLogin)
+    console.log('Granted administrator permission to', adminLogin)
+  }
   await client.query('COMMIT')
 } catch (error) {
   await client.query('ROLLBACK')
