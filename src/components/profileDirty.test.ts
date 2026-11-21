@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { hasUnsavedProfileChanges } from './profileDirty.ts'
+import { hasUnsavedProfileChanges, parseProfileTopics, parseSkillTopics } from './profileDirty.ts'
 import type { EventProfileDraft } from './profileDirty.ts'
 
 const saved: EventProfileDraft = {
@@ -33,5 +33,13 @@ describe('hasUnsavedProfileChanges', () => {
 
     assert.equal(hasUnsavedProfileChanges(saved, { ...saved, visible: false }), true)
     assert.equal(hasUnsavedProfileChanges(saved, { ...saved, goal: 'hire', lookingFor: 'Go' }), true)
+  })
+})
+
+describe('skill parsing', () => {
+  it('splits skills typed without commas and keeps two-word skills whole', () => {
+    assert.deepEqual(parseSkillTopics('Python FastAPI PostgreSQL'), ['Python', 'FastAPI', 'PostgreSQL'])
+    assert.deepEqual(parseSkillTopics('Spring Boot, Компьютерное зрение; Docker'), ['Spring Boot', 'Компьютерное зрение', 'Docker'])
+    assert.deepEqual(parseProfileTopics('Разработка мобильных игр, AI'), ['Разработка мобильных игр', 'AI'])
   })
 })

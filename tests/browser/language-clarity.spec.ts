@@ -62,7 +62,8 @@ test('marks original-language profile fields clearly across kk/ru/en and light/d
       await page.locator('input[name="interests"]').fill('Mobile')
       await page.locator('form button[type="submit"]').click()
 
-      const iosCard = page.locator('section[aria-labelledby="results-title"] .result-card').first()
+      // The pool mixes Russian and English profiles; follow a card whose role was written in English.
+      const iosCard = page.locator('section[aria-labelledby="results-title"] .result-card', { has: page.locator('.candidate-role[lang="en"]') }).first()
       await expect(iosCard).toBeVisible()
       await expect(iosCard.locator('.candidate-role')).toHaveAttribute('lang', 'en')
       await expect(iosCard.locator('.profile-origin-badge')).toHaveCount(0)

@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react'
 import type { FormEvent } from 'react'
 import { getMessages } from '../i18n/messages'
+import { parseProfileTopics, parseSkillTopics } from './profileDirty'
 import type { Goal, Locale, ProfileInput } from '../matching/types'
 import { CustomSelect } from './CustomSelect'
 import { getGoalLabels } from './goalLabels'
@@ -22,9 +23,7 @@ function toFields(profile?: ProfileInput): Fields {
   }
 }
 
-function topics(value: string) {
-  return value.split(/[,\n]/).map(topic => topic.trim()).filter(Boolean)
-}
+const topics = parseProfileTopics
 
 function validate(fields: Fields, locale: Locale): Errors {
   const t = getMessages(locale).form.errors
@@ -96,7 +95,7 @@ export function ProfileForm({
     onSubmit({
       goal: fields.goal,
       role: fields.role.trim(),
-      skills: topics(fields.skills),
+      skills: parseSkillTopics(fields.skills),
       interests: topics(fields.interests),
       experienceYears: Number(fields.experience),
       about: fields.about.trim(),

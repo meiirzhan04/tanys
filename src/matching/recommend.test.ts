@@ -626,3 +626,20 @@ test('a mentee with nine years never gets a one-year mentor through a shared int
   const learner = candidate('learner', 'find_mentor', { skills: ['Python'], experienceYears: 1, lookingFor: ['Kubernetes'] })
   assert.deepEqual(recommend(mentor, [senior, wantsJava, learner], 'ru').map(item => item.candidate.id), ['learner'])
 })
+
+test('treats ML, Machine Learning and the Russian and Kazakh terms as one skill', () => {
+  for (const label of ['ML', 'machine learning', 'Машинное обучение', 'Машиналық оқыту']) {
+    assert.equal(normalizeSkill(label), 'machine learning', label)
+  }
+  assert.equal(normalizeSkill('Spring Boot'), 'spring')
+  assert.equal(normalizeSkill('.NET'), 'dotnet')
+})
+
+test('a request naming a role title such as "Data Scientist" matches applicants with that role', () => {
+  const employer: ProfileInput = { role: 'Head of Data', skills: ['Python'], experienceYears: 9, interests: [], about: '', goal: 'hire', lookingFor: ['Data Scientist'] }
+  const scientist = candidate('ds', 'find_job', { role: 'Junior Data Scientist', skills: ['Python', 'pandas'], interests: [] })
+  const designer = candidate('designer', 'find_job', { role: 'UI/UX-дизайнер', skills: ['Figma'], interests: [] })
+  const results = recommend(employer, [scientist, designer], 'ru')
+  assert.deepEqual(results.map(item => item.candidate.id), ['ds'])
+  assert.doesNotMatch(results[0].explanation, /не указано/)
+})
