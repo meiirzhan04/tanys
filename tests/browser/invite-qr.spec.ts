@@ -77,6 +77,30 @@ function createInviteQrBackend() {
   return { attach }
 }
 
+async function confirmRegistration(page: Page, password: string) {
+  const confirmation = page.getByLabel('Повторите пароль')
+  const submit = page.locator('.auth-form button[type="submit"]')
+  let registrationRequests = 0
+  const trackRegistration = (request: import('@playwright/test').Request) => {
+    if (new URL(request.url()).pathname === '/api/v1/auth/register') registrationRequests += 1
+  }
+
+  page.on('request', trackRegistration)
+  try {
+    await submit.click()
+    await expect(page.getByRole('alert')).toHaveText('Введите пароль ещё раз.')
+    await expect(confirmation).toBeFocused()
+    await confirmation.fill(`${password}!`)
+    await submit.click()
+    await expect(page.getByRole('alert')).toHaveText('Пароли не совпадают.')
+    expect(registrationRequests).toBe(0)
+    await confirmation.fill(password)
+    await expect(page.getByRole('alert')).toHaveCount(0)
+  } finally {
+    page.off('request', trackRegistration)
+  }
+}
+
 test('generates invite QR locally without external requests, closes with Escape, localizes ru/kk/en, and rejects revoked QR (#91)', async ({
   browser,
 }, testInfo) => {
@@ -156,6 +180,7 @@ test('generates invite QR locally without external requests, closes with Escape,
     await entrant.locator('.purpose-toggle button').last().click()
     await entrant.locator('input[name=username]').fill('newuser')
     await entrant.locator('input[name=password]').fill('browser-test-password')
+    await confirmRegistration(entrant, 'browser-test-password')
     await entrant.locator('.auth-form button[type=submit]').click()
     await expect(entrant.locator('#event-profile-title')).toBeVisible()
     await expect(entrant).toHaveURL(/\/events\/evt-qr-1$/)
@@ -179,6 +204,7 @@ test('organizer entry opens the owned event after login and keeps the cabinet on
   await page.goto('/login')
   await page.getByRole('link', { name: /^Организовать мероприятие/ }).click()
   await expect(page.locator('#auth-title')).toHaveText('Организовать мероприятие')
+  await expect(page.getByLabel('Повторите пароль')).toHaveCount(0)
   await page.locator('input[name="username"]').fill('org')
   await page.locator('input[name="password"]').fill('browser-test-password')
   await page.locator('.auth-form button[type="submit"]').click()
@@ -195,6 +221,7 @@ test('an account created from organizer entry waits for server-granted access', 
   await page.getByRole('button', { name: 'Создать аккаунт', exact: true }).click()
   await page.locator('input[name="username"]').fill('guest')
   await page.locator('input[name="password"]').fill('browser-test-password')
+  await confirmRegistration(page, 'browser-test-password')
   const registration = page.waitForRequest(req => new URL(req.url()).pathname === '/api/v1/auth/register')
   await page.locator('.auth-form button[type="submit"]').click()
   expect((await registration).postDataJSON()).toEqual({ username: 'guest', password: 'browser-test-password' })

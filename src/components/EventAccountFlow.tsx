@@ -157,6 +157,9 @@ export function EventAccountFlow({
   const [registering, setRegistering] = useState(false)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const [passwordConfirmation, setPasswordConfirmation] = useState('')
+  const [confirmationError, setConfirmationError] = useState<'passwordConfirmationRequired' | 'passwordMismatch'>()
+  const confirmationInput = useRef<HTMLInputElement>(null)
   const [authBusy, setAuthBusy] = useState(false)
   const [authError, setAuthError] = useState('')
 
@@ -530,11 +533,14 @@ export function EventAccountFlow({
   function chooseAuthMode(createAccount: boolean) {
     setRegistering(createAccount)
     setPassword('')
+    setPasswordConfirmation('')
+    setConfirmationError(undefined)
     setAuthError('')
   }
 
   async function handlePasswordSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (authBusy) return
     const login = username.trim().toLowerCase()
     if (!/^[a-z0-9_-]{3,32}$/.test(login)) {
       setAuthError(t.errors.usernameInvalid)
@@ -542,6 +548,12 @@ export function EventAccountFlow({
     }
     if (!password || (registering && Array.from(password).length < 6)) {
       setAuthError(registering ? t.errors.passwordTooShort : t.errors.passwordRequired)
+      return
+    }
+    if (registering && passwordConfirmation !== password) {
+      setAuthError('')
+      setConfirmationError(passwordConfirmation ? 'passwordMismatch' : 'passwordConfirmationRequired')
+      confirmationInput.current?.focus()
       return
     }
     setAuthBusy(true)
@@ -555,6 +567,7 @@ export function EventAccountFlow({
       if (organizerEntry && !current) throw new Error(t.errors.genericRequest)
       setUser(current ? { ...me, ...current } : me)
       setPassword('')
+      setPasswordConfirmation('')
       const preserveDraft = Boolean(draft.name || draft.role || draft.skills || draft.about)
       await enterAuthenticated(
         pendingInvite ?? (activeEventId ? { eventId: activeEventId } : null),
@@ -1166,11 +1179,37 @@ export function EventAccountFlow({
                 disabled={authBusy}
                 onChange={event => {
                   setPassword(event.target.value)
+                  setConfirmationError(undefined)
                   setAuthError('')
                 }}
               />
               {registering && <p id={`${id}-password-hint`} className="auth-hint">{t.passwordHint}</p>}
             </div>
+
+            {registering && <div className="field">
+              <label htmlFor={`${id}-password-confirmation`}>{t.passwordConfirmationLabel}</label>
+              <input
+                ref={confirmationInput}
+                id={`${id}-password-confirmation`}
+                name="passwordConfirmation"
+                type="password"
+                autoComplete="new-password"
+                aria-invalid={confirmationError ? true : undefined}
+                aria-describedby={confirmationError ? `${id}-password-confirmation-error` : undefined}
+                maxLength={512}
+                required
+                value={passwordConfirmation}
+                disabled={authBusy}
+                onChange={event => {
+                  setPasswordConfirmation(event.target.value)
+                  setConfirmationError(undefined)
+                  setAuthError('')
+                }}
+              />
+              {confirmationError && <p id={`${id}-password-confirmation-error`} className="field-error" role="alert">
+                {t.errors[confirmationError]}
+              </p>}
+            </div>}
 
             <div className="auth-actions">
               <button type="submit" className="primary-button" disabled={authBusy}>
