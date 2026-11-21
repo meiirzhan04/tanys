@@ -37,3 +37,23 @@ test('round-trips local date and time parts without rounding legacy minutes', ()
   assert.deepEqual(toLocalParts(undefined), { date: '', time: '' })
   assert.ok(Number.isNaN(+fromLocalParts('2026-11-21', '')))
 })
+
+test('converts event wall-clock time in its own zone, whatever the device zone is', async () => {
+  const { fromZonedParts, toZonedParts } = await import('./timeStep.ts')
+  // Almaty is UTC+5: 09:00 there is 04:00 UTC.
+  assert.equal(fromZonedParts('2026-11-22', '09:00', 'Asia/Almaty').toISOString(), '2026-11-22T04:00:00.000Z')
+  assert.deepEqual(toZonedParts('2026-11-22T04:00:00.000Z', 'Asia/Almaty'), { date: '2026-11-22', time: '09:00' })
+  // Half- and quarter-hour offsets.
+  assert.equal(fromZonedParts('2026-11-22', '09:00', 'Asia/Kolkata').toISOString(), '2026-11-22T03:30:00.000Z')
+  assert.equal(fromZonedParts('2026-11-22', '09:00', 'Asia/Kathmandu').toISOString(), '2026-11-22T03:15:00.000Z')
+  // Daylight saving in Berlin: +2 in summer, +1 in winter, a skipped hour, and the date line around midnight.
+  assert.equal(fromZonedParts('2026-07-01', '09:00', 'Europe/Berlin').toISOString(), '2026-07-01T07:00:00.000Z')
+  assert.equal(fromZonedParts('2026-12-01', '09:00', 'Europe/Berlin').toISOString(), '2026-12-01T08:00:00.000Z')
+  assert.equal(fromZonedParts('2026-03-29', '02:30', 'Europe/Berlin').toISOString(), '2026-03-29T01:30:00.000Z')
+  assert.deepEqual(toZonedParts('2026-11-21T22:30:00.000Z', 'Asia/Almaty'), { date: '2026-11-22', time: '03:30' })
+  for (const zone of ['Asia/Almaty', 'Europe/Berlin', 'America/New_York', 'UTC']) {
+    const instant = fromZonedParts('2026-10-25', '13:45', zone)
+    assert.deepEqual(toZonedParts(instant, zone), { date: '2026-10-25', time: '13:45' }, zone)
+  }
+  assert.ok(Number.isNaN(+fromZonedParts('2026-11-22', '', 'Asia/Almaty')))
+})

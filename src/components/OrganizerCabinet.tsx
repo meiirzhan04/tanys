@@ -20,7 +20,7 @@ import { getCandidateGoalLabels } from './goalLabels'
 import { InterestMap } from './InterestMap'
 import { TimeSelect } from './TimeSelect'
 import { timeCopy } from '../i18n/timeCopy'
-import { fromLocalParts, isQuarterHourInstant, roundUpToQuarterHour, toLocalParts } from '../scheduling/timeStep'
+import { fromZonedParts, isQuarterHourInstant, roundUpToQuarterHour, toZonedParts } from '../scheduling/timeStep'
 import { buildInviteUrl, getInviteState } from './inviteQr'
 import { InviteQrModal } from './InviteQrModal'
 import { MembersPanel } from './connections/MembersPanel'
@@ -52,12 +52,15 @@ const TIMEZONE_OPTIONS = [
 
 type DateTimeParts = { date: string; time: string }
 
+const DEFAULT_ZONE = 'Asia/Almaty'
+
+// Event times are wall-clock times of the event's own zone, so an organizer elsewhere still sets "09:00 in Almaty".
 function defaultStartsAt(): DateTimeParts {
-  return toLocalParts(roundUpToQuarterHour(new Date(Date.now() + 60 * 60 * 1000)))
+  return toZonedParts(roundUpToQuarterHour(new Date(Date.now() + 60 * 60 * 1000)), DEFAULT_ZONE)
 }
 
 function defaultEndsAt(): DateTimeParts {
-  return toLocalParts(roundUpToQuarterHour(new Date(Date.now() + 8 * 60 * 60 * 1000)))
+  return toZonedParts(roundUpToQuarterHour(new Date(Date.now() + 8 * 60 * 60 * 1000)), DEFAULT_ZONE)
 }
 
 /** A new or edited time must be on the 15-minute grid; an untouched saved time is accepted as stored. */
@@ -102,15 +105,16 @@ export function OrganizerCabinet({
 
   // New event form state
   const [newName, setNewName] = useState('')
-  const [newTimeZone, setNewTimeZone] = useState('Asia/Almaty')
+  const [newTimeZone, setNewTimeZone] = useState(DEFAULT_ZONE)
   const [newStartsAt, setNewStartsAt] = useState(() => defaultStartsAt())
   const [newEndsAt, setNewEndsAt] = useState(() => defaultEndsAt())
   const [creatingEvent, setCreatingEvent] = useState(false)
 
   // Edit active event state
   const [editName, setEditName] = useState(activeEvent?.name ?? '')
-  const [editStart, setEditStart] = useState<DateTimeParts>(() => toLocalParts(activeEvent?.startsAt))
-  const [editEnd, setEditEnd] = useState<DateTimeParts>(() => toLocalParts(activeEvent?.endsAt))
+  const activeZone = activeEvent?.timeZone || DEFAULT_ZONE
+  const [editStart, setEditStart] = useState<DateTimeParts>(() => toZonedParts(activeEvent?.startsAt, activeZone))
+  const [editEnd, setEditEnd] = useState<DateTimeParts>(() => toZonedParts(activeEvent?.endsAt, activeZone))
   const tc = timeCopy[locale]
   const [savingEvent, setSavingEvent] = useState(false)
 
@@ -139,8 +143,8 @@ export function OrganizerCabinet({
 
   useEffect(() => {
     setEditName(activeEvent?.name ?? '')
-    setEditStart(toLocalParts(activeEvent?.startsAt))
-    setEditEnd(toLocalParts(activeEvent?.endsAt))
+    setEditStart(toZonedParts(activeEvent?.startsAt, activeZone))
+    setEditEnd(toZonedParts(activeEvent?.endsAt, activeZone))
     setInvites([])
     setQrInviteId(null)
     setInterests(null)
@@ -186,8 +190,9 @@ export function OrganizerCabinet({
 
   async function handleCreateEvent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const parsedStart = fromLocalParts(newStartsAt.date, newStartsAt.time)
-    const parsedEnd = fromLocalParts(newEndsAt.date, newEndsAt.time)
+    const zone = newTimeZone.trim() || DEFAULT_ZONE
+    const parsedStart = fromZonedParts(newStartsAt.date, newStartsAt.time, zone)
+    const parsedEnd = fromZonedParts(newEndsAt.date, newEndsAt.time, zone)
     if (!newName.trim() || !Number.isFinite(+parsedStart) || !Number.isFinite(+parsedEnd) || +parsedEnd <= +parsedStart) {
       setError(o.invalidEventFields)
       return
@@ -202,7 +207,7 @@ export function OrganizerCabinet({
     try {
       const created = await api.createEvent({
         name: newName.trim(),
-        timeZone: newTimeZone.trim() || 'Asia/Almaty',
+        timeZone: zone,
         startsAt: parsedStart.toISOString(),
         endsAt: parsedEnd.toISOString(),
       })
@@ -224,8 +229,8 @@ export function OrganizerCabinet({
 
   async function handleSaveEvent(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const nextStart = fromLocalParts(editStart.date, editStart.time)
-    const nextEnd = fromLocalParts(editEnd.date, editEnd.time)
+    const nextStart = fromZonedParts(editStart.date, editStart.time, activeZone)
+    const nextEnd = fromZonedParts(editEnd.date, editEnd.time, activeZone)
     if (!activeEvent || !editName.trim() || !Number.isFinite(+nextStart) || !Number.isFinite(+nextEnd) || +nextEnd <= +nextStart) {
       setError(o.invalidEventFields)
       return
@@ -463,7 +468,7 @@ export function OrganizerCabinet({
             onEnd={setNewEndsAt}
           />
         </div>
-        <p className="field-hint">{tc.step}</p>
+        <p className="field-hint" data-zone-hint>{tc.zoneHint(newTimeZone)} · {tc.step}</p>
         <div className="social-card__actions">
           <button type="submit" className="primary-button" disabled={creatingEvent}>
             {creatingEvent ? o.creatingEvent : o.createEventButton}
@@ -498,6 +503,7 @@ export function OrganizerCabinet({
                 onEnd={setEditEnd}
               />
             </div>
+            <p className="field-hint" data-zone-hint>{tc.zoneHint(activeZone)}</p>
             {[editStart.time, editEnd.time].filter(time => time && !/:(00|15|30|45)$/.test(time)).map(time => (
               <p key={time} className="field-hint legacy-time-hint" role="note">{tc.legacyEventTime(time)}</p>
             ))}

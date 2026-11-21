@@ -254,3 +254,40 @@ test('organizer creates events without JSON, isolates second empty event, manage
     await guestCtx.close()
   }
 })
+
+test('event times follow the event zone, not the organizer device zone', async ({ browser }, testInfo) => {
+  const backend = createOrganizerBackend()
+  const viewport = testInfo.project.use.viewport ?? { width: 1280, height: 860 }
+  // The organizer's device is in Berlin; the event runs in Almaty (UTC+5).
+  const ctx = await browser.newContext({ viewport, timezoneId: 'Europe/Berlin' })
+  await backend.attach(ctx)
+  const created: Array<Record<string, unknown>> = []
+  ctx.on('request', request => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/v1/events') created.push(request.postDataJSON())
+  })
+  try {
+    const page = await ctx.newPage()
+    expect(await page.evaluate(() => Intl.DateTimeFormat().resolvedOptions().timeZone)).toBe('Europe/Berlin')
+    await page.goto('/?mode=account')
+    await page.locator('input[name="username"]').fill('org')
+    await page.locator('input[name="password"]').fill('browser-test-password')
+    await page.locator('.auth-form button[type="submit"]').click()
+    await page.locator('.workspace-nav button', { hasText: 'Организатор' }).click()
+    await expect(page.locator('[data-zone-hint]').first()).toContainText('Asia/Almaty')
+    await page.locator('input[name="eventName"]').fill('Almaty time')
+    await page.locator('input[name="eventStartDate"]').fill('2027-03-10')
+    await page.locator('select[name="eventStartTime"]').selectOption('09:00')
+    await page.locator('input[name="eventEndDate"]').fill('2027-03-10')
+    await page.locator('select[name="eventEndTime"]').selectOption('18:00')
+    await page.locator('button', { hasText: 'Создать событие' }).click()
+    await expect.poll(() => created.length).toBe(1)
+    expect(created[0].startsAt).toBe('2027-03-10T04:00:00.000Z')
+    expect(created[0].endsAt).toBe('2027-03-10T13:00:00.000Z')
+    // The edit form shows the stored instant on the Almaty clock again.
+    await expect(page.locator('select[name="editEventStartTime"]')).toHaveValue('09:00')
+    await expect(page.locator('select[name="editEventEndTime"]')).toHaveValue('18:00')
+    await expect(page.locator('input[name="editEventStartDate"]')).toHaveValue('2027-03-10')
+  } finally {
+    await ctx.close()
+  }
+})

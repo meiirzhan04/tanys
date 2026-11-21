@@ -6,7 +6,7 @@ import type { Locale } from '../matching/types'
 import { formatMeetingInterval } from './socialHelpers'
 import { TimeSelect } from './TimeSelect'
 import { AvailabilityDatePicker } from './AvailabilityDatePicker'
-import { QUARTER_HOUR_MS, fromLocalParts, isQuarterHourInstant, isQuarterHourTime, toLocalParts } from '../scheduling/timeStep'
+import { QUARTER_HOUR_MS, fromZonedParts, isQuarterHourInstant, isQuarterHourTime, toZonedParts } from '../scheduling/timeStep'
 
 type Slot = { start: string; end: string }
 type ErrorKind = 'request' | 'invalid' | 'step' | 'beforeEvent' | 'afterEvent' | 'tooShort' | 'tooLong' | 'overlap'
@@ -17,10 +17,10 @@ function parseInstant(value?: string): Date | undefined {
   return date && Number.isFinite(+date) ? date : undefined
 }
 
-/** Device-local date and time, the same clock the inputs use. */
-function formatLocal(date: Date, locale: Locale): string {
+/** Date and time on the event's clock, the same clock the inputs use. */
+function formatLocal(date: Date, locale: Locale, zone: string): string {
   return new Intl.DateTimeFormat(locale === 'kk' ? 'kk-KZ' : locale === 'en' ? 'en-GB' : 'ru-RU', {
-    day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit',
+    day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: zone,
   }).format(date)
 }
 
@@ -39,7 +39,7 @@ const labels = {
     add: 'Добавить интервал',
     remove: 'Убрать',
     empty: 'Интервалов пока нет. Добавьте хотя бы один — без него встречу не предложить.',
-    local: 'Время по часовому поясу устройства',
+    local: 'Время мероприятия',
     timePlaceholder: 'Выберите время',
     step: 'Шаг 15 минут, минимум 15 минут. Интервалы не должны пересекаться.',
     legacyOption: (time: string) => `${time} — недопустимо`,
@@ -68,7 +68,7 @@ const labels = {
     add: 'Аралық қосу',
     remove: 'Алып тастау',
     empty: 'Әзірге аралық жоқ. Кемінде біреуін қосыңыз — онсыз кездесу ұсыну мүмкін емес.',
-    local: 'Құрылғының уақыт белдеуі бойынша',
+    local: 'Іс-шара уақыты',
     timePlaceholder: 'Уақытты таңдаңыз',
     step: 'Қадамы 15 минут, кемінде 15 минут. Аралықтар қабаттаспауы керек.',
     legacyOption: (time: string) => `${time} — жарамсыз`,
@@ -97,7 +97,7 @@ const labels = {
     add: 'Add interval',
     remove: 'Remove',
     empty: 'No intervals yet. Add at least one — without it nobody can propose a meeting.',
-    local: 'Times in your device time zone',
+    local: 'Event time',
     timePlaceholder: 'Choose a time',
     step: '15-minute steps, at least 15 minutes. Intervals must not overlap.',
     legacyOption: (time: string) => `${time} — not allowed`,
@@ -132,8 +132,8 @@ export function AvailabilityEditor({
   const t = labels[locale]
   const eventStart = parseInstant(startsAt)
   const eventEnd = parseInstant(endsAt)
-  const firstDay = toLocalParts(eventStart).date || undefined
-  const lastDay = toLocalParts(eventEnd).date || undefined
+  const firstDay = toZonedParts(eventStart, zone).date || undefined
+  const lastDay = toZonedParts(eventEnd, zone).date || undefined
   // A one-day event needs no date choice: both dates start on that day.
   const defaultDay = firstDay && firstDay === lastDay ? firstDay : ''
   const [slots, setSlots] = useState<Slot[]>()
@@ -160,17 +160,17 @@ export function AvailabilityEditor({
   }, [api, event])
 
   const endDay = endDate || startDate
-  const chosenStart = fromLocalParts(startDate, startTime)
+  const chosenStart = fromZonedParts(startDate, startTime, zone)
 
   function startAllowed(time: string) {
     if (!startDate) return true
-    const at = +fromLocalParts(startDate, time)
+    const at = +fromZonedParts(startDate, time, zone)
     return (!eventStart || at >= +eventStart) && (!eventEnd || at + QUARTER_HOUR_MS <= +eventEnd)
   }
 
   function endAllowed(time: string) {
     if (!endDay) return true
-    const at = +fromLocalParts(endDay, time)
+    const at = +fromZonedParts(endDay, time, zone)
     if (eventEnd && at > +eventEnd) return false
     if (eventStart && at < +eventStart + QUARTER_HOUR_MS) return false
     return !Number.isFinite(+chosenStart) || (at - +chosenStart >= QUARTER_HOUR_MS && at - +chosenStart <= maximumDuration)
@@ -189,7 +189,7 @@ export function AvailabilityEditor({
     setError(undefined)
     // Drop an end time that no longer fits after the new start.
     if (endTime && endDay) {
-      const gap = +fromLocalParts(endDay, endTime) - +fromLocalParts(startDate, time)
+      const gap = +fromZonedParts(endDay, endTime, zone) - +fromZonedParts(startDate, time, zone)
       if (gap < QUARTER_HOUR_MS || gap > maximumDuration) setEndTime('')
     }
   }
@@ -222,8 +222,8 @@ export function AvailabilityEditor({
       setError('step')
       return
     }
-    const from = fromLocalParts(startDate, startTime)
-    const until = fromLocalParts(endDay, endTime)
+    const from = fromZonedParts(startDate, startTime, zone)
+    const until = fromZonedParts(endDay, endTime, zone)
     const duration = +until - +from
     const overlap = slots.find(slot => +from < Date.parse(slot.end) && +until > Date.parse(slot.start))
     const problem: ErrorKind | undefined =
@@ -245,8 +245,8 @@ export function AvailabilityEditor({
 
   function errorText(kind: ErrorKind): string {
     switch (kind) {
-      case 'beforeEvent': return t.errors.beforeEvent(eventStart ? formatLocal(eventStart, locale) : '')
-      case 'afterEvent': return t.errors.afterEvent(eventEnd ? formatLocal(eventEnd, locale) : '')
+      case 'beforeEvent': return t.errors.beforeEvent(eventStart ? formatLocal(eventStart, locale, zone) : '')
+      case 'afterEvent': return t.errors.afterEvent(eventEnd ? formatLocal(eventEnd, locale, zone) : '')
       case 'overlap': return t.errors.overlap(overlapWith ? formatMeetingInterval(overlapWith.start, overlapWith.end, zone, locale) : '')
       case 'tooShort': return t.errors.tooShort
       case 'tooLong': return t.errors.tooLong
@@ -262,7 +262,7 @@ export function AvailabilityEditor({
       <p>{t.intro}</p>
       {eventStart && eventEnd && (
         <p className="availability-window" data-event-window>
-          {t.window(formatLocal(eventStart, locale), formatLocal(eventEnd, locale))}
+          {t.window(formatLocal(eventStart, locale, zone), formatLocal(eventEnd, locale, zone))}
         </p>
       )}
       <p className="field-hint availability-example">{t.example}</p>
@@ -306,7 +306,7 @@ export function AvailabilityEditor({
             </label>
           </fieldset>
         </div>
-        <p className="field-hint">{t.step} {t.local} · {Intl.DateTimeFormat().resolvedOptions().timeZone}</p>
+        <p className="field-hint">{t.step} {t.local} · {zone}</p>
         <div className="social-card__actions">
           <button className="primary-button" type="submit" disabled={!slots || busy}>
             {t.add}
