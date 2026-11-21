@@ -103,6 +103,18 @@ export async function eventRoute(req: IncomingMessage, res: ServerResponse, path
       if (body.status !== undefined && !['active','closed'].includes(String(body.status))) throw new HttpError(400,'invalid_status')
       if (Object.keys(body).some(key=>!['name','timeZone','startsAt','endsAt','status'].includes(key))) throw new HttpError(400,'unknown_field')
       const [name,timeZone,start,end] = fields({ ...row,...body }, row)
+      if (body.startsAt !== undefined || body.endsAt !== undefined) {
+        // New bounds may not strand active meetings: the organizer must move or cancel them first.
+        const stranded = await client.query(`SELECT count(*)::int AS count FROM meetings m JOIN introductions i ON i.id=m.introduction_id
+          WHERE i.event_id=$1 AND m.status IN ('pending','confirmed') AND (m.starts_at < $2 OR m.ends_at > $3)`, [event,start,end])
+        const count = stranded.rows[0].count
+        if (count > 0) return { status:409,data:{ error:{ code:'meetings_outside_window',message:String(count),count } } }
+        // Free time and invite expiry follow the new window: drop what is outside, trim what overlaps an edge.
+        await client.query('DELETE FROM availability WHERE event_id=$1 AND (ends_at <= $2 OR starts_at >= $3)', [event,start,end])
+        await client.query(`UPDATE availability SET starts_at=greatest(starts_at,$2),ends_at=least(ends_at,$3)
+          WHERE event_id=$1 AND (starts_at < $2 OR ends_at > $3)`, [event,start,end])
+        await client.query('UPDATE event_invites SET expires_at=$2 WHERE event_id=$1 AND NOT revoked AND expires_at > $2', [event,end])
+      }
       // Times that were not sent keep their stored value exactly (no re-serialisation of legacy timestamps).
       const updated = await client.query(`UPDATE events AS e SET name=$1,time_zone=$2,starts_at=COALESCE($3,e.starts_at),
         ends_at=COALESCE($4,e.ends_at),status=$5,

@@ -22,6 +22,8 @@ interface ParticipantSearchProps {
   busyIntroId: string
   /** The viewer's own questionnaire state in this event: requests need a saved, visible one. */
   ownProfile: 'visible' | 'hidden' | 'missing'
+  /** Closed event: people can be looked up, but nobody can be asked or answered. */
+  readOnly?: boolean
   onOpenQuestionnaire: () => void
   /** Resolves with an error message, or an empty string once the server stored the request. */
   onRequest: (userId: string, message: string) => Promise<string>
@@ -36,6 +38,7 @@ export function ParticipantSearch({
   introductions,
   busyIntroId,
   ownProfile,
+  readOnly = false,
   onOpenQuestionnaire,
   onRequest,
   onUpdateIntro,
@@ -236,7 +239,7 @@ export function ParticipantSearch({
         </div>
       )}
 
-      {ownProfile !== 'visible' && (
+      {!readOnly && ownProfile !== 'visible' && (
         <div className="own-profile-warning" role="note">
           <p>{ownProfile === 'hidden' ? c.ownHidden : c.ownMissing}</p>
           <button type="button" className="secondary-button" onClick={onOpenQuestionnaire}>{c.openQuestionnaire}</button>
@@ -273,7 +276,7 @@ export function ParticipantSearch({
             </p>
           )}
 
-          {status === 'pending' && direction === 'outgoing' && introId && (
+          {!readOnly && status === 'pending' && direction === 'outgoing' && introId && (
             <div className="person-card__state">
               <strong>{c.sentPending}</strong>
               <p>{c.sentHint}</p>
@@ -282,7 +285,7 @@ export function ParticipantSearch({
               </button>
             </div>
           )}
-          {status === 'pending' && direction === 'incoming' && introId && (
+          {!readOnly && status === 'pending' && direction === 'incoming' && introId && (
             <div className="person-card__state">
               <strong>{c.incomingPending}</strong>
               <div className="person-card__actions">
@@ -292,7 +295,7 @@ export function ParticipantSearch({
             </div>
           )}
           {status === 'declined' && <p className="person-card__state">{c.declined}</p>}
-          {(!status || (status === 'withdrawn' && direction === 'outgoing')) && (
+          {!readOnly && (!status || (status === 'withdrawn' && direction === 'outgoing')) && (
             <div className="person-card__compose">
               <label className="field">
                 <span>{c.messageLabel}</span>

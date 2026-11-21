@@ -50,3 +50,34 @@ test('пересекающиеся встречи допускают одно п
   const [other, remaining] = pairs[1 - winner]
   await call(other, 'PATCH', '/meetings/' + remaining.id, 200, { status: 'confirmed' })
 })
+
+test('сдвиг границ события не оставляет встреч за пределом; свободное время и приглашения подрезаются', async () => {
+  const { people: [org, b], call } = fixture(2)
+  const start = new Date(Math.ceil((Date.now() + 3600000) / 900000) * 900000)
+  const hour = new Date(+start + 3600000)
+  for (const person of [org, b]) {
+    await call(person, 'PUT', '/profile', 200, { ...profile, visible: true })
+    await call(person, 'PUT', '/availability/me', 204, { slots: [{ start, end: hour }] })
+  }
+  const intro = await call(org, 'POST', '/introductions', 201, { recipientId: b.id })
+  await call(b, 'PATCH', '/introductions/' + intro.id, 200, { status: 'accepted' })
+  const slots = await call(org, 'GET', '/introductions/' + intro.id + '/slots', 200)
+  const late = slots.items.at(-1)
+  const meeting = await call(org, 'POST', '/meetings', 201, { introductionId: intro.id, slotId: late.id })
+  await call(b, 'PATCH', '/meetings/' + meeting.id, 200, { status: 'confirmed' })
+  const invite = await call(org, 'POST', '/invites', 201, { expiresAt: new Date(+start + 2 * 3600000).toISOString() })
+
+  // Ending the event 30 minutes after start would strand the confirmed late meeting.
+  const shorter = new Date(+start + 30 * 60000).toISOString()
+  const blocked = await call(org, 'PATCH', '', 409, { endsAt: shorter })
+  assert.equal(blocked.error.code, 'meetings_outside_window')
+  assert.equal(blocked.error.count, 1)
+  assert.equal((await call(org, 'GET', '', 200)).endsAt === shorter, false)
+
+  await call(org, 'PATCH', '/meetings/' + meeting.id, 200, { status: 'cancelled' })
+  assert.equal((await call(org, 'PATCH', '', 200, { endsAt: shorter })).endsAt, shorter)
+  const mine = await call(b, 'GET', '/availability/me', 200)
+  assert.deepEqual(mine.slots.map(slot => [slot.start, slot.end]), [[start.toISOString(), shorter]])
+  const listed = await call(org, 'GET', '/invites', 200)
+  assert.equal(listed.items.find(item => item.id === invite.id).expiresAt, shorter)
+})

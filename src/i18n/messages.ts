@@ -149,6 +149,7 @@ export interface Messages {
     deletingAccount: string
     deleteAccountConfirm: string
     eventClosedNotice: string
+    closedReadOnly: string
     profileTitle: string
     profileEditTitle: string
     profileSubtitle: string
@@ -262,6 +263,8 @@ export interface Messages {
     closeEventButton: string
     eventSaved: string
     eventClosedBadge: string
+    meetingsOutsideWindow: (count: number) => string
+    boundsHint: string
     eventActiveBadge: string
     invitesTitle: string
     createInviteButton: string
@@ -507,6 +510,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       deletingAccount: 'Удаление аккаунта…',
       deleteAccountConfirm: 'Удалить аккаунт и все связанные данные? Это действие необратимо.',
       eventClosedNotice: 'Мероприятие завершено. Редактирование анкеты недоступно.',
+      closedReadOnly: 'Мероприятие завершено: история знакомств и встреч доступна для просмотра, но новые запросы, ответы и встречи недоступны.',
       profileTitle: 'Анкета в мероприятии',
       profileEditTitle: 'Редактировать анкету',
       profileSubtitle: 'Заполните профиль и выберите, показывать ли его другим участникам этого мероприятия.',
@@ -620,6 +624,8 @@ export const messagesByLocale: Record<Locale, Messages> = {
       closeEventButton: 'Завершить событие',
       eventSaved: 'Изменения события сохранены.',
       eventClosedBadge: 'Завершено',
+      meetingsOutsideWindow: count => `Нельзя сохранить новое время: ${count} активн. встреч(и) окажутся за его пределами. Перенесите или отмените их в «Мои встречи» и попробуйте снова.`,
+      boundsHint: 'Время можно изменить, если все активные встречи помещаются в новый период. Свободное время участников вне периода удалится, срок приглашений сократится до нового конца.',
       eventActiveBadge: 'Активно',
       invitesTitle: 'Приглашения участников',
       createInviteButton: 'Выпустить приглашение',
@@ -863,6 +869,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       deletingAccount: 'Аккаунт өшірілуде…',
       deleteAccountConfirm: 'Аккаунтты және барлық байланысты деректерді өшіруді растайсыз ба? Бұл әрекетті қайтару мүмкін емес.',
       eventClosedNotice: 'Іс-шара аяқталды. Сауалнаманы өзгерту қолжетімсіз.',
+      closedReadOnly: 'Іс-шара аяқталды: танысулар мен кездесулер тарихын көруге болады, бірақ жаңа сұраулар, жауаптар мен кездесулер қолжетімсіз.',
       profileTitle: 'Іс-шарадағы анкета',
       profileEditTitle: 'Анкетаны өңдеу',
       profileSubtitle: 'Профильді толтырып, оны осы іс-шараның басқа қатысушыларына көрсетуді таңдаңыз.',
@@ -976,6 +983,8 @@ export const messagesByLocale: Record<Locale, Messages> = {
       closeEventButton: 'Іс-шараны аяқтау',
       eventSaved: 'Іс-шара өзгерістері сақталды.',
       eventClosedBadge: 'Аяқталды',
+      meetingsOutsideWindow: count => `Жаңа уақытты сақтау мүмкін емес: ${count} белсенді кездесу оның шегінен тыс қалады. Оларды «Менің кездесулерім» бөлімінде ауыстырыңыз немесе болдырмаңыз, сосын қайталаңыз.`,
+      boundsHint: 'Барлық белсенді кездесулер жаңа кезеңге сыйса, уақытты өзгертуге болады. Кезеңнен тыс бос уақыт жойылады, шақырулар мерзімі жаңа аяқталуға дейін қысқарады.',
       eventActiveBadge: 'Белсенді',
       invitesTitle: 'Қатысушыларға шақырулар',
       createInviteButton: 'Шақыру шығару',
@@ -1219,6 +1228,7 @@ export const messagesByLocale: Record<Locale, Messages> = {
       deletingAccount: 'Deleting account…',
       deleteAccountConfirm: 'Delete account and all associated data? This action cannot be undone.',
       eventClosedNotice: 'This event is closed. Profile editing is disabled.',
+      closedReadOnly: 'The event has ended: your introductions and meetings stay visible, but new requests, replies and meetings are not available.',
       profileTitle: 'Event profile',
       profileEditTitle: 'Edit profile',
       profileSubtitle: 'Complete your profile and choose whether other participants of this event can see it.',
@@ -1332,6 +1342,8 @@ export const messagesByLocale: Record<Locale, Messages> = {
       closeEventButton: 'Close event',
       eventSaved: 'Event changes saved.',
       eventClosedBadge: 'Closed',
+      meetingsOutsideWindow: count => `The new time cannot be saved: ${count} active meeting(s) would fall outside it. Move or cancel them in My meetings and try again.`,
+      boundsHint: 'You can change the time if every active meeting fits the new period. Free time outside it is removed and invites expire at the new end.',
       eventActiveBadge: 'Active',
       invitesTitle: 'Participant invites',
       createInviteButton: 'Issue invite link',

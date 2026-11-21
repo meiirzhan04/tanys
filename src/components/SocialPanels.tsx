@@ -82,6 +82,8 @@ export interface IntroductionsPanelProps {
   onRequest: (userId: string, message: string) => Promise<string>
   onOpenQuestionnaire: () => void
   onSaveContact: (value: string) => Promise<string>
+  /** Closed event: history stays visible, every write action is hidden. */
+  readOnly?: boolean
   onUpdateIntro: (introId: string, status: Exclude<IntroductionStatus, 'pending'>) => void
   onToggleSlots: (introId: string) => void
   onProposeMeeting: (introId: string, slotId: string) => void
@@ -108,6 +110,7 @@ export function IntroductionsPanel({
   onRequest,
   onOpenQuestionnaire,
   onSaveContact,
+  readOnly = false,
   onUpdateIntro,
   onToggleSlots,
   onProposeMeeting,
@@ -168,14 +171,14 @@ export function IntroductionsPanel({
           </blockquote>
         )}
 
-        {item.status === 'pending' && item.direction === 'incoming' && (
+        {!readOnly && item.status === 'pending' && item.direction === 'incoming' && (
           <div className="social-card__actions">
             <button type="button" className="primary-button" disabled={isBusy} onClick={() => onUpdateIntro(item.id, 'accepted')}>{s.accept}</button>
             <button type="button" className="secondary-button" disabled={isBusy} onClick={() => onUpdateIntro(item.id, 'declined')}>{s.decline}</button>
           </div>
         )}
 
-        {item.status === 'pending' && item.direction === 'outgoing' && (
+        {!readOnly && item.status === 'pending' && item.direction === 'outgoing' && (
           <div className="social-card__actions">
             <p className="social-card__hint">{c.sentPending}</p>
             <button type="button" className="secondary-button" disabled={isBusy} onClick={() => onUpdateIntro(item.id, 'withdrawn')}>{s.withdraw}</button>
@@ -194,15 +197,17 @@ export function IntroductionsPanel({
               <strong>{s.sharedContactLabel}</strong>
               {item.contact?.trim() ? <ContactValue value={item.contact} locale={locale} /> : <span className="lock-note">{c.noContact}</span>}
             </div>
-            <div className="social-card__actions">
-              <button type="button" className="secondary-button" aria-expanded={isSlotsOpen} onClick={() => onToggleSlots(item.id)}>
-                {isSlotsOpen ? s.hideSlots : s.proposeMeeting}
-              </button>
-            </div>
+            {!readOnly && (
+              <div className="social-card__actions">
+                <button type="button" className="secondary-button" aria-expanded={isSlotsOpen} onClick={() => onToggleSlots(item.id)}>
+                  {isSlotsOpen ? s.hideSlots : s.proposeMeeting}
+                </button>
+              </div>
+            )}
 
             {loadingSlotsIntroId === item.id && <p className="social-card__hint" role="status">{s.loadingSlots}</p>}
 
-            {slots && (
+            {!readOnly && slots && (
               <div className="social-slots">
                 {slots.length === 0 ? (
                   <p className="social-card__hint">{s.noCommonSlots}</p>
@@ -251,6 +256,7 @@ export function IntroductionsPanel({
         ))}
       </ol>
 
+      {readOnly && <div className="info-banner" role="status" data-closed-banner>{getMessages(locale).account.closedReadOnly}</div>}
       {socialError && <div className="error-banner" role="alert">{socialError}</div>}
       {socialNotice && <div className="info-banner" role="status">{socialNotice}</div>}
 
@@ -263,6 +269,7 @@ export function IntroductionsPanel({
           introductions={introductions}
           busyIntroId={busyIntroId}
           ownProfile={ownProfile}
+          readOnly={readOnly}
           onOpenQuestionnaire={onOpenQuestionnaire}
           onRequest={onRequest}
           onUpdateIntro={onUpdateIntro}
@@ -349,6 +356,8 @@ export interface ServerMeetingsPanelProps {
   onUpdateMeeting: (meetingId: string, status: Exclude<ServerMeetingStatus, 'pending'>) => void
   onRefresh: () => void
   refreshing: boolean
+  /** Closed event: meetings stay visible, confirm/decline/cancel are hidden. */
+  readOnly?: boolean
 }
 
 export function ServerMeetingsPanel({
@@ -361,6 +370,7 @@ export function ServerMeetingsPanel({
   onUpdateMeeting,
   onRefresh,
   refreshing,
+  readOnly = false,
 }: ServerMeetingsPanelProps) {
   const s = getMessages(locale).social
 
@@ -373,6 +383,7 @@ export function ServerMeetingsPanel({
         </button>
       </div>
 
+      {readOnly && <div className="info-banner" role="status" data-closed-banner>{getMessages(locale).account.closedReadOnly}</div>}
       {socialError && <div className="error-banner" role="alert">{socialError}</div>}
       {socialNotice && <div className="info-banner" role="status">{socialNotice}</div>}
 
@@ -398,7 +409,7 @@ export function ServerMeetingsPanel({
                   </span>
                 </div>
 
-                {meeting.status === 'pending' && (
+                {!readOnly && meeting.status === 'pending' && (
                   <div className="social-card__actions">
                     {meeting.direction !== 'outgoing' && (
                       <>
@@ -425,7 +436,7 @@ export function ServerMeetingsPanel({
                   </div>
                 )}
 
-                {meeting.status === 'confirmed' && (
+                {!readOnly && meeting.status === 'confirmed' && (
                   <div className="social-card__actions">
                     <button
                       type="button"
