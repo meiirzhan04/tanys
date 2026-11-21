@@ -47,7 +47,7 @@ import { PartnerBooths } from './PartnerBooths'
 const OrganizerCabinet = lazy(() =>
   import('./OrganizerCabinet').then(m => ({ default: m.OrganizerCabinet })),
 )
-import { hasUnsavedProfileChanges, parseProfileTopics } from './profileDirty'
+import { hasUnsavedProfileChanges, parseProfileTopics, parseSkillTopics } from './profileDirty'
 import type { EventProfileDraft } from './profileDirty'
 import { RecommendationResults } from './RecommendationResults'
 import {
@@ -702,7 +702,7 @@ export function EventAccountFlow({
       goal: draft.goal,
       role: draft.role.trim(),
       experienceYears: Number(draft.experience),
-      skills: parseTopics(draft.skills),
+      skills: parseSkillTopics(draft.skills),
       interests: parseTopics(draft.interests),
       about: draft.about.trim(),
       ...(usesLookingFor(draft.goal) && draft.lookingFor.trim() ? { lookingFor: parseTopics(draft.lookingFor) } : {}),
@@ -985,7 +985,7 @@ export function EventAccountFlow({
         },
       }))
     if (!published.length) return []
-    const skills = parseTopics(draft.skills)
+    const skills = parseSkillTopics(draft.skills)
     const interests = parseTopics(draft.interests)
     const lookingFor = parseTopics(draft.lookingFor)
     return recommendBooths({ skills, interests, lookingFor }, published, locale)

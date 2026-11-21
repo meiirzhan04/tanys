@@ -3522,5 +3522,2653 @@
     ],
     "about": "Могу показать, как сравниваю холодный старт на устройствах разных поколений. Хочу обсудить измерение задержек в Compose.",
     "goal": "exchange_experience"
+  },
+  {
+    "id": "demo-181",
+    "name": "Камила Б.",
+    "role": "Руководитель Java-команды",
+    "skills": [
+      "Java",
+      "Spring",
+      "Kafka",
+      "Hibernate"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "API",
+      "Финтех"
+    ],
+    "about": "Нанимаю в команду, где пишем на Java, Spring. Расскажу о проектах и процессе найма.",
+    "goal": "hire",
+    "lookingFor": [
+      "Java",
+      "Spring"
+    ]
+  },
+  {
+    "id": "demo-182",
+    "name": "Батыр О.",
+    "role": "Tech Lead Java",
+    "skills": [
+      "Java",
+      "Spring",
+      "Kafka",
+      "PostgreSQL"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "Микросервисы",
+      "Финтех"
+    ],
+    "about": "Расширяю команду: ищу разработчика на Java, Spring, готов обсудить задачи на митапе.",
+    "goal": "hire",
+    "lookingFor": [
+      "Java",
+      "Spring"
+    ]
+  },
+  {
+    "id": "demo-183",
+    "name": "Камила С.",
+    "role": "Head of Backend (Java)",
+    "skills": [
+      "Java",
+      "Spring",
+      "Docker",
+      "Kafka"
+    ],
+    "experienceYears": 10,
+    "interests": [
+      "Финтех",
+      "API"
+    ],
+    "about": "Нанимаю в команду, где пишем на Java, Spring. Расскажу о проектах и процессе найма.",
+    "goal": "hire",
+    "lookingFor": [
+      "Java",
+      "Spring"
+    ]
+  },
+  {
+    "id": "demo-184",
+    "name": "Максат Н.",
+    "role": "Java-разработчик",
+    "skills": [
+      "Java",
+      "Spring",
+      "PostgreSQL",
+      "Kafka"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "Финтех",
+      "API"
+    ],
+    "about": "Ищу работу, где смогу развиваться в Java, Spring. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-185",
+    "name": "Максат З.",
+    "role": "Junior Java Developer",
+    "skills": [
+      "Java",
+      "Spring",
+      "PostgreSQL",
+      "Kafka"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "API",
+      "Микросервисы"
+    ],
+    "about": "Ищу работу, где смогу развиваться в Java, Spring. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-186",
+    "name": "Карина П.",
+    "role": "Backend-разработчик на Java",
+    "skills": [
+      "Java",
+      "Spring",
+      "Kafka",
+      "PostgreSQL"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "Микросервисы",
+      "API"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с Java, Spring.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-187",
+    "name": "Марат С.",
+    "role": "Senior Java-разработчик",
+    "skills": [
+      "Java",
+      "Spring",
+      "Hibernate",
+      "Kafka",
+      "Docker"
+    ],
+    "experienceYears": 7,
+    "interests": [
+      "Финтех",
+      "API"
+    ],
+    "about": "Помогаю джунам с Java, Spring: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-188",
+    "name": "Камила О.",
+    "role": "Java-архитектор",
+    "skills": [
+      "Java",
+      "Spring",
+      "Hibernate",
+      "Kafka",
+      "Docker"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "API",
+      "Микросервисы"
+    ],
+    "about": "Помогаю джунам с Java, Spring: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-189",
+    "name": "Олжас Л.",
+    "role": "Начинающий Java-разработчик",
+    "skills": [
+      "Java",
+      "PostgreSQL"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Микросервисы",
+      "API"
+    ],
+    "about": "Изучаю Spring, Микросервисы и ищу наставника, который поможет не тратить время на ошибки.",
+    "goal": "find_mentor",
+    "lookingFor": [
+      "Spring",
+      "Микросервисы"
+    ]
+  },
+  {
+    "id": "demo-190",
+    "name": "Диана Л.",
+    "role": "Руководитель .NET-разработки",
+    "skills": [
+      "C#",
+      ".NET",
+      "SQL Server",
+      "Entity Framework"
+    ],
+    "experienceYears": 6,
+    "interests": [
+      "Облака",
+      "API"
+    ],
+    "about": "Нанимаю в команду, где пишем на C#, .NET. Расскажу о проектах и процессе найма.",
+    "goal": "hire",
+    "lookingFor": [
+      "C#",
+      ".NET"
+    ]
+  },
+  {
+    "id": "demo-191",
+    "name": "Дамир Е.",
+    "role": "Tech Lead C#",
+    "skills": [
+      "C#",
+      ".NET",
+      "Azure",
+      "ASP.NET Core"
+    ],
+    "experienceYears": 9,
+    "interests": [
+      "Облака",
+      "Энтерпрайз"
+    ],
+    "about": "Нанимаю в команду, где пишем на C#, .NET. Расскажу о проектах и процессе найма.",
+    "goal": "hire",
+    "lookingFor": [
+      "C#",
+      ".NET"
+    ]
+  },
+  {
+    "id": "demo-192",
+    "name": "Алихан И.",
+    "role": "Руководитель .NET-разработки",
+    "skills": [
+      "C#",
+      ".NET",
+      "Entity Framework",
+      "ASP.NET Core"
+    ],
+    "experienceYears": 12,
+    "interests": [
+      "API",
+      "Энтерпрайз"
+    ],
+    "about": "Нанимаю в команду, где пишем на C#, .NET. Расскажу о проектах и процессе найма.",
+    "goal": "hire",
+    "lookingFor": [
+      "C#",
+      ".NET"
+    ]
+  },
+  {
+    "id": "demo-193",
+    "name": "Даулет Ж.",
+    "role": "C#-разработчик",
+    "skills": [
+      "C#",
+      ".NET",
+      "Azure",
+      "Entity Framework"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "Энтерпрайз",
+      "Облака"
+    ],
+    "about": "Ищу первую или следующую работу, основной стек — C#, .NET.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-194",
+    "name": "Ринат Л.",
+    "role": ".NET-разработчик",
+    "skills": [
+      "C#",
+      ".NET",
+      "Entity Framework",
+      "Azure"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Облака",
+      "Энтерпрайз"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с C#, .NET.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-195",
+    "name": "Камила В.",
+    "role": "C#-разработчик",
+    "skills": [
+      "C#",
+      ".NET",
+      "Azure",
+      "ASP.NET Core"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "Облака",
+      "API"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с C#, .NET.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-196",
+    "name": "Мадина З.",
+    "role": "Senior .NET-разработчик",
+    "skills": [
+      "C#",
+      ".NET",
+      "Azure",
+      "Entity Framework",
+      "ASP.NET Core"
+    ],
+    "experienceYears": 10,
+    "interests": [
+      "Энтерпрайз",
+      "Облака"
+    ],
+    "about": "Готов менторить начинающих: разберу код и помогу выстроить план роста в C#, .NET.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-197",
+    "name": "Гүлназ К.",
+    "role": "Senior .NET-разработчик",
+    "skills": [
+      "C#",
+      ".NET",
+      "Entity Framework",
+      "ASP.NET Core",
+      "Azure"
+    ],
+    "experienceYears": 9,
+    "interests": [
+      "Облака",
+      "Энтерпрайз"
+    ],
+    "about": "Помогаю джунам с C#, .NET: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-198",
+    "name": "Санжар М.",
+    "role": "Junior C#-разработчик",
+    "skills": [
+      "C#",
+      "SQL Server"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "Облака",
+      "Энтерпрайз"
+    ],
+    "about": "Хочу разобраться в ASP.NET Core: ищу ментора для регулярных созвонов.",
+    "goal": "find_mentor",
+    "lookingFor": [
+      "ASP.NET Core"
+    ]
+  },
+  {
+    "id": "demo-199",
+    "name": "Аида П.",
+    "role": "Тимлид PHP-команды",
+    "skills": [
+      "PHP",
+      "Laravel",
+      "Redis",
+      "Vue"
+    ],
+    "experienceYears": 9,
+    "interests": [
+      "API",
+      "E-commerce"
+    ],
+    "about": "Расширяю команду: ищу разработчика на PHP, Laravel, готов обсудить задачи на митапе.",
+    "goal": "hire",
+    "lookingFor": [
+      "PHP",
+      "Laravel"
+    ]
+  },
+  {
+    "id": "demo-200",
+    "name": "Олжас И.",
+    "role": "CTO e-commerce",
+    "skills": [
+      "PHP",
+      "Laravel",
+      "MySQL",
+      "Vue"
+    ],
+    "experienceYears": 10,
+    "interests": [
+      "E-commerce",
+      "API"
+    ],
+    "about": "Ищу коллегу со знанием PHP, Laravel. Подойдут и сильные джуны.",
+    "goal": "hire",
+    "lookingFor": [
+      "PHP",
+      "Laravel"
+    ]
+  },
+  {
+    "id": "demo-201",
+    "name": "Карина Н.",
+    "role": "Тимлид PHP-команды",
+    "skills": [
+      "PHP",
+      "Laravel",
+      "Vue",
+      "MySQL"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "Веб",
+      "E-commerce"
+    ],
+    "about": "Ищу коллегу со знанием PHP, Laravel. Подойдут и сильные джуны.",
+    "goal": "hire",
+    "lookingFor": [
+      "PHP",
+      "Laravel"
+    ]
+  },
+  {
+    "id": "demo-202",
+    "name": "Даулет П.",
+    "role": "PHP-разработчик",
+    "skills": [
+      "PHP",
+      "Laravel",
+      "MySQL",
+      "Vue"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "E-commerce",
+      "API"
+    ],
+    "about": "Ищу первую или следующую работу, основной стек — PHP, Laravel.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-203",
+    "name": "Камила Н.",
+    "role": "Laravel-разработчик",
+    "skills": [
+      "PHP",
+      "Laravel",
+      "Vue",
+      "Docker"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "API",
+      "Веб"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с PHP, Laravel.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-204",
+    "name": "Гүлназ В.",
+    "role": "PHP-разработчик",
+    "skills": [
+      "PHP",
+      "Laravel",
+      "Redis",
+      "Vue"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "API",
+      "Веб"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с PHP, Laravel.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-205",
+    "name": "Виктория П.",
+    "role": "Senior PHP-разработчик",
+    "skills": [
+      "PHP",
+      "Laravel",
+      "MySQL",
+      "Vue",
+      "Redis"
+    ],
+    "experienceYears": 14,
+    "interests": [
+      "E-commerce",
+      "Веб"
+    ],
+    "about": "Помогаю джунам с PHP, Laravel: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-206",
+    "name": "Нұрлан С.",
+    "role": "Senior PHP-разработчик",
+    "skills": [
+      "PHP",
+      "Laravel",
+      "MySQL",
+      "Docker",
+      "Redis"
+    ],
+    "experienceYears": 9,
+    "interests": [
+      "E-commerce",
+      "Веб"
+    ],
+    "about": "Готов менторить начинающих: разберу код и помогу выстроить план роста в PHP, Laravel.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-207",
+    "name": "Гүлназ Д.",
+    "role": "Начинающий PHP-разработчик",
+    "skills": [
+      "PHP",
+      "Vue"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "API",
+      "E-commerce"
+    ],
+    "about": "Хочу разобраться в Laravel: ищу ментора для регулярных созвонов.",
+    "goal": "find_mentor",
+    "lookingFor": [
+      "Laravel"
+    ]
+  },
+  {
+    "id": "demo-208",
+    "name": "Ержан Н.",
+    "role": "Руководитель платформы на Go",
+    "skills": [
+      "Go",
+      "PostgreSQL",
+      "Docker",
+      "gRPC"
+    ],
+    "experienceYears": 12,
+    "interests": [
+      "API",
+      "Микросервисы"
+    ],
+    "about": "Нанимаю в команду, где пишем на Go, PostgreSQL. Расскажу о проектах и процессе найма.",
+    "goal": "hire",
+    "lookingFor": [
+      "Go"
+    ]
+  },
+  {
+    "id": "demo-209",
+    "name": "Дамир С.",
+    "role": "Tech Lead Go-сервисов",
+    "skills": [
+      "Go",
+      "PostgreSQL",
+      "gRPC",
+      "Kafka"
+    ],
+    "experienceYears": 12,
+    "interests": [
+      "Микросервисы",
+      "API"
+    ],
+    "about": "Расширяю команду: ищу разработчика на Go, PostgreSQL, готов обсудить задачи на митапе.",
+    "goal": "hire",
+    "lookingFor": [
+      "Go"
+    ]
+  },
+  {
+    "id": "demo-210",
+    "name": "Диана Н.",
+    "role": "Руководитель платформы на Go",
+    "skills": [
+      "Go",
+      "PostgreSQL",
+      "Kafka",
+      "Docker"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "Микросервисы",
+      "API"
+    ],
+    "about": "Нанимаю в команду, где пишем на Go, PostgreSQL. Расскажу о проектах и процессе найма.",
+    "goal": "hire",
+    "lookingFor": [
+      "Go"
+    ]
+  },
+  {
+    "id": "demo-211",
+    "name": "Алихан Л.",
+    "role": "Go-разработчик",
+    "skills": [
+      "Go",
+      "PostgreSQL",
+      "Kubernetes",
+      "gRPC"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "Highload",
+      "Микросервисы"
+    ],
+    "about": "Ищу первую или следующую работу, основной стек — Go, PostgreSQL.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-212",
+    "name": "Артём Б.",
+    "role": "Backend-разработчик на Go",
+    "skills": [
+      "Go",
+      "PostgreSQL",
+      "Kafka",
+      "gRPC"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Микросервисы",
+      "API"
+    ],
+    "about": "Ищу первую или следующую работу, основной стек — Go, PostgreSQL.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-213",
+    "name": "Сабина Р.",
+    "role": "Go-разработчик",
+    "skills": [
+      "Go",
+      "PostgreSQL",
+      "Kafka",
+      "gRPC"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "Highload",
+      "API"
+    ],
+    "about": "Ищу первую или следующую работу, основной стек — Go, PostgreSQL.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-214",
+    "name": "Камила Р.",
+    "role": "Senior Go-разработчик",
+    "skills": [
+      "Go",
+      "PostgreSQL",
+      "Docker",
+      "Kubernetes",
+      "gRPC"
+    ],
+    "experienceYears": 11,
+    "interests": [
+      "API",
+      "Микросервисы"
+    ],
+    "about": "Помогаю джунам с Go, PostgreSQL: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-215",
+    "name": "Ержан М.",
+    "role": "Senior Go-разработчик",
+    "skills": [
+      "Go",
+      "PostgreSQL",
+      "Kafka",
+      "gRPC",
+      "Docker"
+    ],
+    "experienceYears": 14,
+    "interests": [
+      "Highload",
+      "API"
+    ],
+    "about": "Помогаю джунам с Go, PostgreSQL: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-216",
+    "name": "Акбота Г.",
+    "role": "Руководитель Node.js-команды",
+    "skills": [
+      "Node.js",
+      "TypeScript",
+      "PostgreSQL",
+      "Docker"
+    ],
+    "experienceYears": 10,
+    "interests": [
+      "API",
+      "Веб"
+    ],
+    "about": "Расширяю команду: ищу разработчика на Node.js, TypeScript, готов обсудить задачи на митапе.",
+    "goal": "hire",
+    "lookingFor": [
+      "Node.js",
+      "TypeScript"
+    ]
+  },
+  {
+    "id": "demo-217",
+    "name": "Айгерім П.",
+    "role": "CTO стартапа",
+    "skills": [
+      "Node.js",
+      "TypeScript",
+      "Docker",
+      "PostgreSQL"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "API",
+      "Стартапы"
+    ],
+    "about": "Нанимаю в команду, где пишем на Node.js, TypeScript. Расскажу о проектах и процессе найма.",
+    "goal": "hire",
+    "lookingFor": [
+      "Node.js",
+      "TypeScript"
+    ]
+  },
+  {
+    "id": "demo-218",
+    "name": "Мадина В.",
+    "role": "Руководитель Node.js-команды",
+    "skills": [
+      "Node.js",
+      "TypeScript",
+      "PostgreSQL",
+      "Docker"
+    ],
+    "experienceYears": 9,
+    "interests": [
+      "API",
+      "Стартапы"
+    ],
+    "about": "Нанимаю в команду, где пишем на Node.js, TypeScript. Расскажу о проектах и процессе найма.",
+    "goal": "hire",
+    "lookingFor": [
+      "Node.js",
+      "TypeScript"
+    ]
+  },
+  {
+    "id": "demo-219",
+    "name": "Жансая М.",
+    "role": "Node.js-разработчик",
+    "skills": [
+      "Node.js",
+      "TypeScript",
+      "NestJS",
+      "MongoDB"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "Веб",
+      "API"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с Node.js, TypeScript.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-220",
+    "name": "Ержан Р.",
+    "role": "Backend-разработчик на Node.js",
+    "skills": [
+      "Node.js",
+      "TypeScript",
+      "NestJS",
+      "PostgreSQL"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Веб",
+      "Стартапы"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с Node.js, TypeScript.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-221",
+    "name": "Артём Р.",
+    "role": "Node.js-разработчик",
+    "skills": [
+      "Node.js",
+      "TypeScript",
+      "PostgreSQL",
+      "MongoDB"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "Веб",
+      "Стартапы"
+    ],
+    "about": "Ищу работу, где смогу развиваться в Node.js, TypeScript. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-222",
+    "name": "Виктория Л.",
+    "role": "Senior Node.js-разработчик",
+    "skills": [
+      "Node.js",
+      "TypeScript",
+      "Docker",
+      "MongoDB",
+      "PostgreSQL"
+    ],
+    "experienceYears": 9,
+    "interests": [
+      "Стартапы",
+      "Веб"
+    ],
+    "about": "Готов менторить начинающих: разберу код и помогу выстроить план роста в Node.js, TypeScript.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-223",
+    "name": "Айгерім Б.",
+    "role": "Senior Node.js-разработчик",
+    "skills": [
+      "Node.js",
+      "TypeScript",
+      "Docker",
+      "NestJS",
+      "PostgreSQL"
+    ],
+    "experienceYears": 12,
+    "interests": [
+      "Стартапы",
+      "API"
+    ],
+    "about": "Помогаю джунам с Node.js, TypeScript: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-224",
+    "name": "Нурсултан И.",
+    "role": "Junior Node.js-разработчик",
+    "skills": [
+      "Node.js",
+      "PostgreSQL"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "API",
+      "Веб"
+    ],
+    "about": "Хочу разобраться в NestJS: ищу ментора для регулярных созвонов.",
+    "goal": "find_mentor",
+    "lookingFor": [
+      "NestJS"
+    ]
+  },
+  {
+    "id": "demo-225",
+    "name": "Ерлан Б.",
+    "role": "Руководитель Python-разработки",
+    "skills": [
+      "Python",
+      "Django",
+      "Celery",
+      "PostgreSQL"
+    ],
+    "experienceYears": 11,
+    "interests": [
+      "Веб",
+      "API"
+    ],
+    "about": "Ищу коллегу со знанием Python, Django. Подойдут и сильные джуны.",
+    "goal": "hire",
+    "lookingFor": [
+      "Python",
+      "Django"
+    ]
+  },
+  {
+    "id": "demo-226",
+    "name": "Тимур К.",
+    "role": "Тимлид Django-команды",
+    "skills": [
+      "Python",
+      "Django",
+      "Celery",
+      "PostgreSQL"
+    ],
+    "experienceYears": 9,
+    "interests": [
+      "Веб",
+      "EdTech"
+    ],
+    "about": "Расширяю команду: ищу разработчика на Python, Django, готов обсудить задачи на митапе.",
+    "goal": "hire",
+    "lookingFor": [
+      "Python",
+      "Django"
+    ]
+  },
+  {
+    "id": "demo-227",
+    "name": "Ринат Е.",
+    "role": "Руководитель Python-разработки",
+    "skills": [
+      "Python",
+      "Django",
+      "Docker",
+      "Redis"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "Веб",
+      "EdTech"
+    ],
+    "about": "Ищу коллегу со знанием Python, Django. Подойдут и сильные джуны.",
+    "goal": "hire",
+    "lookingFor": [
+      "Python",
+      "Django"
+    ]
+  },
+  {
+    "id": "demo-228",
+    "name": "Ринат Т.",
+    "role": "Python-разработчик",
+    "skills": [
+      "Python",
+      "Django",
+      "Docker",
+      "PostgreSQL"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "Веб",
+      "EdTech"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с Python, Django.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-229",
+    "name": "Ильяс Р.",
+    "role": "Django-разработчик",
+    "skills": [
+      "Python",
+      "Django",
+      "Docker",
+      "Celery"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "EdTech",
+      "Веб"
+    ],
+    "about": "Ищу первую или следующую работу, основной стек — Python, Django.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-230",
+    "name": "Бахытжан Л.",
+    "role": "Python-разработчик",
+    "skills": [
+      "Python",
+      "Django",
+      "Redis",
+      "Celery"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "API",
+      "EdTech"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с Python, Django.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-231",
+    "name": "Марат В.",
+    "role": "Senior Python-разработчик",
+    "skills": [
+      "Python",
+      "Django",
+      "PostgreSQL",
+      "Docker",
+      "Celery"
+    ],
+    "experienceYears": 10,
+    "interests": [
+      "EdTech",
+      "API"
+    ],
+    "about": "Помогаю джунам с Python, Django: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-232",
+    "name": "Артём И.",
+    "role": "Senior Python-разработчик",
+    "skills": [
+      "Python",
+      "Django",
+      "Celery",
+      "Docker",
+      "PostgreSQL"
+    ],
+    "experienceYears": 11,
+    "interests": [
+      "EdTech",
+      "API"
+    ],
+    "about": "Помогаю джунам с Python, Django: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-233",
+    "name": "Ильяс Г.",
+    "role": "Руководитель фронтенд-команды",
+    "skills": [
+      "JavaScript",
+      "TypeScript",
+      "Vue",
+      "React"
+    ],
+    "experienceYears": 12,
+    "interests": [
+      "Веб",
+      "UI"
+    ],
+    "about": "Ищу коллегу со знанием JavaScript, TypeScript. Подойдут и сильные джуны.",
+    "goal": "hire",
+    "lookingFor": [
+      "JavaScript",
+      "TypeScript"
+    ]
+  },
+  {
+    "id": "demo-234",
+    "name": "Карина Е.",
+    "role": "Frontend Lead",
+    "skills": [
+      "JavaScript",
+      "TypeScript",
+      "React",
+      "Next.js"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "Дизайн-системы",
+      "UI"
+    ],
+    "about": "Расширяю команду: ищу разработчика на JavaScript, TypeScript, готов обсудить задачи на митапе.",
+    "goal": "hire",
+    "lookingFor": [
+      "JavaScript",
+      "TypeScript"
+    ]
+  },
+  {
+    "id": "demo-235",
+    "name": "Аида О.",
+    "role": "Руководитель фронтенд-команды",
+    "skills": [
+      "JavaScript",
+      "TypeScript",
+      "React",
+      "Vue"
+    ],
+    "experienceYears": 12,
+    "interests": [
+      "Дизайн-системы",
+      "Веб"
+    ],
+    "about": "Нанимаю в команду, где пишем на JavaScript, TypeScript. Расскажу о проектах и процессе найма.",
+    "goal": "hire",
+    "lookingFor": [
+      "JavaScript",
+      "TypeScript"
+    ]
+  },
+  {
+    "id": "demo-236",
+    "name": "Руслан В.",
+    "role": "Frontend-разработчик",
+    "skills": [
+      "JavaScript",
+      "TypeScript",
+      "CSS",
+      "Next.js"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "UI",
+      "Дизайн-системы"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с JavaScript, TypeScript.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-237",
+    "name": "Нұрлан Д.",
+    "role": "Vue-разработчик",
+    "skills": [
+      "JavaScript",
+      "TypeScript",
+      "Vue",
+      "CSS"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Веб",
+      "UI"
+    ],
+    "about": "Ищу работу, где смогу развиваться в JavaScript, TypeScript. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-238",
+    "name": "Максат Т.",
+    "role": "Angular-разработчик",
+    "skills": [
+      "JavaScript",
+      "TypeScript",
+      "Vue",
+      "Angular"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "UI",
+      "Веб"
+    ],
+    "about": "Ищу работу, где смогу развиваться в JavaScript, TypeScript. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-239",
+    "name": "Нұрлан Р.",
+    "role": "Senior Frontend-разработчик",
+    "skills": [
+      "JavaScript",
+      "TypeScript",
+      "React",
+      "CSS",
+      "Vue"
+    ],
+    "experienceYears": 7,
+    "interests": [
+      "Веб",
+      "Дизайн-системы"
+    ],
+    "about": "Готов менторить начинающих: разберу код и помогу выстроить план роста в JavaScript, TypeScript.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-240",
+    "name": "Айгерім О.",
+    "role": "Senior Frontend-разработчик",
+    "skills": [
+      "JavaScript",
+      "TypeScript",
+      "Angular",
+      "Next.js",
+      "CSS"
+    ],
+    "experienceYears": 12,
+    "interests": [
+      "Дизайн-системы",
+      "UI"
+    ],
+    "about": "Помогаю джунам с JavaScript, TypeScript: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-241",
+    "name": "Карина Д.",
+    "role": "Начинающий frontend-разработчик",
+    "skills": [
+      "JavaScript",
+      "Vue"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Дизайн-системы",
+      "Веб"
+    ],
+    "about": "Изучаю React, TypeScript и ищу наставника, который поможет не тратить время на ошибки.",
+    "goal": "find_mentor",
+    "lookingFor": [
+      "React",
+      "TypeScript"
+    ]
+  },
+  {
+    "id": "demo-242",
+    "name": "Олжас Е.",
+    "role": "Руководитель мобильной разработки",
+    "skills": [
+      "Flutter",
+      "Dart",
+      "REST API",
+      "Firebase"
+    ],
+    "experienceYears": 9,
+    "interests": [
+      "Мобильная разработка",
+      "Стартапы"
+    ],
+    "about": "Нанимаю в команду, где пишем на Flutter, Dart. Расскажу о проектах и процессе найма.",
+    "goal": "hire",
+    "lookingFor": [
+      "Flutter",
+      "Dart"
+    ]
+  },
+  {
+    "id": "demo-243",
+    "name": "Гүлназ Н.",
+    "role": "Mobile Lead (Flutter)",
+    "skills": [
+      "Flutter",
+      "Dart",
+      "Firebase",
+      "BLoC"
+    ],
+    "experienceYears": 12,
+    "interests": [
+      "Стартапы",
+      "Мобильная разработка"
+    ],
+    "about": "Ищу коллегу со знанием Flutter, Dart. Подойдут и сильные джуны.",
+    "goal": "hire",
+    "lookingFor": [
+      "Flutter",
+      "Dart"
+    ]
+  },
+  {
+    "id": "demo-244",
+    "name": "Руслан Л.",
+    "role": "Руководитель мобильной разработки",
+    "skills": [
+      "Flutter",
+      "Dart",
+      "REST API",
+      "Riverpod"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "Стартапы",
+      "Мобильная разработка"
+    ],
+    "about": "Нанимаю в команду, где пишем на Flutter, Dart. Расскажу о проектах и процессе найма.",
+    "goal": "hire",
+    "lookingFor": [
+      "Flutter",
+      "Dart"
+    ]
+  },
+  {
+    "id": "demo-245",
+    "name": "Бахытжан З.",
+    "role": "Flutter-разработчик",
+    "skills": [
+      "Flutter",
+      "Dart",
+      "BLoC",
+      "REST API"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "Стартапы",
+      "Мобильная разработка"
+    ],
+    "about": "Ищу работу, где смогу развиваться в Flutter, Dart. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-246",
+    "name": "Диана М.",
+    "role": "Мобильный разработчик",
+    "skills": [
+      "Flutter",
+      "Dart",
+      "Riverpod",
+      "Firebase"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Мобильная разработка",
+      "Стартапы"
+    ],
+    "about": "Ищу первую или следующую работу, основной стек — Flutter, Dart.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-247",
+    "name": "Ержан З.",
+    "role": "Flutter-разработчик",
+    "skills": [
+      "Flutter",
+      "Dart",
+      "REST API",
+      "BLoC"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "Стартапы",
+      "Мобильная разработка"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с Flutter, Dart.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-248",
+    "name": "Зарина К.",
+    "role": "Senior Flutter-разработчик",
+    "skills": [
+      "Flutter",
+      "Dart",
+      "Firebase",
+      "BLoC",
+      "REST API"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "Стартапы",
+      "Мобильная разработка"
+    ],
+    "about": "Готов менторить начинающих: разберу код и помогу выстроить план роста в Flutter, Dart.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-249",
+    "name": "Карина Т.",
+    "role": "Senior Flutter-разработчик",
+    "skills": [
+      "Flutter",
+      "Dart",
+      "Riverpod",
+      "REST API",
+      "BLoC"
+    ],
+    "experienceYears": 14,
+    "interests": [
+      "Мобильная разработка",
+      "Стартапы"
+    ],
+    "about": "Готов менторить начинающих: разберу код и помогу выстроить план роста в Flutter, Dart.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-250",
+    "name": "Ерлан Д.",
+    "role": "Junior Flutter-разработчик",
+    "skills": [
+      "Flutter",
+      "Firebase"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Стартапы",
+      "Мобильная разработка"
+    ],
+    "about": "Хочу разобраться в Flutter: ищу ментора для регулярных созвонов.",
+    "goal": "find_mentor",
+    "lookingFor": [
+      "Flutter"
+    ]
+  },
+  {
+    "id": "demo-251",
+    "name": "Артём О.",
+    "role": "Руководитель iOS-разработки",
+    "skills": [
+      "Swift",
+      "SwiftUI",
+      "Combine",
+      "Core Data"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "UI",
+      "Мобильная разработка"
+    ],
+    "about": "Ищу коллегу со знанием Swift, SwiftUI. Подойдут и сильные джуны.",
+    "goal": "hire",
+    "lookingFor": [
+      "Swift",
+      "SwiftUI"
+    ]
+  },
+  {
+    "id": "demo-252",
+    "name": "Максат Г.",
+    "role": "Руководитель iOS-разработки",
+    "skills": [
+      "Swift",
+      "SwiftUI",
+      "Core Data",
+      "Combine"
+    ],
+    "experienceYears": 7,
+    "interests": [
+      "Мобильная разработка",
+      "UI"
+    ],
+    "about": "Ищу коллегу со знанием Swift, SwiftUI. Подойдут и сильные джуны.",
+    "goal": "hire",
+    "lookingFor": [
+      "Swift",
+      "SwiftUI"
+    ]
+  },
+  {
+    "id": "demo-253",
+    "name": "Динара П.",
+    "role": "iOS-разработчик",
+    "skills": [
+      "Swift",
+      "SwiftUI",
+      "Core Data",
+      "UIKit"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "Мобильная разработка",
+      "UI"
+    ],
+    "about": "Ищу первую или следующую работу, основной стек — Swift, SwiftUI.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-254",
+    "name": "Медина В.",
+    "role": "Junior iOS Developer",
+    "skills": [
+      "Swift",
+      "SwiftUI",
+      "Core Data",
+      "Combine"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "UI",
+      "Мобильная разработка"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с Swift, SwiftUI.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-255",
+    "name": "Динара О.",
+    "role": "iOS-разработчик",
+    "skills": [
+      "Swift",
+      "SwiftUI",
+      "Core Data",
+      "Combine"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "Мобильная разработка",
+      "UI"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с Swift, SwiftUI.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-256",
+    "name": "Лаура Б.",
+    "role": "Senior iOS-разработчик",
+    "skills": [
+      "Swift",
+      "SwiftUI",
+      "UIKit",
+      "Core Data",
+      "Combine"
+    ],
+    "experienceYears": 10,
+    "interests": [
+      "UI",
+      "Мобильная разработка"
+    ],
+    "about": "Помогаю джунам с Swift, SwiftUI: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-257",
+    "name": "Нұрлан Н.",
+    "role": "Senior iOS-разработчик",
+    "skills": [
+      "Swift",
+      "SwiftUI",
+      "UIKit",
+      "Core Data",
+      "Combine"
+    ],
+    "experienceYears": 13,
+    "interests": [
+      "Мобильная разработка",
+      "UI"
+    ],
+    "about": "Помогаю джунам с Swift, SwiftUI: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-258",
+    "name": "Марат О.",
+    "role": "Руководитель Android-разработки",
+    "skills": [
+      "Kotlin",
+      "Android SDK",
+      "Room",
+      "Coroutines"
+    ],
+    "experienceYears": 6,
+    "interests": [
+      "UI",
+      "Мобильная разработка"
+    ],
+    "about": "Ищу коллегу со знанием Kotlin, Android SDK. Подойдут и сильные джуны.",
+    "goal": "hire",
+    "lookingFor": [
+      "Kotlin"
+    ]
+  },
+  {
+    "id": "demo-259",
+    "name": "Ержан Г.",
+    "role": "Руководитель Android-разработки",
+    "skills": [
+      "Kotlin",
+      "Android SDK",
+      "Room",
+      "Coroutines"
+    ],
+    "experienceYears": 12,
+    "interests": [
+      "Мобильная разработка",
+      "UI"
+    ],
+    "about": "Ищу коллегу со знанием Kotlin, Android SDK. Подойдут и сильные джуны.",
+    "goal": "hire",
+    "lookingFor": [
+      "Kotlin"
+    ]
+  },
+  {
+    "id": "demo-260",
+    "name": "Олжас Т.",
+    "role": "Android-разработчик",
+    "skills": [
+      "Kotlin",
+      "Android SDK",
+      "Jetpack Compose",
+      "Room"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "UI",
+      "Мобильная разработка"
+    ],
+    "about": "Ищу работу, где смогу развиваться в Kotlin, Android SDK. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-261",
+    "name": "Сабина Н.",
+    "role": "Junior Android Developer",
+    "skills": [
+      "Kotlin",
+      "Android SDK",
+      "Room",
+      "Jetpack Compose"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Мобильная разработка",
+      "UI"
+    ],
+    "about": "Ищу работу, где смогу развиваться в Kotlin, Android SDK. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-262",
+    "name": "Мадина П.",
+    "role": "Android-разработчик",
+    "skills": [
+      "Kotlin",
+      "Android SDK",
+      "Room",
+      "Coroutines"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "UI",
+      "Мобильная разработка"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с Kotlin, Android SDK.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-263",
+    "name": "Зарина П.",
+    "role": "Senior Android-разработчик",
+    "skills": [
+      "Kotlin",
+      "Android SDK",
+      "Jetpack Compose",
+      "Room",
+      "Coroutines"
+    ],
+    "experienceYears": 9,
+    "interests": [
+      "UI",
+      "Мобильная разработка"
+    ],
+    "about": "Помогаю джунам с Kotlin, Android SDK: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-264",
+    "name": "Лаура Л.",
+    "role": "Senior Android-разработчик",
+    "skills": [
+      "Kotlin",
+      "Android SDK",
+      "Coroutines",
+      "Room",
+      "Jetpack Compose"
+    ],
+    "experienceYears": 13,
+    "interests": [
+      "UI",
+      "Мобильная разработка"
+    ],
+    "about": "Готов менторить начинающих: разберу код и помогу выстроить план роста в Kotlin, Android SDK.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-265",
+    "name": "Артём Л.",
+    "role": "Руководитель отдела тестирования",
+    "skills": [
+      "Тестирование",
+      "Postman",
+      "Playwright",
+      "SQL"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "Автоматизация",
+      "API"
+    ],
+    "about": "Нанимаю в команду, где пишем на Тестирование, Postman. Расскажу о проектах и процессе найма.",
+    "goal": "hire",
+    "lookingFor": [
+      "Тестирование",
+      "Selenium"
+    ]
+  },
+  {
+    "id": "demo-266",
+    "name": "Тимур П.",
+    "role": "QA Lead",
+    "skills": [
+      "Тестирование",
+      "Postman",
+      "Jira",
+      "Playwright"
+    ],
+    "experienceYears": 10,
+    "interests": [
+      "Автоматизация",
+      "API"
+    ],
+    "about": "Расширяю команду: ищу разработчика на Тестирование, Postman, готов обсудить задачи на митапе.",
+    "goal": "hire",
+    "lookingFor": [
+      "Тестирование",
+      "Selenium"
+    ]
+  },
+  {
+    "id": "demo-267",
+    "name": "Асель Е.",
+    "role": "Head of QA",
+    "skills": [
+      "Тестирование",
+      "Postman",
+      "Playwright",
+      "Cypress"
+    ],
+    "experienceYears": 7,
+    "interests": [
+      "Автоматизация",
+      "API"
+    ],
+    "about": "Расширяю команду: ищу разработчика на Тестирование, Postman, готов обсудить задачи на митапе.",
+    "goal": "hire",
+    "lookingFor": [
+      "Тестирование",
+      "Selenium"
+    ]
+  },
+  {
+    "id": "demo-268",
+    "name": "Нурсултан М.",
+    "role": "QA-инженер",
+    "skills": [
+      "Тестирование",
+      "Postman",
+      "Jira",
+      "Selenium"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "Автоматизация",
+      "Качество"
+    ],
+    "about": "Ищу работу, где смогу развиваться в Тестирование, Postman. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-269",
+    "name": "Алина Е.",
+    "role": "Тестировщик",
+    "skills": [
+      "Тестирование",
+      "Postman",
+      "Playwright",
+      "Cypress"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Качество",
+      "API"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с Тестирование, Postman.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-270",
+    "name": "Диана К.",
+    "role": "QA Automation Engineer",
+    "skills": [
+      "Тестирование",
+      "Postman",
+      "Selenium",
+      "Jira"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "Качество",
+      "API"
+    ],
+    "about": "Ищу работу, где смогу развиваться в Тестирование, Postman. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-271",
+    "name": "Батыр Е.",
+    "role": "Senior QA Automation",
+    "skills": [
+      "Тестирование",
+      "Postman",
+      "Jira",
+      "Selenium",
+      "Cypress"
+    ],
+    "experienceYears": 13,
+    "interests": [
+      "API",
+      "Автоматизация"
+    ],
+    "about": "Помогаю джунам с Тестирование, Postman: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-272",
+    "name": "Руслан Р.",
+    "role": "Senior QA Automation",
+    "skills": [
+      "Тестирование",
+      "Postman",
+      "Selenium",
+      "Jira",
+      "Playwright"
+    ],
+    "experienceYears": 9,
+    "interests": [
+      "API",
+      "Автоматизация"
+    ],
+    "about": "Помогаю джунам с Тестирование, Postman: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-273",
+    "name": "Айгерім Г.",
+    "role": "Начинающий тестировщик",
+    "skills": [
+      "Тестирование",
+      "Jira"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Качество",
+      "API"
+    ],
+    "about": "Изучаю Автоматизация тестирования, Selenium и ищу наставника, который поможет не тратить время на ошибки.",
+    "goal": "find_mentor",
+    "lookingFor": [
+      "Автоматизация тестирования",
+      "Selenium"
+    ]
+  },
+  {
+    "id": "demo-274",
+    "name": "Ильяс С.",
+    "role": "Head of Data Science",
+    "skills": [
+      "Python",
+      "Machine Learning",
+      "SQL",
+      "PyTorch"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "Данные",
+      "NLP"
+    ],
+    "about": "Ищу коллегу со знанием Python, Machine Learning. Подойдут и сильные джуны.",
+    "goal": "hire",
+    "lookingFor": [
+      "Python",
+      "Machine Learning"
+    ]
+  },
+  {
+    "id": "demo-275",
+    "name": "Жансая Л.",
+    "role": "Руководитель ML-команды",
+    "skills": [
+      "Python",
+      "Machine Learning",
+      "pandas",
+      "NLP"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "Данные",
+      "AI"
+    ],
+    "about": "Расширяю команду: ищу разработчика на Python, Machine Learning, готов обсудить задачи на митапе.",
+    "goal": "hire",
+    "lookingFor": [
+      "Python",
+      "Machine Learning"
+    ]
+  },
+  {
+    "id": "demo-276",
+    "name": "Олжас П.",
+    "role": "Lead Data Scientist",
+    "skills": [
+      "Python",
+      "Machine Learning",
+      "scikit-learn",
+      "pandas"
+    ],
+    "experienceYears": 11,
+    "interests": [
+      "AI",
+      "Данные"
+    ],
+    "about": "Ищу коллегу со знанием Python, Machine Learning. Подойдут и сильные джуны.",
+    "goal": "hire",
+    "lookingFor": [
+      "Python",
+      "Machine Learning"
+    ]
+  },
+  {
+    "id": "demo-277",
+    "name": "Тимур Р.",
+    "role": "Data Scientist",
+    "skills": [
+      "Python",
+      "Machine Learning",
+      "PyTorch",
+      "NLP"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "Данные",
+      "AI"
+    ],
+    "about": "Ищу работу, где смогу развиваться в Python, Machine Learning. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-278",
+    "name": "Нурсултан К.",
+    "role": "Junior Data Scientist",
+    "skills": [
+      "Python",
+      "Machine Learning",
+      "scikit-learn",
+      "PyTorch"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "AI",
+      "Данные"
+    ],
+    "about": "Ищу работу, где смогу развиваться в Python, Machine Learning. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-279",
+    "name": "Айгерім В.",
+    "role": "ML-инженер",
+    "skills": [
+      "Python",
+      "Machine Learning",
+      "SQL",
+      "pandas"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "Данные",
+      "AI"
+    ],
+    "about": "Ищу работу, где смогу развиваться в Python, Machine Learning. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-280",
+    "name": "Жансая Е.",
+    "role": "Senior Data Scientist",
+    "skills": [
+      "Python",
+      "Machine Learning",
+      "SQL",
+      "PyTorch",
+      "NLP"
+    ],
+    "experienceYears": 14,
+    "interests": [
+      "Данные",
+      "NLP"
+    ],
+    "about": "Готов менторить начинающих: разберу код и помогу выстроить план роста в Python, Machine Learning.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-281",
+    "name": "Алихан Н.",
+    "role": "ML-архитектор",
+    "skills": [
+      "Python",
+      "Machine Learning",
+      "NLP",
+      "scikit-learn",
+      "SQL"
+    ],
+    "experienceYears": 13,
+    "interests": [
+      "Данные",
+      "AI"
+    ],
+    "about": "Готов менторить начинающих: разберу код и помогу выстроить план роста в Python, Machine Learning.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-282",
+    "name": "Нұрлан Г.",
+    "role": "Начинающий data scientist",
+    "skills": [
+      "Python",
+      "SQL"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Данные",
+      "AI"
+    ],
+    "about": "Изучаю Machine Learning, PyTorch и ищу наставника, который поможет не тратить время на ошибки.",
+    "goal": "find_mentor",
+    "lookingFor": [
+      "Machine Learning",
+      "PyTorch"
+    ]
+  },
+  {
+    "id": "demo-283",
+    "name": "Марат М.",
+    "role": "Руководитель DevOps",
+    "skills": [
+      "Docker",
+      "Kubernetes",
+      "AWS",
+      "Linux"
+    ],
+    "experienceYears": 6,
+    "interests": [
+      "Облака",
+      "Надёжность"
+    ],
+    "about": "Нанимаю в команду, где пишем на Docker, Kubernetes. Расскажу о проектах и процессе найма.",
+    "goal": "hire",
+    "lookingFor": [
+      "Docker",
+      "Kubernetes"
+    ]
+  },
+  {
+    "id": "demo-284",
+    "name": "Алихан Б.",
+    "role": "Head of Infrastructure",
+    "skills": [
+      "Docker",
+      "Kubernetes",
+      "Prometheus",
+      "CI/CD"
+    ],
+    "experienceYears": 12,
+    "interests": [
+      "Облака",
+      "Автоматизация"
+    ],
+    "about": "Ищу коллегу со знанием Docker, Kubernetes. Подойдут и сильные джуны.",
+    "goal": "hire",
+    "lookingFor": [
+      "Docker",
+      "Kubernetes"
+    ]
+  },
+  {
+    "id": "demo-285",
+    "name": "Ержан Ж.",
+    "role": "Руководитель DevOps",
+    "skills": [
+      "Docker",
+      "Kubernetes",
+      "Terraform",
+      "Linux"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "Облака",
+      "Надёжность"
+    ],
+    "about": "Нанимаю в команду, где пишем на Docker, Kubernetes. Расскажу о проектах и процессе найма.",
+    "goal": "hire",
+    "lookingFor": [
+      "Docker",
+      "Kubernetes"
+    ]
+  },
+  {
+    "id": "demo-286",
+    "name": "Динара И.",
+    "role": "DevOps-инженер",
+    "skills": [
+      "Docker",
+      "Kubernetes",
+      "AWS",
+      "CI/CD"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "Облака",
+      "Надёжность"
+    ],
+    "about": "Ищу работу, где смогу развиваться в Docker, Kubernetes. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-287",
+    "name": "Медина Л.",
+    "role": "SRE-инженер",
+    "skills": [
+      "Docker",
+      "Kubernetes",
+      "CI/CD",
+      "Prometheus"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Автоматизация",
+      "Надёжность"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с Docker, Kubernetes.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-288",
+    "name": "Нұрлан Т.",
+    "role": "DevOps-инженер",
+    "skills": [
+      "Docker",
+      "Kubernetes",
+      "CI/CD",
+      "Linux"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "Надёжность",
+      "Автоматизация"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с Docker, Kubernetes.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-289",
+    "name": "Нурсултан Н.",
+    "role": "Senior DevOps-инженер",
+    "skills": [
+      "Docker",
+      "Kubernetes",
+      "CI/CD",
+      "Prometheus",
+      "Terraform"
+    ],
+    "experienceYears": 10,
+    "interests": [
+      "Облака",
+      "Автоматизация"
+    ],
+    "about": "Готов менторить начинающих: разберу код и помогу выстроить план роста в Docker, Kubernetes.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-290",
+    "name": "Алина Р.",
+    "role": "Senior DevOps-инженер",
+    "skills": [
+      "Docker",
+      "Kubernetes",
+      "AWS",
+      "CI/CD",
+      "Terraform"
+    ],
+    "experienceYears": 12,
+    "interests": [
+      "Надёжность",
+      "Автоматизация"
+    ],
+    "about": "Помогаю джунам с Docker, Kubernetes: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-291",
+    "name": "Нұрлан М.",
+    "role": "Junior DevOps",
+    "skills": [
+      "Docker",
+      "Linux"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "Автоматизация",
+      "Облака"
+    ],
+    "about": "Хочу разобраться в Kubernetes, CI/CD: ищу ментора для регулярных созвонов.",
+    "goal": "find_mentor",
+    "lookingFor": [
+      "Kubernetes",
+      "CI/CD"
+    ]
+  },
+  {
+    "id": "demo-292",
+    "name": "Акбота Д.",
+    "role": "Руководитель дизайна",
+    "skills": [
+      "Figma",
+      "UI/UX",
+      "Прототипирование",
+      "UX-исследования"
+    ],
+    "experienceYears": 12,
+    "interests": [
+      "Дизайн",
+      "UI"
+    ],
+    "about": "Ищу коллегу со знанием Figma, UI/UX. Подойдут и сильные джуны.",
+    "goal": "hire",
+    "lookingFor": [
+      "Figma",
+      "UI/UX"
+    ]
+  },
+  {
+    "id": "demo-293",
+    "name": "Марат И.",
+    "role": "Art Director",
+    "skills": [
+      "Figma",
+      "UI/UX",
+      "UX-исследования",
+      "Прототипирование"
+    ],
+    "experienceYears": 6,
+    "interests": [
+      "UI",
+      "Дизайн"
+    ],
+    "about": "Ищу коллегу со знанием Figma, UI/UX. Подойдут и сильные джуны.",
+    "goal": "hire",
+    "lookingFor": [
+      "Figma",
+      "UI/UX"
+    ]
+  },
+  {
+    "id": "demo-294",
+    "name": "Санжар Б.",
+    "role": "Руководитель дизайна",
+    "skills": [
+      "Figma",
+      "UI/UX",
+      "Прототипирование",
+      "Дизайн-системы"
+    ],
+    "experienceYears": 6,
+    "interests": [
+      "Дизайн",
+      "Продукт"
+    ],
+    "about": "Расширяю команду: ищу разработчика на Figma, UI/UX, готов обсудить задачи на митапе.",
+    "goal": "hire",
+    "lookingFor": [
+      "Figma",
+      "UI/UX"
+    ]
+  },
+  {
+    "id": "demo-295",
+    "name": "Ринат П.",
+    "role": "UI/UX-дизайнер",
+    "skills": [
+      "Figma",
+      "UI/UX",
+      "Прототипирование",
+      "UX-исследования"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "Продукт",
+      "Дизайн"
+    ],
+    "about": "Ищу первую или следующую работу, основной стек — Figma, UI/UX.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-296",
+    "name": "Асель Р.",
+    "role": "Продуктовый дизайнер",
+    "skills": [
+      "Figma",
+      "UI/UX",
+      "UX-исследования",
+      "Прототипирование"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Дизайн",
+      "UI"
+    ],
+    "about": "Ищу работу, где смогу развиваться в Figma, UI/UX. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-297",
+    "name": "Аида С.",
+    "role": "UI/UX-дизайнер",
+    "skills": [
+      "Figma",
+      "UI/UX",
+      "UX-исследования",
+      "Дизайн-системы"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "Продукт",
+      "Дизайн"
+    ],
+    "about": "Ищу первую или следующую работу, основной стек — Figma, UI/UX.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-298",
+    "name": "Аида М.",
+    "role": "Senior продуктовый дизайнер",
+    "skills": [
+      "Figma",
+      "UI/UX",
+      "Дизайн-системы",
+      "Прототипирование",
+      "UX-исследования"
+    ],
+    "experienceYears": 14,
+    "interests": [
+      "Продукт",
+      "UI"
+    ],
+    "about": "Готов менторить начинающих: разберу код и помогу выстроить план роста в Figma, UI/UX.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-299",
+    "name": "Акбота С.",
+    "role": "Senior продуктовый дизайнер",
+    "skills": [
+      "Figma",
+      "UI/UX",
+      "Дизайн-системы",
+      "Прототипирование",
+      "UX-исследования"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "UI",
+      "Продукт"
+    ],
+    "about": "Помогаю джунам с Figma, UI/UX: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-300",
+    "name": "Бахытжан Е.",
+    "role": "Head of Product",
+    "skills": [
+      "Продуктовый менеджмент",
+      "Аналитика",
+      "Roadmap",
+      "Jira"
+    ],
+    "experienceYears": 10,
+    "interests": [
+      "Продукт",
+      "EdTech"
+    ],
+    "about": "Расширяю команду: ищу разработчика на Продуктовый менеджмент, Аналитика, готов обсудить задачи на митапе.",
+    "goal": "hire",
+    "lookingFor": [
+      "Продуктовый менеджмент"
+    ]
+  },
+  {
+    "id": "demo-301",
+    "name": "Мадина К.",
+    "role": "CPO",
+    "skills": [
+      "Продуктовый менеджмент",
+      "Аналитика",
+      "Roadmap",
+      "Jira"
+    ],
+    "experienceYears": 7,
+    "interests": [
+      "Продукт",
+      "Стартапы"
+    ],
+    "about": "Ищу коллегу со знанием Продуктовый менеджмент, Аналитика. Подойдут и сильные джуны.",
+    "goal": "hire",
+    "lookingFor": [
+      "Продуктовый менеджмент"
+    ]
+  },
+  {
+    "id": "demo-302",
+    "name": "Алина Н.",
+    "role": "Head of Product",
+    "skills": [
+      "Продуктовый менеджмент",
+      "Аналитика",
+      "Roadmap",
+      "Agile"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "EdTech",
+      "Продукт"
+    ],
+    "about": "Расширяю команду: ищу разработчика на Продуктовый менеджмент, Аналитика, готов обсудить задачи на митапе.",
+    "goal": "hire",
+    "lookingFor": [
+      "Продуктовый менеджмент"
+    ]
+  },
+  {
+    "id": "demo-303",
+    "name": "Гүлназ Р.",
+    "role": "Product Manager",
+    "skills": [
+      "Продуктовый менеджмент",
+      "Аналитика",
+      "Jira",
+      "CustDev"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "Продукт",
+      "Стартапы"
+    ],
+    "about": "Ищу работу, где смогу развиваться в Продуктовый менеджмент, Аналитика. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-304",
+    "name": "Алихан В.",
+    "role": "Project Manager",
+    "skills": [
+      "Продуктовый менеджмент",
+      "Аналитика",
+      "Agile",
+      "Jira"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "Стартапы",
+      "Продукт"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с Продуктовый менеджмент, Аналитика.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-305",
+    "name": "Санжар О.",
+    "role": "Product Manager",
+    "skills": [
+      "Продуктовый менеджмент",
+      "Аналитика",
+      "Agile",
+      "Roadmap"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "Стартапы",
+      "Продукт"
+    ],
+    "about": "Ищу первую или следующую работу, основной стек — Продуктовый менеджмент, Аналитика.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-306",
+    "name": "Санжар Н.",
+    "role": "Senior Product Manager",
+    "skills": [
+      "Продуктовый менеджмент",
+      "Аналитика",
+      "Roadmap",
+      "Jira",
+      "CustDev"
+    ],
+    "experienceYears": 10,
+    "interests": [
+      "Стартапы",
+      "EdTech"
+    ],
+    "about": "Готов менторить начинающих: разберу код и помогу выстроить план роста в Продуктовый менеджмент, Аналитика.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-307",
+    "name": "Ержан И.",
+    "role": "Senior Product Manager",
+    "skills": [
+      "Продуктовый менеджмент",
+      "Аналитика",
+      "Roadmap",
+      "Jira",
+      "CustDev"
+    ],
+    "experienceYears": 10,
+    "interests": [
+      "Продукт",
+      "EdTech"
+    ],
+    "about": "Готов менторить начинающих: разберу код и помогу выстроить план роста в Продуктовый менеджмент, Аналитика.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-308",
+    "name": "Батыр Г.",
+    "role": "Junior Product Manager",
+    "skills": [
+      "Продуктовый менеджмент",
+      "Jira"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "Стартапы",
+      "EdTech"
+    ],
+    "about": "Хочу разобраться в Продуктовый менеджмент, CustDev: ищу ментора для регулярных созвонов.",
+    "goal": "find_mentor",
+    "lookingFor": [
+      "Продуктовый менеджмент",
+      "CustDev"
+    ]
+  },
+  {
+    "id": "demo-309",
+    "name": "Гүлназ З.",
+    "role": "Руководитель отдела 1С",
+    "skills": [
+      "1С",
+      "1С:Предприятие",
+      "Интеграции",
+      "SQL"
+    ],
+    "experienceYears": 9,
+    "interests": [
+      "Автоматизация бизнеса",
+      "ERP"
+    ],
+    "about": "Расширяю команду: ищу разработчика на 1С, 1С:Предприятие, готов обсудить задачи на митапе.",
+    "goal": "hire",
+    "lookingFor": [
+      "1С"
+    ]
+  },
+  {
+    "id": "demo-310",
+    "name": "Жансая Д.",
+    "role": "Руководитель отдела 1С",
+    "skills": [
+      "1С",
+      "1С:Предприятие",
+      "SQL",
+      "ERP"
+    ],
+    "experienceYears": 8,
+    "interests": [
+      "Автоматизация бизнеса",
+      "ERP"
+    ],
+    "about": "Ищу коллегу со знанием 1С, 1С:Предприятие. Подойдут и сильные джуны.",
+    "goal": "hire",
+    "lookingFor": [
+      "1С"
+    ]
+  },
+  {
+    "id": "demo-311",
+    "name": "Ринат Р.",
+    "role": "Программист 1С",
+    "skills": [
+      "1С",
+      "1С:Предприятие",
+      "Интеграции",
+      "ERP"
+    ],
+    "experienceYears": 0,
+    "interests": [
+      "Автоматизация бизнеса",
+      "ERP"
+    ],
+    "about": "Ищу работу, где смогу развиваться в 1С, 1С:Предприятие. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-312",
+    "name": "Ринат О.",
+    "role": "Разработчик 1С",
+    "skills": [
+      "1С",
+      "1С:Предприятие",
+      "SQL",
+      "Интеграции"
+    ],
+    "experienceYears": 1,
+    "interests": [
+      "ERP",
+      "Автоматизация бизнеса"
+    ],
+    "about": "Хочу присоединиться к продуктовой команде, работаю с 1С, 1С:Предприятие.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-313",
+    "name": "Ильяс И.",
+    "role": "Программист 1С",
+    "skills": [
+      "1С",
+      "1С:Предприятие",
+      "Интеграции",
+      "SQL"
+    ],
+    "experienceYears": 2,
+    "interests": [
+      "Автоматизация бизнеса",
+      "ERP"
+    ],
+    "about": "Ищу работу, где смогу развиваться в 1С, 1С:Предприятие. Есть пет-проекты на GitHub.",
+    "goal": "find_job"
+  },
+  {
+    "id": "demo-314",
+    "name": "Ерлан П.",
+    "role": "Ведущий программист 1С",
+    "skills": [
+      "1С",
+      "1С:Предприятие",
+      "SQL",
+      "ERP",
+      "Интеграции"
+    ],
+    "experienceYears": 7,
+    "interests": [
+      "Автоматизация бизнеса",
+      "ERP"
+    ],
+    "about": "Помогаю джунам с 1С, 1С:Предприятие: ревью, подготовка к собеседованиям, карьерные советы.",
+    "goal": "be_mentor"
+  },
+  {
+    "id": "demo-315",
+    "name": "Алихан Р.",
+    "role": "Ведущий программист 1С",
+    "skills": [
+      "1С",
+      "1С:Предприятие",
+      "SQL",
+      "ERP",
+      "Интеграции"
+    ],
+    "experienceYears": 10,
+    "interests": [
+      "ERP",
+      "Автоматизация бизнеса"
+    ],
+    "about": "Готов менторить начинающих: разберу код и помогу выстроить план роста в 1С, 1С:Предприятие.",
+    "goal": "be_mentor"
   }
 ]

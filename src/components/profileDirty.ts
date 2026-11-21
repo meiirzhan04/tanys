@@ -14,7 +14,18 @@ export interface EventProfileDraft {
 }
 
 export function parseProfileTopics(value: string): string[] {
-  return value.split(/[,\n]/).map(item => item.trim()).filter(Boolean)
+  return value.split(/[,;\n]/).map(item => item.trim()).filter(Boolean)
+}
+
+/**
+ * Skills typed without commas ("Python FastAPI PostgreSQL") become separate skills. Two-word skills such as
+ * "Spring Boot" or "Компьютерное зрение" stay whole; only items of three or more words are split.
+ */
+export function parseSkillTopics(value: string): string[] {
+  return parseProfileTopics(value).flatMap(item => {
+    const words = item.split(/\s+/)
+    return words.length >= 3 ? words : [item]
+  })
 }
 
 function goalUsesLookingFor(goal: Goal | ''): boolean {

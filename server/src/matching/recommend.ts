@@ -140,6 +140,12 @@ const skillAliases = new Map([
   ['vuejs', 'vue'],
   ['golang', 'go'],
   ['k8s', 'kubernetes'],
+  ['ml', 'machine learning'],
+  ['машинное обучение', 'machine learning'],
+  ['машиналық оқыту', 'machine learning'],
+  ['c sharp', 'c#'],
+  ['.net', 'dotnet'],
+  ['spring boot', 'spring'],
   ['fast api', 'fastapi'],
   ['питон', 'python'],
   ['компьютерное зрение', 'computer vision'],
@@ -308,9 +314,17 @@ function hiringMatchFor(
   let compatible: boolean
   if (!request.targets.length) compatible = true
   else if (request.technologies.length) {
-    compatible = !roleConflict && matchingTopics(applicantSkills, request.technologies, skillKey, broaderSkills, true).length > 0
+    compatible = !roleConflict && (matchingTopics(applicantSkills, request.technologies, skillKey, broaderSkills, true).length > 0 ||
+      request.technologies.some(technology => roleNames(applicantRole, technology)))
   } else compatible = roleMatch || (!roleConflict && needs.length > 0)
   return { needs, roleMatch, compatible }
+}
+
+/** A request such as "Data Scientist" that names the applicant's own role title, not a skill. */
+function roleNames(applicantRole: string, requested: string): boolean {
+  const role = ` ${titleWords(applicantRole).join(' ')} `
+  const wanted = titleWords(requested).join(' ')
+  return wanted.length >= 3 && role.includes(` ${wanted} `)
 }
 
 function makeIcebreaker(goal: Goal, candidate: Candidate, locale: Locale, topic: string): string {
@@ -429,13 +443,15 @@ function scoreCandidate(
     const seekerRequest = employerSide ? candidateRequest : inputRequest
     const applicantSkills = employerSide ? candidate.skills : input.skills
     const employerSkills = employerSide ? input.skills : candidate.skills
-    const lacks = (have: readonly string[]) => (wanted: string) => !matchingTopics(have, [wanted], skillKey, undefined, true).length
+    const applicantRole = employerSide ? candidate.role : input.role
+    const lacks = (have: readonly string[], role = '') => (wanted: string) =>
+      !matchingTopics(have, [wanted], skillKey, undefined, true).length && !roleNames(role, wanted)
     // Parsed technologies are lower-cased; show them as the person wrote them.
     const asWritten = (raw: readonly string[] = []) => (technology: string) =>
       raw.map(value => value.trim()).find(value => value.toLowerCase().includes(technology)) ?? technology
     const employerRaw = (employerSide ? input : candidate).lookingFor
     const seekerRaw = (employerSide ? candidate : input).lookingFor
-    const missingRequired = employerRequest.technologies.filter(lacks(applicantSkills)).map(asWritten(employerRaw))
+    const missingRequired = employerRequest.technologies.filter(lacks(applicantSkills, applicantRole)).map(asWritten(employerRaw))
     const missingWish = seekerRequest.technologies.filter(lacks([...employerSkills, ...employerRequest.technologies])).map(asWritten(seekerRaw))
     requirementGap = missingRequired.length + missingWish.length
     if (missingRequired.length) {

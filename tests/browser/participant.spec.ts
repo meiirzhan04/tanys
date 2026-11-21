@@ -69,3 +69,23 @@ test('separates form action goal labels from candidate intent labels in ru/kk/en
   await expect(goalSelect).toHaveValue('find_job')
   await expect(goalSelect.locator('option[value="hire"]')).toHaveText('Hire')
 })
+
+test('skills typed without commas still find matches, and common stacks are covered', async ({ page }) => {
+  await page.goto('/')
+  await page.locator('select[name="goal"]').selectOption('find_job')
+  await page.locator('input[name="role"]').fill('Backend-разработчик')
+  await page.locator('input[name="experience"]').fill('1')
+  await page.locator('input[name="skills"]').fill('Python FastAPI PostgreSQL')
+  await page.locator('input[name="interests"]').fill('API')
+  await page.locator('textarea[name="about"]').fill('Ищу работу.')
+  await page.locator('form button[type="submit"]').click()
+  await expect(page.locator('section[aria-labelledby="results-title"] .result-card')).toHaveCount(5)
+
+  // A Java developer, absent from the original base, now gets employers too.
+  await page.getByRole('button', { name: 'Изменить анкету' }).click()
+  await page.locator('input[name="role"]').fill('Java-разработчик')
+  await page.locator('input[name="skills"]').fill('Java, Spring')
+  await page.locator('form button[type="submit"]').click()
+  await expect(page.locator('section[aria-labelledby="results-title"] .result-card').first()).toBeVisible()
+  expect(await page.locator('section[aria-labelledby="results-title"] .result-card').count()).toBeGreaterThanOrEqual(3)
+})
