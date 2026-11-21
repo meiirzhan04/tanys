@@ -5,7 +5,7 @@ import type { Locale } from '../../matching/types'
 import { TanysWordmark } from '../brand/TanysLogo'
 import { shellCopy } from '../connections/connectionsCopy'
 
-const SUPPORT_EMAIL = 'tanys.hrr@gmail.com'
+export const SUPPORT_EMAIL = 'tanys.hrr@gmail.com'
 
 /** Compact product footer: brand, year, and real "About" and "Support" content in dialogs. */
 export function SiteFooter({ locale }: { locale: Locale }) {

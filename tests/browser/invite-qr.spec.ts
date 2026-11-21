@@ -145,7 +145,9 @@ test('generates invite QR locally without external requests, closes with Escape,
 
     // Follow the generated URL after registration, including a reload before registration.
     const entrant = await guestCtx.newPage()
-    await entrant.goto('/join')
+    await entrant.goto('/login')
+    await entrant.getByRole('link', { name: /^Вступить в мероприятие/ }).click()
+    await expect(entrant).toHaveURL(/\/join$/)
     await entrant.locator('input[inputmode=url]').fill(inviteUrl)
     await entrant.locator('button[type=submit]').click()
     await expect(entrant).toHaveURL(inviteUrl)
@@ -157,6 +159,7 @@ test('generates invite QR locally without external requests, closes with Escape,
     await entrant.locator('.auth-form button[type=submit]').click()
     await expect(entrant.locator('#event-profile-title')).toBeVisible()
     await expect(entrant).toHaveURL(/\/events\/evt-qr-1$/)
+    await expect(entrant.locator('.nav-organizer-btn')).toHaveCount(0)
 
     // Revoke invite -> QR action disappears and old scanned URL is rejected by server
     await orgPage.locator('.invite-row button', { hasText: 'Revoke' }).click()
@@ -169,6 +172,38 @@ test('generates invite QR locally without external requests, closes with Escape,
     await orgCtx.close()
     await guestCtx.close()
   }
+})
+
+test('organizer entry opens the owned event after login and keeps the cabinet on reload', async ({ page, context }) => {
+  await createInviteQrBackend().attach(context)
+  await page.goto('/login')
+  await page.getByRole('link', { name: /^Организовать мероприятие/ }).click()
+  await expect(page.locator('#auth-title')).toHaveText('Организовать мероприятие')
+  await page.locator('input[name="username"]').fill('org')
+  await page.locator('input[name="password"]').fill('browser-test-password')
+  await page.locator('.auth-form button[type="submit"]').click()
+  await expect(page.locator('#organizer-title')).toBeVisible()
+  await expect(page).toHaveURL(/\/events\/evt-qr-1\?intent=organizer$/)
+  await page.reload()
+  await expect(page.locator('#organizer-title')).toBeVisible()
+})
+
+test('an account created from organizer entry waits for server-granted access', async ({ page, context }) => {
+  await createInviteQrBackend().attach(context)
+  await page.goto('/login')
+  await page.getByRole('link', { name: /^Организовать мероприятие/ }).click()
+  await page.getByRole('button', { name: 'Создать аккаунт', exact: true }).click()
+  await page.locator('input[name="username"]').fill('guest')
+  await page.locator('input[name="password"]').fill('browser-test-password')
+  const registration = page.waitForRequest(req => new URL(req.url()).pathname === '/api/v1/auth/register')
+  await page.locator('.auth-form button[type="submit"]').click()
+  expect((await registration).postDataJSON()).toEqual({ username: 'guest', password: 'browser-test-password' })
+  await expect(page.locator('#organizer-access-title')).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Запросить доступ по почте' })).toHaveAttribute('href', /^mailto:/)
+  await expect(page.locator('#organizer-title')).toHaveCount(0)
+  await page.getByRole('link', { name: 'Мои мероприятия', exact: true }).click()
+  await expect(page.locator('#organizer-access-title')).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Организовать мероприятие', exact: true })).toBeVisible()
 })
 
 test('retry keeps the invited event even when it is outside the first events page', async ({ page, context }) => {

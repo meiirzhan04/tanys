@@ -1,4 +1,6 @@
 import { InviteEntry } from './InviteEntry'
+import { loginEntryCopy } from './loginEntryCopy'
+import { SUPPORT_EMAIL } from './shell/SiteFooter'
 import { AvailabilityEditor } from './AvailabilityEditor'
 import { lazy, Suspense, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
@@ -138,10 +140,14 @@ export function EventAccountFlow({
     (window.location.pathname.startsWith('/invite/') && !initialInvite?.token)
   const messages = getMessages(locale)
   const t = messages.account
+  const entry = loginEntryCopy[locale]
+  const [organizerEntry] = useState(() => !initialInvite?.token &&
+    new URLSearchParams(window.location.search).get('intent') === 'organizer')
 
   const [pendingInvite, setPendingInvite] = useState<InviteTarget | null>(() => {
-    const resolved = initialInvite ?? loadPendingInvite()
-    if (resolved) savePendingInvite(resolved)
+    const resolved = initialInvite ?? (organizerEntry ? null : loadPendingInvite())
+    if (organizerEntry) savePendingInvite(null)
+    else if (resolved) savePendingInvite(resolved)
     return resolved
   })
   const [user, setUser] = useState<AuthUser | null>(null)
@@ -341,7 +347,13 @@ export function EventAccountFlow({
     }
   }, [api, locale, readAccount, redirectToLogin, refreshSocialState])
 
-  const enterAuthenticated = useCallback(async (invite: InviteTarget | null, preserveDraft = false) => {
+  const enterAuthenticated = useCallback(async (
+    invite: InviteTarget | null,
+    canCreateEvents: boolean,
+    preserveDraft = false,
+  ) => {
+    const openOrganizer = organizerEntry && !invite?.token
+    if (openOrganizer) setTab('organizer')
     accountCache.current = null
     // Owner-only contact so the profile and the requests screen show what is saved after a reload.
     setContactValue('')
@@ -378,10 +390,13 @@ export function EventAccountFlow({
     try {
       const list = await api.listEvents()
       setEvents(list)
-      const preferredId = invite?.eventId || list[0]?.id || ''
+      const ownEvents = openOrganizer && canCreateEvents ? list.filter(item => item.role === 'organizer') : []
+      const preferredId = openOrganizer
+        ? (ownEvents.find(item => item.id === invite?.eventId) ?? ownEvents.find(item => item.status === 'active') ?? ownEvents[0])?.id
+        : invite?.eventId || list[0]?.id
       if (preferredId) {
-        const loaded = await loadEventWorkspace(preferredId, preserveDraft)
-        if (!loaded && invite) {
+        const loaded = await loadEventWorkspace(preferredId, preserveDraft, openOrganizer ? 'organizer' : 'profile')
+        if (!loaded && invite && !openOrganizer) {
           setPhase('inviteError')
           return
         }
@@ -390,6 +405,7 @@ export function EventAccountFlow({
       } else {
         setActiveEventId('')
         setActiveEvent(null)
+        if (!openOrganizer) setTab('profile')
       }
       setPhase('ready')
     } catch (error) {
@@ -398,9 +414,9 @@ export function EventAccountFlow({
         return
       }
       setEventError(formatApiError(error, locale, 'general'))
-      setPhase(invite ? 'inviteError' : 'ready')
+      setPhase(invite && !openOrganizer ? 'inviteError' : 'ready')
     }
-  }, [api, loadContact, loadEventWorkspace, locale, redirectToLogin])
+  }, [api, loadContact, loadEventWorkspace, locale, organizerEntry, redirectToLogin])
 
   useEffect(() => {
     let cancelled = false
@@ -416,7 +432,7 @@ export function EventAccountFlow({
         }
         setUser(me)
         if (needsInviteLink) { setPhase('ready'); return }
-        await enterAuthenticated(pendingInvite, false)
+        await enterAuthenticated(pendingInvite, Boolean(me.canCreateEvents))
       } catch (error) {
         if (cancelled) return
         setUser(null)
@@ -499,16 +515,17 @@ export function EventAccountFlow({
   useEffect(() => {
     if (typeof window === 'undefined' || !window.history?.replaceState) return
     if (phase === 'ready' && user && activeEventId) {
-      const targetPath = `/events/${encodeURIComponent(activeEventId)}`
-      if (window.location.pathname !== targetPath || window.location.search) {
+      const organizerQuery = organizerEntry && tab === 'organizer' ? '?intent=organizer' : ''
+      const targetPath = `/events/${encodeURIComponent(activeEventId)}${organizerQuery}`
+      if (window.location.pathname + window.location.search !== targetPath) {
         window.history.replaceState(null, '', targetPath)
       }
     } else if (!needsInviteLink && ((phase === 'ready' && user && !activeEventId) || phase === 'expired')) {
       if (/^\/(events|invite)\//.test(window.location.pathname)) {
-        window.history.replaceState(null, '', '/?mode=account')
+        window.history.replaceState(null, '', organizerEntry ? '/login?intent=organizer' : '/?mode=account')
       }
     }
-  }, [activeEventId, needsInviteLink, phase, user])
+  }, [activeEventId, needsInviteLink, organizerEntry, phase, tab, user])
 
   function chooseAuthMode(createAccount: boolean) {
     setRegistering(createAccount)
@@ -534,11 +551,16 @@ export function EventAccountFlow({
         ? await api.registerWithPassword(login, password)
         : await api.signInWithPassword(login, password)
       // The sign-in response carries only the id; /me adds the username and organizer permission.
-      const current = await api.getMe().catch(() => null)
+      const current = organizerEntry ? await api.getMe() : await api.getMe().catch(() => null)
+      if (organizerEntry && !current) throw new Error(t.errors.genericRequest)
       setUser(current ? { ...me, ...current } : me)
       setPassword('')
       const preserveDraft = Boolean(draft.name || draft.role || draft.skills || draft.about)
-      await enterAuthenticated(pendingInvite ?? (activeEventId ? { eventId: activeEventId } : null), preserveDraft)
+      await enterAuthenticated(
+        pendingInvite ?? (activeEventId ? { eventId: activeEventId } : null),
+        Boolean(current?.canCreateEvents),
+        preserveDraft,
+      )
     } catch (error) {
       setAuthError(formatApiError(error, locale, 'auth'))
     } finally {
@@ -985,7 +1007,7 @@ export function EventAccountFlow({
           return
         }
         setUser(me)
-        if (!me.canCreateEvents) setTab(current => current === 'organizer' ? 'me' : current)
+        if (!me.canCreateEvents && !organizerEntry) setTab(current => current === 'organizer' ? 'me' : current)
       } catch { /* A temporary network failure leaves the server-enforced session intact. */ }
     }
     function refreshWhenVisible() {
@@ -1000,7 +1022,7 @@ export function EventAccountFlow({
       window.removeEventListener('focus', refresh)
       document.removeEventListener('visibilitychange', refreshWhenVisible)
     }
-  }, [api, redirectToLogin, userId])
+  }, [api, organizerEntry, redirectToLogin, userId])
 
 
   function handleStayOnProfile() {
@@ -1060,7 +1082,7 @@ export function EventAccountFlow({
         <section className="surface status-panel" aria-labelledby="expired-invite-title">
           <h1 id="expired-invite-title">{phase === 'expired' ? t[inviteFailure] : eventError}</h1>
           {phase === 'expired' && <p>{t.expiredBody}</p>}
-          {phase === 'inviteError' && <button className="primary-button" onClick={() => void enterAuthenticated(pendingInvite)}>{t.inviteRetry}</button>}
+          {phase === 'inviteError' && <button className="primary-button" onClick={() => void enterAuthenticated(pendingInvite, Boolean(user?.canCreateEvents))}>{t.inviteRetry}</button>}
           <div className="status-actions">
             <a className="secondary-button" href="/account" onClick={() => savePendingInvite(null)}>{t.openMyEvents}</a>
             <button type="button" className="secondary-button" onClick={onExitToDemo}>{t.backToDemo}</button>
@@ -1076,8 +1098,9 @@ export function EventAccountFlow({
         <section className="auth-card surface" aria-labelledby="auth-title">
           <div className="page-heading">
             <div>
-              <h1 id="auth-title">{t.signInTitle}</h1>
-              <p>{t.signInSubtitle}</p>
+              <h1 id="auth-title">{organizerEntry ? entry.organizer : t.signInTitle}</h1>
+              {organizerEntry && <p>{entry.organizerHint}</p>}
+              {pendingInvite?.token && <p>{t.signInSubtitle}</p>}
             </div>
           </div>
 
@@ -1087,6 +1110,13 @@ export function EventAccountFlow({
             </div>
           )}
 
+          {!pendingInvite && !organizerEntry && (
+            <nav className="login-entry-options" aria-label={entry.paths}>
+              <a href="/join"><strong>{entry.participant}</strong><span>{entry.participantHint}</span></a>
+              <a href="/login?intent=organizer"><strong>{entry.organizer}</strong><span>{entry.organizerHint}</span></a>
+            </nav>
+          )}
+
           {authError && (
             <div className="error-banner" role="alert">
               {authError}
@@ -1094,14 +1124,14 @@ export function EventAccountFlow({
           )}
 
           <form noValidate onSubmit={handlePasswordSubmit} className="auth-form">
-            <div className="purpose-toggle" role="group" aria-label={t.signInTitle}>
+            {(pendingInvite?.token || organizerEntry) && <div className="purpose-toggle" role="group" aria-label={t.signInTitle}>
               <button type="button" aria-pressed={!registering} disabled={authBusy} onClick={() => chooseAuthMode(false)}>
                 {t.purposeLogin}
               </button>
               <button type="button" aria-pressed={registering} disabled={authBusy} onClick={() => chooseAuthMode(true)}>
                 {t.purposeRegister}
               </button>
-            </div>
+            </div>}
 
             <div className="field">
               <label htmlFor={`${id}-username`}>{t.usernameLabel}</label>
@@ -1146,11 +1176,31 @@ export function EventAccountFlow({
               <button type="submit" className="primary-button" disabled={authBusy}>
                 {authBusy ? t.authSubmitting : registering ? t.purposeRegister : t.purposeLogin}
               </button>
+              {organizerEntry ? <a className="secondary-button" href="/login">{t.signInTitle}</a> :
               <button type="button" className="secondary-button" onClick={onExitToDemo}>
                 {t.backToDemo}
-              </button>
+              </button>}
             </div>
           </form>
+        </section>
+      </main>
+    )
+  }
+
+  if (organizerEntry && tab === 'organizer' && !canOrganize) {
+    return (
+      <main className="site-width account-main">
+        {logoutDialog}
+        <section className="surface status-panel" aria-labelledby="organizer-access-title">
+          <h1 id="organizer-access-title">{entry.accessTitle}</h1>
+          <p>{entry.accessHint}</p>
+          <div className="status-actions">
+            <a className="primary-button" href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent(entry.organizer)}`}>
+              {entry.requestAccess}
+            </a>
+            <button type="button" className="secondary-button" onClick={() => window.location.reload()}>{entry.checkAccess}</button>
+            <a className="text-button" href="/account">{t.openMyEvents}</a>
+          </div>
         </section>
       </main>
     )
@@ -1182,7 +1232,14 @@ export function EventAccountFlow({
       ) : (
         <span className="event-picker-empty">{t.noEventsTitle}</span>
       )}
-
+      {!canOrganize && <a className="text-button" href="/login?intent=organizer"
+        onClick={event => {
+          const link = event.currentTarget
+          event.preventDefault()
+          guardNavigation(() => window.location.assign(link.href), link)
+        }}>
+        {entry.organizer}
+      </a>}
     </div>
   )
 
