@@ -91,7 +91,9 @@ export interface UpdateEventPayload {
 
 export interface EventInvite {
   id: string
-  token: string
+  /** Known only in the session that issued the invite: the server keeps a hash, never the link. */
+  token?: string
+  createdAt?: string
   expiresAt: string
   revoked?: boolean
 }
@@ -383,6 +385,7 @@ export interface TanysApiClient {
   createEvent(payload: CreateEventPayload): Promise<EventDetails>
   updateEvent(eventId: string, payload: UpdateEventPayload): Promise<EventDetails>
   createInvite(eventId: string, expiresAt: string): Promise<EventInvite>
+  listInvites(eventId: string): Promise<EventInvite[]>
   revokeInvite(eventId: string, inviteId: string): Promise<void>
   listEventMembers(eventId: string): Promise<EventMemberItem[]>
   pageEventMembers(eventId: string, filters?: MemberPageFilters): Promise<MemberPage>
@@ -695,14 +698,19 @@ export function createTanysApiClient(
     },
 
     async createInvite(eventId, expiresAt) {
-      const created = await request<{ id: string; token: string }>(
+      const created = await request<{ id: string; token: string; createdAt?: string; expiresAt?: string }>(
         `/events/${encodeURIComponent(eventId)}/invites`,
         {
           method: 'POST',
           body: JSON.stringify({ expiresAt }),
         },
       )
-      return { id: created.id, token: created.token, expiresAt }
+      return { id: created.id, token: created.token, createdAt: created.createdAt, expiresAt: created.expiresAt ?? expiresAt }
+    },
+
+    async listInvites(eventId) {
+      const data = await request<{ items?: EventInvite[] }>(`/events/${encodeURIComponent(eventId)}/invites`)
+      return Array.isArray(data?.items) ? data.items : []
     },
 
     async revokeInvite(eventId, inviteId) {

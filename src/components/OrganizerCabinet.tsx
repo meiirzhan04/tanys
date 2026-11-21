@@ -52,6 +52,14 @@ const TIMEZONE_OPTIONS = [
 
 type DateTimeParts = { date: string; time: string }
 
+function formatInviteDate(value: string, locale: Locale, zone: string): string {
+  const date = new Date(value)
+  if (!Number.isFinite(+date)) return ''
+  return new Intl.DateTimeFormat(locale === 'kk' ? 'kk-KZ' : locale === 'en' ? 'en-GB' : 'ru-RU', {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: zone,
+  }).format(date)
+}
+
 const DEFAULT_ZONE = 'Asia/Almaty'
 
 // Event times are wall-clock times of the event's own zone, so an organizer elsewhere still sets "09:00 in Almaty".
@@ -164,12 +172,16 @@ export function OrganizerCabinet({
     async function loadOrganizerData(eventId: string) {
       setLoadingData(true)
       try {
-        const [interestData, boothList, reportList] = await Promise.all([
+        const [interestData, boothList, reportList, inviteList] = await Promise.all([
           api.getEventInterests(eventId),
           api.listEventBooths(eventId),
           api.listEventReports(eventId).catch(() => [] as EventReportItem[]),
+          api.listInvites(eventId).catch(() => null),
         ])
         if (cancelled) return
+        if (inviteList) {
+          setInvites(current => inviteList.map(item => ({ ...item, token: current.find(known => known.id === item.id)?.token })))
+        }
         setInterests(interestData)
         setBooths(boothList)
         setReports(reportList)
@@ -280,6 +292,7 @@ export function OrganizerCabinet({
       const expiresAt = activeEvent.endsAt || new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString()
       const invite = await api.createInvite(activeEvent.id, expiresAt)
       setInvites(current => [invite, ...current])
+      setNotice(o.inviteSaveNow)
     } catch {
       setError(messages.account.errors.genericRequest)
     } finally {
@@ -298,8 +311,26 @@ export function OrganizerCabinet({
     }
   }
 
-  async function handleCopyInvite(invite: EventInvite) {
+  /** A new link for an invite whose link is no longer known: issue a fresh one, revoke the old, show its QR. */
+  async function handleReissueInvite(previous: EventInvite, trigger: HTMLButtonElement) {
     if (!activeEvent) return
+    setIssuingInvite(true)
+    setError('')
+    try {
+      const fresh = await api.createInvite(activeEvent.id, previous.expiresAt)
+      await api.revokeInvite(activeEvent.id, previous.id)
+      setInvites(current => [fresh, ...current.map(item => (item.id === previous.id ? { ...item, revoked: true } : item))])
+      qrTriggerRef.current = trigger
+      setQrInviteId(fresh.id)
+    } catch {
+      setError(messages.account.errors.genericRequest)
+    } finally {
+      setIssuingInvite(false)
+    }
+  }
+
+  async function handleCopyInvite(invite: EventInvite) {
+    if (!activeEvent || !invite.token) return
     setError('')
     const url = buildInviteUrl(window.location.origin, activeEvent.id, invite.token)
     try {
@@ -535,18 +566,35 @@ export function OrganizerCabinet({
             ) : (
               <ul className="invite-list">
                 {invites.map(invite => {
-                  const fullUrl = buildInviteUrl(window.location.origin, activeEvent.id, invite.token)
+                  const fullUrl = invite.token ? buildInviteUrl(window.location.origin, activeEvent.id, invite.token) : ''
                   const inviteState = getInviteState(invite)
                   return (
                     <li key={invite.id} className="invite-row" data-invite-id={invite.id}>
-                      <code className="invite-url">{fullUrl}</code>
+                      {fullUrl ? <code className="invite-url">{fullUrl}</code> : (
+                        <p className="social-card__hint invite-hidden" data-invite-hidden>
+                          {inviteState === 'active' ? o.inviteLinkHidden : null}
+                        </p>
+                      )}
+                      {invite.createdAt && (
+                        <p className="social-card__hint invite-meta">
+                          {o.inviteIssuedAt(formatInviteDate(invite.createdAt, locale, activeZone), formatInviteDate(invite.expiresAt, locale, activeZone))}
+                        </p>
+                      )}
                       <div className="social-card__actions">
                         {inviteState !== 'active' ? (
                           <span className="status-badge status-badge--cancelled">
                             {inviteState === 'revoked' ? o.inviteRevoked : o.inviteExpired}
                           </span>
                         ) : (
-                          <>
+                          !fullUrl ? (
+                            <>
+                              <button type="button" className="secondary-button" data-action="reissue" disabled={issuingInvite || isClosed}
+                                onClick={event => void handleReissueInvite(invite, event.currentTarget)}>{o.reissueInvite}</button>
+                              <button type="button" className="meeting-slot-cancel" onClick={() => void handleRevokeInvite(invite.id)}>
+                                {o.revokeInvite}
+                              </button>
+                            </>
+                          ) : <>
                             <button type="button" className="secondary-button" onClick={() => void handleCopyInvite(invite)}>
                               {copiedInviteId === invite.id ? o.inviteCopied : o.copyInvite}
                             </button>
@@ -747,7 +795,7 @@ export function OrganizerCabinet({
 
       {activeEvent && qrInviteId && (() => {
         const activeInvite = invites.find(item => item.id === qrInviteId)
-        if (!activeInvite) return null
+        if (!activeInvite?.token) return null
         const fullUrl = buildInviteUrl(window.location.origin, activeEvent.id, activeInvite.token)
         return (
           <InviteQrModal

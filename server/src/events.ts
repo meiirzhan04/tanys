@@ -111,13 +111,21 @@ export async function eventRoute(req: IncomingMessage, res: ServerResponse, path
         body.endsAt === undefined ? null : end,body.status ?? row.status,event])
       return { status:200,data:updated.rows[0] }
     }
+    if (action === 'invites' && req.method === 'GET') {
+      // Organizer-only. Tokens are stored as hashes, so the list never carries a link or the digest.
+      const listed = await client.query(`SELECT id,created_at AS "createdAt",expires_at AS "expiresAt",revoked,
+        CASE WHEN revoked THEN 'revoked' WHEN expires_at <= now() THEN 'expired' ELSE 'active' END AS status
+        FROM event_invites WHERE event_id=$1 ORDER BY created_at DESC, id LIMIT 100`, [event])
+      return { status:200,data:{ items:listed.rows } }
+    }
     if (action === 'invites' && req.method === 'POST') {
       if (row.status === 'closed') throw new HttpError(409,'event_closed')
       const expires = timestamp(body.expiresAt)
       if (expires <= new Date() || expires > row.endsAt) throw new HttpError(400,'invalid_expiry')
       const token = randomBytes(32).toString('hex')
-      const created = await client.query('INSERT INTO event_invites(event_id,digest,expires_at) VALUES($1,$2,$3) RETURNING id', [event,digest(token),expires])
-      return { status:201,data:{ id:created.rows[0].id,token } }
+      const created = await client.query(`INSERT INTO event_invites(event_id,digest,expires_at) VALUES($1,$2,$3)
+        RETURNING id,created_at AS "createdAt",expires_at AS "expiresAt"`, [event,digest(token),expires])
+      return { status:201,data:{ ...created.rows[0],token,revoked:false,status:'active' } }
     }
     if (suffix[0] === 'invites' && uuid(suffix[1]) && req.method === 'DELETE') {
       const removed = await client.query('UPDATE event_invites SET revoked=true WHERE id=$1 AND event_id=$2', [suffix[1],event])
